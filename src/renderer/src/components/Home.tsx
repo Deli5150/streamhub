@@ -125,7 +125,7 @@ export function Home(): React.JSX.Element {
             </Button>
           </div>
         ) : (
-          <div className="mx-auto flex max-w-[1500px] flex-col gap-6 py-4 pr-12 pl-6">
+          <div className="mx-auto flex max-w-[1500px] flex-col gap-6 px-12 py-4">
             {playlists.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
                 {watchLater}
@@ -157,19 +157,21 @@ export function Home(): React.JSX.Element {
             ) : (
               <>
                 <section className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2 px-1">
+                  <div className="flex items-center justify-center gap-2">
                     <span className="size-2 rounded-full bg-support-red" aria-hidden="true" />
                     <span className={heading}>Highlighted channels</span>
                   </div>
-                  <div className="grid [grid-template-columns:repeat(auto-fill,minmax(250px,320px))] gap-4">{highlighted.map((r, i) => card(r, i + 1))}</div>
+                  <div className="grid justify-center [grid-template-columns:repeat(auto-fit,minmax(250px,320px))] gap-4">
+                    {highlighted.map((r, i) => card(r, i + 1))}
+                  </div>
                 </section>
                 {rest.length > 0 && (
                   <section className="flex flex-col gap-3">
-                    <div className="flex items-baseline gap-2 px-1">
+                    <div className="flex items-baseline justify-center gap-2">
                       <span className={heading}>Live now</span>
                       <span className={`text-small tabular-nums ${pick('text-tertiary', 'text-black/60', 'text-white/75')} ${shadow}`}>{rest.length} more</span>
                     </div>
-                    <div className="grid [grid-template-columns:repeat(auto-fill,minmax(230px,1fr))] gap-4">{rest.map((r) => card(r))}</div>
+                    <div className="grid justify-center [grid-template-columns:repeat(auto-fill,minmax(220px,250px))] gap-4">{rest.map((r) => card(r))}</div>
                   </section>
                 )}
               </>

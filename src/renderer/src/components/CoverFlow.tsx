@@ -51,14 +51,23 @@ export function CoverFlow({
     return () => window.removeEventListener('keydown', onKey)
   }, [hovered, covers, center, last, onOpen])
 
-  // One wheel flick moves one cover.
+  // The wheel over the carousel moves it, one cover per flick, and never scrolls the page under it.
+  // (A native listener: React's wheel events are passive, so they can't stop the page scrolling.)
+  const root = useRef<HTMLDivElement>(null)
   const lastWheel = useRef(0)
-  const onWheel = (e: React.WheelEvent): void => {
-    const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX
-    if (covers.length <= 1 || Math.abs(delta) < 8 || Date.now() - lastWheel.current < 220) return
-    lastWheel.current = Date.now()
-    setCenter((c) => (delta > 0 ? Math.min(last, c + 1) : Math.max(0, c - 1)))
-  }
+  useEffect(() => {
+    const el = root.current
+    if (!el || covers.length === 0) return
+    const onWheel = (e: WheelEvent): void => {
+      e.preventDefault()
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX
+      if (Math.abs(delta) < 8 || Date.now() - lastWheel.current < 220) return
+      lastWheel.current = Date.now()
+      setCenter((c) => (delta > 0 ? Math.min(last, c + 1) : Math.max(0, c - 1)))
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [covers.length, last])
 
   const active = covers[Math.min(center, last)]
   const navButton =
@@ -66,12 +75,12 @@ export function CoverFlow({
 
   return (
     <div
+      ref={root}
       className="flex w-full min-w-0 flex-col items-center gap-2 select-none"
-      onWheel={covers.length ? onWheel : undefined}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
-      <div className="flex w-full items-center gap-1.5 px-1 text-small-strong text-secondary">{label}</div>
+      <div className="flex w-full items-center justify-center gap-1.5 px-1 text-small-strong text-secondary">{label}</div>
       {!active ? (
         <div className="flex h-[168px] w-full items-center justify-center">{empty}</div>
       ) : (
