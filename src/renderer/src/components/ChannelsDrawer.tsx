@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { LayersIcon, Link2Icon, UsersIcon, XIcon } from 'lucide-react'
 import type { Platform } from '@shared/types'
 import { groupOf } from '../lib/combined'
+import { formatAccelerator } from '../lib/shortcuts'
 import { useUi } from '../store'
 import { ChannelRow } from './ChannelRow'
 import { useChannelMenu } from './channelMenu'
@@ -15,12 +16,13 @@ import { SearchInput } from './ui'
 export function ChannelsHandle(): React.JSX.Element | null {
   const count = useUi((s) => s.app?.channels.length ?? 0)
   const open = useUi((s) => s.channelsOpen)
+  const key = useUi((s) => (s.app?.settings.shortcuts.toggleChannels ?? s.app?.shortcutDefaults.toggleChannels)?.[0])
   if (open) return null
   return (
     <button
       type="button"
       onClick={() => useUi.getState().set({ channelsOpen: true })}
-      title="All your channels: search and browse"
+      title={`All your channels: search and browse${key ? ` (${formatAccelerator(key)})` : ''}`}
       className="absolute top-1/2 right-0 z-30 flex -translate-y-1/2 flex-col items-center gap-1.5 rounded-l-xl bg-popover py-3 pr-1.5 pl-2 text-secondary shadow-lg ring-1 ring-separator transition-colors hover:text-primary"
     >
       <UsersIcon className="size-4" strokeWidth={2.25} />

@@ -170,7 +170,7 @@ export interface CombinedGroup {
   memberKeys: string[]
 }
 
-export const SHORTCUT_ACTIONS = ['toggleSidebar', 'multiView', 'pip', 'returnHome', 'toggleMenubarApp'] as const
+export const SHORTCUT_ACTIONS = ['toggleSidebar', 'toggleChannels', 'multiView', 'pip', 'returnHome', 'toggleMenubarApp'] as const
 export type ShortcutAction = (typeof SHORTCUT_ACTIONS)[number]
 
 export const MENUBAR_THEMES = ['default', 'operagx', 'gummy', 'terminal', 'shortcuts'] as const

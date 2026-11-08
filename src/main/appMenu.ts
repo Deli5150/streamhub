@@ -30,6 +30,7 @@ export function setupAppMenu(getMainWindow: () => BrowserWindow | null): void {
       label: 'Controls',
       submenu: [
         ...item('Toggle Sidebar', 'toggleSidebar'),
+        ...item('Channels', 'toggleChannels'),
         ...item('Multi-view', 'multiView'),
         ...item('Picture in Picture', 'pip'),
         ...item('Return Home', 'returnHome')

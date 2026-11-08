@@ -35,6 +35,7 @@ export function App(): React.JSX.Element {
         const s = useUi.getState()
         const watching = s.view.kind === 'watch' && s.app?.live[s.view.key] ? s.view.key : null
         if (action === 'toggleSidebar') s.set({ collapsed: !s.collapsed })
+        else if (action === 'toggleChannels') s.set({ channelsOpen: !s.channelsOpen })
         else if (action === 'returnHome') s.go({ kind: 'home' })
         else if (action === 'multiView') s.set({ multiPicker: s.multi.length ? s.multi : watching ? [watching] : [] })
         else if (action === 'pip') {

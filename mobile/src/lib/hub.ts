@@ -52,7 +52,7 @@ export function state(): AppState {
     muted: store.get('muted'),
     syncing: [...syncing],
     settings: getSettings(),
-    shortcutDefaults: { toggleSidebar: [], multiView: [], pip: [], returnHome: [], toggleMenubarApp: [] },
+    shortcutDefaults: { toggleSidebar: [], toggleChannels: [], multiView: [], pip: [], returnHome: [], toggleMenubarApp: [] },
     watchLater: getSaved(),
     ytPlaylists: getPlaylists(),
     sync: syncStatus(),

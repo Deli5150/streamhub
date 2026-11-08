@@ -3,6 +3,7 @@ import { canonical, codeToKey, formatAccelerator, normalizeBindings, shortcutPro
 
 const defaults = {
   toggleSidebar: ['Control+Command+S'],
+  toggleChannels: ['Control+Command+C'],
   multiView: ['Control+Command+M'],
   pip: ['Control+Command+P'],
   returnHome: ['Control+Command+H'],

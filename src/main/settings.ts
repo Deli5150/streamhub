@@ -7,6 +7,7 @@ import { store } from './store'
 /** All ⌃⌘ combos, so none clash with common single-⌘ system shortcuts. */
 export const SHORTCUT_DEFAULTS: Record<ShortcutAction, string[]> = {
   toggleSidebar: ['Control+Command+S'],
+  toggleChannels: ['Control+Command+C'],
   multiView: ['Control+Command+M'],
   pip: ['Control+Command+P'],
   returnHome: ['Control+Command+H'],
