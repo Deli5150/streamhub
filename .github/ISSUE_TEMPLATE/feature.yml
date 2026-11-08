@@ -1,0 +1,17 @@
+name: Feature idea
+description: Something StreamHub should do
+labels: [feature]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What it should do, and why.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: For
+      multiple: true
+      options: [Desktop (Mac/Windows/Linux), Steam Deck / Big Picture, iPhone, Android]

@@ -6,28 +6,34 @@ No developer keys, client IDs or `.env` file. You sign in on each platform's own
 
 ## Install
 
-Download the installer for your computer. Each one works on every processor type:
+Download the installer for your device from the **[latest release](../../releases/latest)**. Each one works on every processor type. What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
-| Computer | File |
+| Device | File |
 |---|---|
-| Any Mac (Apple silicon or Intel) | `StreamHub-1.0.7.dmg` |
-| Windows 10 or 11 (x64 or ARM64) | `StreamHub-Setup-1.0.7.exe` |
-| Linux (x64) | `StreamHub-1.0.7-x86_64.AppImage` |
-| Steam Deck / SteamOS, into your Steam library | `StreamHub-1.0.7-Steam-Installer.sh` |
+| Any Mac (Apple silicon or Intel) | `StreamHub-<version>.dmg` |
+| Windows 10 or 11 (x64 or ARM64) | `StreamHub-Setup-<version>.exe` |
+| Linux (x64) | `StreamHub-<version>-x86_64.AppImage` |
+| Steam Deck / SteamOS, into your Steam library | `StreamHub-<version>-Steam-Installer.sh` |
+| Android | `StreamHub-<version>.apk` |
+
+Once StreamHub is installed, it **updates itself**: when a new version is out, an **Update** button appears at the top right. Click it, and StreamHub downloads the new version and restarts into it (Settings → Updates has *Check now* and an on/off switch for the automatic checks). On Android the update opens the system installer; the first time, Android asks you to allow *Install unknown apps* for StreamHub. iPhone shows that a new version is out, and you install it as before.
 
 The Mac app is universal: it runs natively on both Apple silicon and Intel. The Windows installer carries both an x64 and an ARM64 build and installs the one that matches your PC.
 
 **Mac:** open the `.dmg` and drag StreamHub into Applications. The app isn't notarized by Apple, so the first time you open it macOS says it can't verify the developer. Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to the StreamHub message, then confirm. After that it opens normally.
 
-**Linux / SteamOS:** the AppImage is the whole app in one file, with nothing to install. Put it somewhere it'll stay (on a Steam Deck, in Desktop Mode, e.g. your home folder), right-click it → **Properties → Permissions → Is executable** (or `chmod +x StreamHub-1.0.7-x86_64.AppImage`), then double-click it.
+**Linux / SteamOS:** the AppImage is the whole app in one file, with nothing to install. Put it somewhere it'll stay (on a Steam Deck, in Desktop Mode, e.g. your home folder), right-click it → **Properties → Permissions → Is executable** (or `chmod +x StreamHub-*-x86_64.AppImage`), then double-click it.
 
-**Steam Deck / Steam Big Picture:** use `StreamHub-1.0.7-Steam-Installer.sh` (it contains the app). In Desktop Mode, right-click it → **Properties → Permissions → Is executable**, then double-click it (or run `bash StreamHub-1.0.7-Steam-Installer.sh` in Konsole). It installs StreamHub in your home folder (`~/.local/share/StreamHub`) and your app menu, and adds it to your Steam library with its own artwork, set to open in Big Picture mode. Steam closes for a moment while it's added (Steam rewrites its library when it quits) and opens again. Then find it in Game Mode under **Library → Non-Steam**. Run the installer again to update; run it with `--uninstall` (or `~/.local/share/StreamHub/uninstall.sh`) to remove it. If it doesn't start from Steam, `~/.local/share/StreamHub/last-run.log` says why. Building it: `npm run dist:steam` (scripts/steam).
+**Steam Deck / Steam Big Picture:** use `StreamHub-<version>-Steam-Installer.sh` (it contains the app). In Desktop Mode, right-click it → **Properties → Permissions → Is executable**, then double-click it (or run `bash StreamHub-*-Steam-Installer.sh` in Konsole). It installs StreamHub in your home folder (`~/.local/share/StreamHub`) and your app menu, and adds it to your Steam library with its own artwork, set to open in Big Picture mode. Steam closes for a moment while it's added (Steam rewrites its library when it quits) and opens again. Then find it in Game Mode under **Library → Non-Steam**. StreamHub updates itself from then on (in Game Mode, *Install and close* installs the update and closes; start it again from your library). Running a newer installer also updates it. Run it with `--uninstall` (or `~/.local/share/StreamHub/uninstall.sh`) to remove it. If it doesn't start from Steam, `~/.local/share/StreamHub/last-run.log` says why. Building it: `npm run dist:steam` (scripts/steam).
 
 **Windows:** run the installer and choose where to install. The installer isn't code-signed, so Windows SmartScreen may show "Windows protected your PC". Click **More info → Run anyway**. StreamHub gets Start menu and desktop shortcuts, and can be removed from **Settings → Apps**.
 
 ## Watching
 
-- **Theater mode:** the rectangle button under a live stream hides the sidebar and chat so the player fills the window. It stays on from stream to stream until you turn it off with the same button or **Esc**. Showing chat turns it off.
+- **Theater mode:** the rectangle button under a live stream, or under a video in Watch Later, the queue or a YouTube playlist, hides the sidebar and the chat or list so the player fills the window. It stays on from video to video until you turn it off with the same button or **Esc**. Showing chat turns it off.
+- **Queue:** right-click a past stream, video or clip → **Add to queue** to line it up. You stay where you are, so you can add several. Open the **Queue** tab to play them one after another.
+- **YouTube playlists:** Settings → YouTube playlists (the list button at the top right) → **Import playlists…** shows every playlist on your YouTube account, plus Liked videos. Tick the ones you want and click **Import**. They appear on Home under *Your playlists*, play like Watch Later, catch up with changes on YouTube every few hours (or with Refresh), and come over to your other devices with Sync with Google. YouTube doesn't let apps read your Watch Later list. Needs YouTube connected in Accounts.
+- **Themes** (the palette button): a colorway colors the whole app, including the sidebar, search bars, buttons and menus. There are neutral Light and Dark themes and 22 colorways. *Use system* follows your computer's light or dark mode, with the translucent Mac window.
 - **Picture in picture:** a small window that floats above your other apps. Hover over it for the controls: close and move-to-the-side (top left); speed, sound and back to StreamHub (top right); back and forward 15 seconds and play/pause (middle); time and a scrubber (bottom). Drag it anywhere, resize it from its edges, and double-click it to return to StreamHub. Live streams have no seeking controls. It resumes playback by itself if a site pauses a video you didn't pause, for example YouTube's "Continue watching?".
 - **Picture in picture when minimized** (Settings → Playback, off by default): minimizing or hiding StreamHub while something plays moves it into picture in picture, and it moves back when you return. On macOS, ⌘H hides every StreamHub window, including picture in picture, so use ⌘M or the yellow button instead.
 - **Big Picture mode** (Mac and Windows): the controller button at the top right turns StreamHub into a full-screen, TV-style app for the couch. Tabs for Live, Following, Watch Later and the queue; channel pages with past streams, videos and clips; and a full-screen player with chat at the side. Use a game controller (Xbox, PlayStation and other standard controllers): d-pad or left stick to move, A to choose, B to go back, LB/RB to switch tabs. In the player: A pauses, left/right skip 10 seconds, LT/RT skip 30, X shows chat, and LB/RB switch platform on a combined channel, or go to the previous or next video in Watch Later and the queue, which also move on by themselves. The arrow keys, Enter, Esc and Q/E work too, and so does the mouse. B on the home screen (or Exit) leaves Big Picture. Press **Y** (△ on PlayStation) on any stream or video, or right-click it, for a menu: save it to Watch Later, add it to the queue, or go to its channel. Combined channels show once, and their page has a button per platform (or LB/RB) to switch between them. **Search** (the magnifier tab) finds followed channels by name and live streams by title or game: type with a keyboard, or press A on the search box (or the Keyboard button next to it) for an on-screen keyboard, where X deletes, Y adds a space and B closes it. Chat in Big Picture is for reading (its message box is hidden). With chat open on a live stream, **Chat on phone** (or Y) shows a QR code: scan it with your phone's camera to open that chat in your phone's browser and type there. **Settings → Playback → Open in Big Picture at startup** starts StreamHub in Big Picture.
@@ -102,6 +108,9 @@ Known limits:
 - `npm run dist:mac`: build the universal Mac installer (`dist/StreamHub-<version>.dmg`)
 - `npm run dist:win`: build the Windows installer for x64 and ARM64 (`dist/StreamHub-Setup-<version>.exe`); works from a Mac too
 - `npm run dist`: build for the current platform
+- `npm run release`: publish the GitHub Release for the version in `package.json`, with the notes from its `CHANGELOG.md` section and every download attached (dmg, Mac zip, Windows setup, AppImage, Steam installer, APK). The in-app updater reads these releases, so keep the file names. Bump the version, add a CHANGELOG section and build everything first.
+
+Updates (`src/main/updater.ts`) come from the latest GitHub Release of the repo named in `src/shared/release.ts`. Because the builds are ad-hoc signed, StreamHub installs updates itself rather than with Electron's updater: on a Mac it swaps in the new app from the release's `-mac.zip`; on Windows it runs the new Setup silently; on Linux it swaps in the new AppImage (or, for the Steam installer's copy, unpacks it into `~/.local/share/StreamHub/app`).
 
 Builds aren't signed with an Apple Developer ID or a Windows code-signing certificate, which is why the first launch needs the steps under Install. Mac builds get an ad-hoc signature (`"identity": "-"` in `package.json`), because Apple silicon refuses to run apps with no valid signature. To sign and notarize properly, add the certificates and replace that setting; see https://www.electron.build/code-signing.
 

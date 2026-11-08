@@ -1,0 +1,29 @@
+name: Bug
+description: Something in StreamHub isn't working right
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where
+      multiple: true
+      options: [Mac, Windows, Linux, Steam Deck / SteamOS, iPhone, Android, Big Picture mode]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: StreamHub version
+      placeholder: 1.0.8
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or logs
+      description: On a Steam Deck, ~/.local/share/StreamHub/last-run.log helps.
