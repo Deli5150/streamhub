@@ -148,13 +148,16 @@ export function Home(): React.JSX.Element {
           <div className="shrink-0 border-t border-separator px-6 pt-3 pb-4">
             {playlists.length > 0 ? (
               <div className="grid grid-cols-2 items-start gap-6 pr-8">
-                <CoverFlow
-                  compact
-                  items={saved}
-                  onOpen={(id) => go({ kind: 'playlist', startId: id })}
-                  textClass={pick('text-primary', 'text-black', 'text-white')}
-                  shadow={shadow}
-                />
+                {/* Clipped to its half: the side covers would otherwise spill under the sidebar. */}
+                <div className="min-w-0 overflow-hidden">
+                  <CoverFlow
+                    compact
+                    items={saved}
+                    onOpen={(id) => go({ kind: 'playlist', startId: id })}
+                    textClass={pick('text-primary', 'text-black', 'text-white')}
+                    shadow={shadow}
+                  />
+                </div>
                 <PlaylistShelf
                   playlists={playlists}
                   heading={heading}
