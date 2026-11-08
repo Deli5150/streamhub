@@ -6,7 +6,11 @@ import tailwindcss from '@tailwindcss/vite'
 const shared = { '@shared': resolve(__dirname, 'src/shared') }
 
 export default defineConfig({
-  main: { resolve: { alias: shared } },
+  main: {
+    resolve: { alias: shared },
+    // Electron's built-in module (Node's fs without .asar support), used by the updater.
+    build: { rollupOptions: { external: ['original-fs'] } }
+  },
   preload: {
     resolve: { alias: shared },
     // The app's preload, and the picture-in-picture window's (its controls).
