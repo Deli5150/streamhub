@@ -14,20 +14,20 @@ beforeAll(() => {
 })
 
 describe('sidebar on navigation', () => {
-  it('reopens on Home, minimizes on Channels, and stays minimized in a non-empty multi-view', async () => {
+  it('minimizes on Home (its grid shows everyone live) and stays minimized in a non-empty multi-view', async () => {
     const { useUi } = await import('../src/renderer/src/store')
     const ui = (): ReturnType<typeof useUi.getState> => useUi.getState()
 
-    ui().set({ collapsed: true })
+    ui().set({ collapsed: false })
     ui().go({ kind: 'home' })
-    expect(ui().collapsed).toBe(false)
+    expect(ui().collapsed).toBe(true)
 
     ui().addToMulti('twitch:a') // starts a multi-view → minimized
     expect(ui().view.kind).toBe('multi')
     expect(ui().collapsed).toBe(true)
 
+    ui().set({ collapsed: false })
     ui().go({ kind: 'home' })
-    ui().go({ kind: 'channels' }) // the Channels page lists everything → minimized
     expect(ui().collapsed).toBe(true)
 
     ui().go({ kind: 'multi' }) // back to multi-view with a stream playing

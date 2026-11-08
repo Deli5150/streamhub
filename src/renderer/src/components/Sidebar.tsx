@@ -10,7 +10,7 @@ import { CombinedPlatformDots, PLATFORM_META, PLATFORM_ORDER, PlatformOverlayBad
 import { Button, EmptyState, SearchInput } from './ui'
 
 /**
- * Live-only sidebar (offline channels live on the Channels page), with a platform filter grid and
+ * Live-only sidebar (every channel is in the Channels panel, ChannelsDrawer.tsx), with a platform filter grid and
  * a collapsed avatar rail — the layout of the Glaze StreamHub sidebar.
  */
 export function Sidebar(): React.JSX.Element {
@@ -132,7 +132,7 @@ export function Sidebar(): React.JSX.Element {
             <EmptyState
               icon={<TvIcon className="size-8 text-tertiary" />}
               title="No one is live"
-              description={'None of your followed channels are streaming right now. Open "Channels" above to browse everyone you follow.'}
+              description={'None of your followed channels are streaming right now. Open Channels on the right of Home to browse everyone you follow.'}
             />
           ) : q && rows.length === 0 ? (
             <EmptyState icon={<TvIcon className="size-8 text-tertiary" />} title="No matches" description={`No live channels match “${search.trim()}”.`} />

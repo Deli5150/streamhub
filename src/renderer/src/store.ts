@@ -4,7 +4,6 @@ import type { AppState, Channel, CombinedGroup, LiveInfo, Platform } from '@shar
 
 export type View =
   | { kind: 'home' }
-  | { kind: 'channels' }
   /** `offline` shows the channel page (past videos) even while the channel is live */
   | { kind: 'watch'; key: string; offline?: boolean }
   | { kind: 'multi' }
@@ -50,6 +49,8 @@ interface UiState {
   toast: (Toast & { id: number }) | null
   /** The YouTube playlist import pane (Settings → YouTube playlists) is open. */
   importPlaylists: boolean
+  /** The slide-out list of every followed channel (ChannelsDrawer) is open. */
+  channelsOpen: boolean
   setApp(s: AppState): void
   go(v: View): void
   addToMulti(key: string): void
@@ -58,19 +59,18 @@ interface UiState {
   reorderMulti(sourceKey: string, targetKey: string): void
   focus(key: string): void
   showToast(t: Toast): void
-  set(p: Partial<Pick<UiState, 'collapsed' | 'theater' | 'bigPicture' | 'filter' | 'search' | 'multiPicker' | 'combine' | 'pip' | 'importPlaylists'>>): void
+  set(p: Partial<Pick<UiState, 'collapsed' | 'theater' | 'bigPicture' | 'filter' | 'search' | 'multiPicker' | 'combine' | 'pip' | 'importPlaylists' | 'channelsOpen'>>): void
 }
 
 export const MAX_MULTI = 6
 
 /**
- * Sidebar state implied by navigating to a view: Home opens it back up, Channels minimizes it (the
- * page already lists every channel), and Multi-view keeps it minimized while streams are playing.
+ * Sidebar state implied by navigating to a view: Home minimizes it (Home's grid already shows
+ * everyone live), and Multi-view keeps it minimized while streams are playing.
  * Other views leave it as is.
  */
 function sidebarFor(view: View, multiCount: number): { collapsed: boolean } | Record<string, never> {
-  if (view.kind === 'home') return { collapsed: false }
-  if (view.kind === 'channels') return { collapsed: true }
+  if (view.kind === 'home') return { collapsed: true }
   if (view.kind === 'multi' && multiCount > 0) return { collapsed: true }
   if (view.kind === 'playlist' || view.kind === 'queue' || view.kind === 'ytPlaylist') return { collapsed: true }
   return {}
@@ -97,6 +97,7 @@ export const useUi = create<UiState>((set) => ({
   search: '',
   toast: null,
   importPlaylists: false,
+  channelsOpen: false,
   setApp: (app) => set({ app }),
   go: (view) => set((s) => ({ view, ...persistCollapsed(sidebarFor(view, s.multi.length)) })),
   addToMulti: (key) =>

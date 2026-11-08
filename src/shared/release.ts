@@ -75,3 +75,12 @@ export function newerRelease(release: GitHubRelease, current: string, kind: Inst
     }
   }
 }
+
+/** One version's section of CHANGELOG.md (from its "## [x.y.z]" heading to the next), or "" if it has none. */
+export function changelogSection(changelog: string, version: string): string {
+  const start = changelog.indexOf(`## [${version}]`)
+  if (start < 0) return ''
+  const rest = changelog.slice(start)
+  const next = rest.indexOf('\n## [', 1)
+  return (next > 0 ? rest.slice(0, next) : rest).split('\n').slice(1).join('\n').trim()
+}

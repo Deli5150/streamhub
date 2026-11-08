@@ -17,7 +17,7 @@ Download the installer for your device from the **[latest release](../../release
 | Android | `StreamHub-<version>.apk` |
 | iPhone (sideloaded) | `StreamHub-<version>.ipa` |
 
-Once StreamHub is installed, it **updates itself**: when a new version is out, an **Update** button appears at the top right. Click it, and StreamHub downloads the new version and restarts into it (Settings → Updates has *Check now* and an on/off switch for the automatic checks). On Android the update opens the system installer; the first time, Android asks you to allow *Install unknown apps* for StreamHub. iPhone shows that a new version is out, and you install it as before: the `.ipa` is signed with a free Apple ID for one iPhone, so it's installed with Xcode or a sideloading tool (such as AltStore or Sideloadly), and it has to be re-signed every 7 days.
+Once StreamHub is installed, it **updates itself**: when a new version is out, an **Update** button appears at the top right. Click it, and StreamHub downloads the new version and restarts into it. The Updates button (the arrow at the top right) has *Check now*, an on/off switch for the automatic checks, and what's new in the version you have. On Android the update opens the system installer; the first time, Android asks you to allow *Install unknown apps* for StreamHub. iPhone shows that a new version is out, and you install it as before: the `.ipa` is signed with a free Apple ID for one iPhone, so it's installed with Xcode or a sideloading tool (such as AltStore or Sideloadly), and it has to be re-signed every 7 days.
 
 The Mac app is universal: it runs natively on both Apple silicon and Intel. The Windows installer carries both an x64 and an ARM64 build and installs the one that matches your PC.
 
@@ -31,6 +31,7 @@ The Mac app is universal: it runs natively on both Apple silicon and Intel. The 
 
 ## Watching
 
+- **Home:** the most-watched live channels are highlighted at the top, and everyone else who's live is in the grid below them. Watch Later runs along the bottom (on the left, with your imported YouTube playlists on the right, once you've imported some). The **Channels** tab on the right edge slides out a panel with every channel you follow, live or not, with search and platform filters. Esc or a click outside closes it.
 - **Theater mode:** the rectangle button under a live stream, or under a video in Watch Later, the queue or a YouTube playlist, hides the sidebar and the chat or list so the player fills the window. It stays on from video to video until you turn it off with the same button or **Esc**. Showing chat turns it off.
 - **Queue:** right-click a past stream, video or clip → **Add to queue** to line it up. You stay where you are, so you can add several. Open the **Queue** tab to play them one after another.
 - **YouTube playlists:** Settings → YouTube playlists (the list button at the top right) → **Import playlists…** shows every playlist on your YouTube account, plus Liked videos. Tick the ones you want and click **Import**. They appear on Home under *Your playlists*, play like Watch Later, catch up with changes on YouTube every few hours (or with Refresh), and come over to your other devices with Sync with Google. YouTube doesn't let apps read your Watch Later list. Needs YouTube connected in Accounts.

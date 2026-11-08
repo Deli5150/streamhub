@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { CircleUserIcon, HomeIcon, LayoutGridIcon, ListIcon, ListVideoIcon } from 'lucide-react'
+import { CircleUserIcon, HomeIcon, LayoutGridIcon, ListVideoIcon } from 'lucide-react'
 import { useQueue } from './lib/queue'
 import { applyColorway } from './lib/theme'
 import { applySystemAppearance, useUi } from './store'
@@ -8,7 +8,7 @@ import { CombineDialog } from './components/CombineDialog'
 import { MultiViewDialog } from './components/MultiViewDialog'
 import { QuickActions } from './components/QuickActions'
 import { Accounts } from './components/Accounts'
-import { ChannelsPage } from './components/ChannelsPage'
+import { ChannelsDrawer } from './components/ChannelsDrawer'
 import { Home } from './components/Home'
 import { PlaylistView } from './components/PlaylistView'
 import { MultiView } from './components/MultiView'
@@ -67,7 +67,6 @@ export function App(): React.JSX.Element {
     }
   }, [setApp, go, set])
 
-  const channelCount = app?.channels.length ?? 0
   // Theater mode (Watch.tsx, PlaylistView.tsx) gives a live stream or a playlist's video the whole window.
   const playlistView = view.kind === 'playlist' || view.kind === 'queue' || view.kind === 'ytPlaylist'
   const theaterOn = theater && (playlistView || (view.kind === 'watch' && !view.offline && Boolean(app?.live[view.key])))
@@ -83,11 +82,6 @@ export function App(): React.JSX.Element {
         <TabButton active={view.kind === 'home'} onClick={() => go({ kind: 'home' })}>
           <HomeIcon className="size-4 shrink-0" strokeWidth={2.5} />
           Home
-        </TabButton>
-        <TabButton active={view.kind === 'channels'} onClick={() => go({ kind: 'channels' })} disabled={channelCount === 0}>
-          <ListIcon className="size-4 shrink-0" strokeWidth={2.5} />
-          Channels
-          {channelCount > 0 && <span className="text-small text-secondary tabular-nums">{channelCount}</span>}
         </TabButton>
         <TabButton active={view.kind === 'multi'} onClick={() => go({ kind: 'multi' })}>
           <LayoutGridIcon className="size-4 shrink-0" strokeWidth={2.5} />
@@ -115,7 +109,6 @@ export function App(): React.JSX.Element {
         {!theaterOn && <Sidebar />}
         <main className="min-w-0 flex-1">
           {view.kind === 'home' && <Home />}
-          {view.kind === 'channels' && <ChannelsPage />}
           {view.kind === 'accounts' && <Accounts />}
           {view.kind === 'watch' && <Watch channelKey={view.key} offline={view.offline} />}
           {view.kind === 'multi' && <MultiView />}
@@ -126,6 +119,7 @@ export function App(): React.JSX.Element {
       </div>
       <CombineDialog request={combine} onClose={() => set({ combine: null })} />
       <MultiViewDialog />
+      <ChannelsDrawer />
       <ImportPlaylistsDialog />
       <Toast />
     </div>

@@ -1,5 +1,8 @@
 import { CircleArrowUpIcon, ExternalLinkIcon, Loader2Icon, RotateCwIcon } from 'lucide-react'
+import { changelogSection, RELEASE_REPO } from '@shared/release'
 import type { UpdateStatus } from '@shared/types'
+// This version's notes come with the app (so they show offline, and for the version you're running).
+import changelog from '../../../../CHANGELOG.md?raw'
 import { useUi } from '../store'
 import { Button, Field, FieldGroup, Switch } from './ui'
 
@@ -44,13 +47,74 @@ export function UpdatePill(): React.JSX.Element | null {
   )
 }
 
-/** Release notes (Markdown) as plain text: no heading marks, bold or links' URLs. */
-const plainNotes = (md: string): string =>
-  md
-    .replace(/^#+\s*/gm, '')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
+/** Inline Markdown: **bold** and *italic* as such, links as their text. */
+function inline(text: string): React.ReactNode[] {
+  return text
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/^[-*] /gm, '• ')
+    .split(/(\*\*.+?\*\*|\*[^*]+\*)/g)
+    .map((part, i) =>
+      part.startsWith('**') ? (
+        <strong key={i} className="font-semibold text-primary">
+          {part.slice(2, -2)}
+        </strong>
+      ) : part.startsWith('*') && part.length > 2 ? (
+        <em key={i}>{part.slice(1, -1)}</em>
+      ) : (
+        part
+      )
+    )
+}
+
+/** Release notes (CHANGELOG.md / GitHub Markdown): headings and bullet lists. */
+function ReleaseNotes({ md }: { md: string }): React.JSX.Element {
+  const blocks: React.ReactNode[] = []
+  let list: React.ReactNode[] = []
+  const flush = (): void => {
+    if (list.length) blocks.push(<ul key={`l${blocks.length}`} className="flex list-disc flex-col gap-1.5 pl-4 marker:text-tertiary">{list}</ul>)
+    list = []
+  }
+  for (const line of md.split('\n')) {
+    const t = line.trim()
+    if (!t) continue
+    if (t.startsWith('#')) {
+      flush()
+      blocks.push(
+        <p key={`h${blocks.length}`} className="pt-1 text-small-strong text-primary first:pt-0">
+          {t.replace(/^#+\s*/, '')}
+        </p>
+      )
+    } else if (/^[-*] /.test(t)) list.push(<li key={list.length}>{inline(t.slice(2))}</li>)
+    else {
+      flush()
+      blocks.push(<p key={`p${blocks.length}`}>{inline(t)}</p>)
+    }
+  }
+  flush()
+  return <div className="flex flex-col gap-2 text-small text-secondary">{blocks}</div>
+}
+
+function NotesBox({ title, md, link }: { title: string; md: string; link?: { label: string; url: string } }): React.JSX.Element {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-small font-semibold tracking-wide text-tertiary uppercase">{title}</span>
+        {link && (
+          <button
+            type="button"
+            onClick={() => void window.api.openExternal(link.url)}
+            className="flex items-center gap-1 text-small-strong text-accent hover:underline"
+          >
+            {link.label}
+            <ExternalLinkIcon className="size-3" />
+          </button>
+        )}
+      </div>
+      <div className="max-h-72 overflow-y-auto rounded-card bg-well px-3 py-2.5 ring-1 ring-separator">
+        <ReleaseNotes md={md} />
+      </div>
+    </div>
+  )
+}
 
 const ago = (t?: number): string => {
   if (!t) return 'never'
@@ -64,6 +128,7 @@ export function UpdatesSection(): React.JSX.Element {
   if (!app) return <div />
   const u = app.update
   const step = nextStep(u)
+  const current = changelogSection(changelog, u.current)
   const summary =
     u.state === 'checking'
       ? 'Checking…'
@@ -116,24 +181,14 @@ export function UpdatesSection(): React.JSX.Element {
           </Field>
         </FieldGroup>
         {u.version && u.notes && ['available', 'downloading', 'ready', 'error'].includes(u.state) && (
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-small font-semibold tracking-wide text-tertiary uppercase">What's new in {u.version}</span>
-              {u.page && (
-                <button
-                  type="button"
-                  onClick={() => void window.api.openExternal(u.page!)}
-                  className="flex items-center gap-1 text-small-strong text-accent hover:underline"
-                >
-                  Release page
-                  <ExternalLinkIcon className="size-3" />
-                </button>
-              )}
-            </div>
-            <div className="max-h-56 overflow-y-auto rounded-card bg-well px-3 py-2.5 text-small whitespace-pre-wrap text-secondary ring-1 ring-separator">
-              {plainNotes(u.notes)}
-            </div>
-          </div>
+          <NotesBox title={`What's new in ${u.version}`} md={u.notes} link={u.page ? { label: 'Release page', url: u.page } : undefined} />
+        )}
+        {current && (
+          <NotesBox
+            title={`What's new in this version (${u.current})`}
+            md={current}
+            link={{ label: 'All versions', url: `https://github.com/${RELEASE_REPO}/blob/main/CHANGELOG.md` }}
+          />
         )}
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareVersions, newerRelease, type GitHubRelease } from '@shared/release'
+import { changelogSection, compareVersions, newerRelease, type GitHubRelease } from '@shared/release'
 
 const release = (tag: string, extra: Partial<GitHubRelease> = {}): GitHubRelease => ({
   tag_name: tag,
@@ -50,5 +50,14 @@ describe('newerRelease', () => {
     expect(newerRelease(release('v1.0.6'), '1.0.7', 'mac-app')).toBeNull()
     expect(newerRelease(release('v1.0.9', { prerelease: true }), '1.0.7', 'mac-app')).toBeNull()
     expect(newerRelease(release('v1.0.9', { draft: true }), '1.0.7', 'mac-app')).toBeNull()
+  })
+})
+
+describe('changelogSection', () => {
+  const md = '# Changelog\n\nintro\n\n## [1.0.8]\n\n### New\n- A\n\n## [1.0.7]\n\n- B\n'
+  it("reads one version's notes", () => {
+    expect(changelogSection(md, '1.0.8')).toBe('### New\n- A')
+    expect(changelogSection(md, '1.0.7')).toBe('- B')
+    expect(changelogSection(md, '9.9.9')).toBe('')
   })
 })

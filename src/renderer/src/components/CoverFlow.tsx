@@ -14,14 +14,18 @@ export function CoverFlow({
   items,
   onOpen,
   textClass,
-  shadow
+  shadow,
+  compact = false
 }: {
   items: SavedItem[]
   onOpen(id: string): void
   /** Heading color, matched to the home wallpaper. */
   textClass: string
   shadow: string
+  /** Smaller covers, for Home's bottom shelf. */
+  compact?: boolean
 }): React.JSX.Element {
+  const size = compact ? { cover: 'w-[200px]', stage: 'h-[124px]', step: 100 } : { cover: 'w-[280px]', stage: 'h-[180px]', step: 150 }
   const [center, setCenter] = useState(0)
   const last = items.length - 1
 
@@ -50,7 +54,7 @@ export function CoverFlow({
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 rounded-2xl bg-black/25 px-5 py-4 text-white/85 ring-1 ring-white/10 backdrop-blur-md">
-        <BookmarkIcon className="size-7 text-white/60" strokeWidth={1.75} />
+        <BookmarkIcon className={`${compact ? 'size-5' : 'size-7'} text-white/60`} strokeWidth={1.75} />
         <p className="text-regular">Your Watch Later playlist is empty.</p>
         <p className="max-w-sm text-center text-small text-white/65">Press “Save for Later” under any stream, or on a past video, and it’ll show up here.</p>
       </div>
@@ -64,7 +68,7 @@ export function CoverFlow({
     <div className="flex w-full flex-col items-center gap-2 select-none" onWheel={onWheel}>
       <span className={`text-strong ${textClass} ${shadow}`}>Saved · Watch Later</span>
 
-      <div className="relative h-[180px] w-full max-w-3xl [perspective:1200px]">
+      <div className={`relative ${size.stage} w-full max-w-3xl [perspective:1200px]`}>
         <div className="absolute inset-0 flex items-center justify-center [transform-style:preserve-3d]">
           {items.map((item, i) => {
             const offset = i - center
@@ -77,9 +81,9 @@ export function CoverFlow({
                 type="button"
                 onClick={() => (isCenter ? onOpen(item.id) : setCenter(i))}
                 aria-label={isCenter ? `Play ${savedTitle(item)}` : `Show ${savedTitle(item)}`}
-                className="absolute aspect-video w-[280px] overflow-hidden rounded-xl bg-control-subtle shadow-2xl ring-1 ring-white/10 transition-[transform,opacity] duration-300 ease-out outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className={`absolute aspect-video ${size.cover} overflow-hidden rounded-xl bg-control-subtle shadow-2xl ring-1 ring-white/10 transition-[transform,opacity] duration-300 ease-out outline-none focus-visible:ring-2 focus-visible:ring-accent`}
                 style={{
-                  transform: `translateX(${offset * 150}px) rotateY(${isCenter ? 0 : offset > 0 ? -48 : 48}deg) scale(${isCenter ? 1 : 0.82})`,
+                  transform: `translateX(${offset * size.step}px) rotateY(${isCenter ? 0 : offset > 0 ? -48 : 48}deg) scale(${isCenter ? 1 : 0.82})`,
                   zIndex: 100 - abs,
                   opacity: abs > 2 ? 0.25 : 1
                 }}
@@ -111,7 +115,7 @@ export function CoverFlow({
       </div>
 
       {/* Glass chip keeps the label legible over any wallpaper. */}
-      <div className="flex min-h-[44px] items-center justify-center">
+      <div className={`flex ${compact ? 'min-h-[40px]' : 'min-h-[44px]'} items-center justify-center`}>
         <div className="flex max-w-xl flex-col items-center gap-0.5 rounded-2xl bg-black/40 px-3.5 py-1.5 text-center ring-1 ring-white/10 backdrop-blur-md">
           <div className="flex min-w-0 items-center gap-1.5">
             <PlatformDot platform={active.platform} />
