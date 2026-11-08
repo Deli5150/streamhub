@@ -15,8 +15,9 @@ Download the installer for your device from the **[latest release](../../release
 | Linux (x64) | `StreamHub-<version>-x86_64.AppImage` |
 | Steam Deck / SteamOS, into your Steam library | `StreamHub-<version>-Steam-Installer.sh` |
 | Android | `StreamHub-<version>.apk` |
+| iPhone (sideloaded) | `StreamHub-<version>.ipa` |
 
-Once StreamHub is installed, it **updates itself**: when a new version is out, an **Update** button appears at the top right. Click it, and StreamHub downloads the new version and restarts into it (Settings → Updates has *Check now* and an on/off switch for the automatic checks). On Android the update opens the system installer; the first time, Android asks you to allow *Install unknown apps* for StreamHub. iPhone shows that a new version is out, and you install it as before.
+Once StreamHub is installed, it **updates itself**: when a new version is out, an **Update** button appears at the top right. Click it, and StreamHub downloads the new version and restarts into it (Settings → Updates has *Check now* and an on/off switch for the automatic checks). On Android the update opens the system installer; the first time, Android asks you to allow *Install unknown apps* for StreamHub. iPhone shows that a new version is out, and you install it as before: the `.ipa` is signed with a free Apple ID for one iPhone, so it's installed with Xcode or a sideloading tool (such as AltStore or Sideloadly), and it has to be re-signed every 7 days.
 
 The Mac app is universal: it runs natively on both Apple silicon and Intel. The Windows installer carries both an x64 and an ARM64 build and installs the one that matches your PC.
 

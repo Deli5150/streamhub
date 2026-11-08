@@ -6,7 +6,7 @@
 //   npm run release -- --from ~/Downloads   files from another folder
 //
 // Build first: `npx electron-vite build && npx electron-builder --mac --win --linux`, then
-// `node scripts/steam/build-installer.mjs`, and the APK (see mobile/README.md).
+// `node scripts/steam/build-installer.mjs`, the APK and the IPA (see mobile/README.md), all in dist/.
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -24,7 +24,9 @@ const files = [
   `StreamHub-Setup-${version}.exe`,
   `StreamHub-${version}-x86_64.AppImage`,
   `StreamHub-${version}-Steam-Installer.sh`,
-  `StreamHub-${version}.apk`
+  `StreamHub-${version}.apk`,
+  // Signed for the owner's own iPhone (free Apple ID): installed from Xcode or a sideloading tool.
+  `StreamHub-${version}.ipa`
 ]
 const find = (name) => {
   const places = from ? [from] : [path.join(root, 'dist'), path.join(root, 'mobile/android/app/build/outputs/apk/release')]
