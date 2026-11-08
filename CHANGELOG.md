@@ -5,11 +5,11 @@ What changed in each version of StreamHub. Each version's downloads are on its [
 ## [1.0.8]
 
 ### New
-- **A new Home.** Home and the Channels tab are now one page. The most-watched live channels are highlighted at the top, and everyone else who's live fills the grid below them. Watch Later sits along the bottom, with your imported YouTube playlists beside it. Every channel you follow, live or not, is in a **Channels** panel that slides out from the right edge, with search and platform filters.
+- **A new Home.** Home and the Channels tab are now one page. Watch Later and your imported YouTube playlists sit side by side along the top, as carousels you can scroll through. The three most-watched live channels come next, numbered, and everyone else who's live fills a grid of tiles below them. Every channel you follow, live or not, is in a **Channels** panel that slides out from the right edge, with search and platform filters.
 - **What's new, any time.** The Updates button always shows what's new in the version you have, with a link to every version's notes.
 - **In-app updates.** StreamHub checks for new versions on launch and every few hours. Click **Update**, and the app downloads the new version and restarts into it. No installer needed on Mac, Windows, Linux (AppImage) or Steam Deck. Android downloads the update and opens the system installer. iPhone shows when a new version is out. There's also a new Updates section in Settings: *Check now*, auto-check on or off, and what's new.
 - **Theater mode in Watch Later and the Queue.** It hides the sidebar and the list so the video gets the whole window. Esc exits.
-- **Import your YouTube playlists.** Settings → YouTube playlists → *Import playlists…* lists every playlist on your account (plus Liked videos), so you pick the ones you want and confirm. They show on Home under *Your playlists*, play like Watch Later (theater mode included), keep up with changes on YouTube, and come over to your other devices with Sync with Google. They're on iPhone and Android too.
+- **Import your YouTube playlists.** Settings → YouTube playlists → *Import playlists…* lists every playlist on your account (plus Liked videos), so you pick the ones you want and confirm. They show on Home under *Your playlists* (a carousel like Watch Later's), play like Watch Later (theater mode included), keep up with changes on YouTube, and come over to your other devices with Sync with Google. They're on iPhone and Android too.
 - **More themes.** Dark: Ocean, Grape, Slate, Ember and Arctic. Light: Peach, Sage, Blush and Cloud.
 
 ### Fixed

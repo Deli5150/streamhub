@@ -1,132 +1,145 @@
-import { useEffect, useRef, useState } from 'react'
-import { BookmarkIcon, ChevronLeftIcon, ChevronRightIcon, PlayIcon, RadioIcon } from 'lucide-react'
-import type { SavedItem } from '@shared/types'
-import { savedTitle } from '../lib/watchLater'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ChevronLeftIcon, ChevronRightIcon, PlayIcon } from 'lucide-react'
+import type { Platform } from '@shared/types'
 import { PlatformDot } from './platform'
 import { Thumbnail } from './Thumbnail'
 
+/** One cover in a CoverFlow. */
+export interface Cover {
+  id: string
+  thumbnail?: string
+  title: string
+  subtitle: string
+  platform?: Platform
+  /** Drawn over the cover (a "Stream" tag, a video count). */
+  overlay?: ReactNode
+}
+
 /**
- * Cover Flow carousel of the Watch Later playlist. The centered cover faces forward and its
- * neighbours angle away (CSS 3D). Click the centered cover (or press Enter) to open the playlist
- * there; click a side cover to bring it to the middle; ←/→ and the scroll wheel move through it.
+ * Cover Flow carousel (Home's Watch Later and imported YouTube playlists). The centered cover faces
+ * forward and its neighbours angle away (CSS 3D). Click the centered cover (or press Enter) to open
+ * it; click a side cover to bring it to the middle; ←/→ and the scroll wheel move through it while
+ * the pointer is over it (so two carousels side by side don't both move).
  */
 export function CoverFlow({
-  items,
+  label,
+  covers,
   onOpen,
-  textClass,
-  shadow,
-  compact = false
+  empty
 }: {
-  items: SavedItem[]
+  label: ReactNode
+  covers: Cover[]
   onOpen(id: string): void
-  /** Heading color, matched to the home wallpaper. */
-  textClass: string
-  shadow: string
-  /** Smaller covers, for Home's bottom shelf. */
-  compact?: boolean
+  /** Shown instead when there are no covers. */
+  empty?: ReactNode
 }): React.JSX.Element {
-  const size = compact ? { cover: 'w-[200px]', stage: 'h-[124px]', step: 100 } : { cover: 'w-[280px]', stage: 'h-[180px]', step: 150 }
   const [center, setCenter] = useState(0)
-  const last = items.length - 1
+  const [hovered, setHovered] = useState(false)
+  const last = covers.length - 1
 
   useEffect(() => setCenter((c) => Math.min(c, Math.max(0, last))), [last])
 
   useEffect(() => {
+    if (!hovered) return
     const onKey = (e: KeyboardEvent): void => {
       if ((e.target as HTMLElement | null)?.closest('input, textarea')) return
       if (e.key === 'ArrowLeft') setCenter((c) => Math.max(0, c - 1))
       else if (e.key === 'ArrowRight') setCenter((c) => Math.min(last, c + 1))
-      else if (e.key === 'Enter' && items[center]) onOpen(items[center].id)
+      else if (e.key === 'Enter' && covers[center]) onOpen(covers[center].id)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [items, center, last, onOpen])
+  }, [hovered, covers, center, last, onOpen])
 
   // One wheel flick moves one cover.
   const lastWheel = useRef(0)
   const onWheel = (e: React.WheelEvent): void => {
     const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX
-    if (items.length <= 1 || Math.abs(delta) < 8 || Date.now() - lastWheel.current < 220) return
+    if (covers.length <= 1 || Math.abs(delta) < 8 || Date.now() - lastWheel.current < 220) return
     lastWheel.current = Date.now()
     setCenter((c) => (delta > 0 ? Math.min(last, c + 1) : Math.max(0, c - 1)))
   }
 
-  if (items.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-2 rounded-2xl bg-black/25 px-5 py-4 text-white/85 ring-1 ring-white/10 backdrop-blur-md">
-        <BookmarkIcon className={`${compact ? 'size-5' : 'size-7'} text-white/60`} strokeWidth={1.75} />
-        <p className="text-regular">Your Watch Later playlist is empty.</p>
-        <p className="max-w-sm text-center text-small text-white/65">Press “Save for Later” under any stream, or on a past video, and it’ll show up here.</p>
-      </div>
-    )
-  }
-
-  const active = items[Math.min(center, last)]
-  const navButton = 'absolute top-1/2 z-50 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/10 backdrop-blur-md transition-all hover:bg-black/65 disabled:opacity-0'
+  const active = covers[Math.min(center, last)]
+  const navButton =
+    'absolute top-1/2 z-50 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-white/10 backdrop-blur-md transition-all hover:bg-black/65 disabled:opacity-0'
 
   return (
-    <div className="flex w-full flex-col items-center gap-2 select-none" onWheel={onWheel}>
-      <span className={`text-strong ${textClass} ${shadow}`}>Saved · Watch Later</span>
-
-      <div className={`relative ${size.stage} w-full max-w-3xl [perspective:1200px]`}>
-        <div className="absolute inset-0 flex items-center justify-center [transform-style:preserve-3d]">
-          {items.map((item, i) => {
-            const offset = i - center
-            const abs = Math.abs(offset)
-            if (abs > 3) return null
-            const isCenter = offset === 0
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => (isCenter ? onOpen(item.id) : setCenter(i))}
-                aria-label={isCenter ? `Play ${savedTitle(item)}` : `Show ${savedTitle(item)}`}
-                className={`absolute aspect-video ${size.cover} overflow-hidden rounded-xl bg-control-subtle shadow-2xl ring-1 ring-white/10 transition-[transform,opacity] duration-300 ease-out outline-none focus-visible:ring-2 focus-visible:ring-accent`}
-                style={{
-                  transform: `translateX(${offset * size.step}px) rotateY(${isCenter ? 0 : offset > 0 ? -48 : 48}deg) scale(${isCenter ? 1 : 0.82})`,
-                  zIndex: 100 - abs,
-                  opacity: abs > 2 ? 0.25 : 1
-                }}
-              >
-                <Thumbnail src={item.thumbnail} />
-                {item.kind === 'channel' && (
-                  <span className="absolute top-1.5 left-1.5 flex h-5 items-center gap-1 rounded-md bg-black/70 px-1.5 text-small font-semibold text-white backdrop-blur-sm">
-                    <RadioIcon className="size-3 text-support-red" strokeWidth={2.5} />
-                    Stream
-                  </span>
-                )}
-                {isCenter && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <span className="flex size-12 items-center justify-center rounded-full bg-black/60 backdrop-blur-md">
-                      <PlayIcon className="ml-0.5 size-6 fill-white text-white" />
-                    </span>
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-        <button type="button" onClick={() => setCenter((c) => Math.max(0, c - 1))} disabled={center === 0} aria-label="Previous" className={`${navButton} left-1`}>
-          <ChevronLeftIcon className="size-5" />
-        </button>
-        <button type="button" onClick={() => setCenter((c) => Math.min(last, c + 1))} disabled={center >= last} aria-label="Next" className={`${navButton} right-1`}>
-          <ChevronRightIcon className="size-5" />
-        </button>
-      </div>
-
-      {/* Glass chip keeps the label legible over any wallpaper. */}
-      <div className={`flex ${compact ? 'min-h-[40px]' : 'min-h-[44px]'} items-center justify-center`}>
-        <div className="flex max-w-xl flex-col items-center gap-0.5 rounded-2xl bg-black/40 px-3.5 py-1.5 text-center ring-1 ring-white/10 backdrop-blur-md">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <PlatformDot platform={active.platform} />
-            <span className="line-clamp-1 text-strong text-white">{savedTitle(active)}</span>
+    <div
+      className="flex w-full min-w-0 flex-col items-center gap-2 select-none"
+      onWheel={covers.length ? onWheel : undefined}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+    >
+      <div className="flex w-full items-center gap-1.5 px-1 text-small-strong text-secondary">{label}</div>
+      {!active ? (
+        <div className="flex h-[168px] w-full items-center justify-center">{empty}</div>
+      ) : (
+        <>
+          {/* Clipped, so side covers stay inside the panel. */}
+          <div className="relative h-[124px] w-full overflow-hidden [perspective:1200px]">
+            <div className="absolute inset-0 flex items-center justify-center [transform-style:preserve-3d]">
+              {covers.map((cover, i) => {
+                const offset = i - center
+                const abs = Math.abs(offset)
+                if (abs > 3) return null
+                const isCenter = offset === 0
+                return (
+                  <button
+                    key={cover.id}
+                    type="button"
+                    onClick={() => (isCenter ? onOpen(cover.id) : setCenter(i))}
+                    aria-label={isCenter ? `Play ${cover.title}` : `Show ${cover.title}`}
+                    className="absolute aspect-video w-[200px] overflow-hidden rounded-xl bg-control-subtle shadow-xl ring-1 ring-white/10 transition-[transform,opacity] duration-300 ease-out outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    style={{
+                      transform: `translateX(${offset * 100}px) rotateY(${isCenter ? 0 : offset > 0 ? -48 : 48}deg) scale(${isCenter ? 1 : 0.82})`,
+                      zIndex: 100 - abs,
+                      opacity: abs > 2 ? 0.25 : 1
+                    }}
+                  >
+                    <Thumbnail src={cover.thumbnail} />
+                    {cover.overlay}
+                    {isCenter && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/15 opacity-0 transition-opacity hover:opacity-100">
+                        <span className="flex size-11 items-center justify-center rounded-full bg-black/60 backdrop-blur-md">
+                          <PlayIcon className="ml-0.5 size-5 fill-white text-white" />
+                        </span>
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => setCenter((c) => Math.max(0, c - 1))}
+              disabled={center === 0}
+              aria-label="Previous"
+              className={`${navButton} left-1`}
+            >
+              <ChevronLeftIcon className="size-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCenter((c) => Math.min(last, c + 1))}
+              disabled={center >= last}
+              aria-label="Next"
+              className={`${navButton} right-1`}
+            >
+              <ChevronRightIcon className="size-5" />
+            </button>
           </div>
-          <span className="text-small text-white/70">
-            {active.kind === 'vod' ? `${active.displayName} · ` : 'Live stream · '}
-            {Math.min(center, last) + 1} / {items.length}
-          </span>
-        </div>
-      </div>
+          <div className="flex w-full min-w-0 flex-col items-center gap-0.5 px-2 text-center">
+            <div className="flex max-w-full min-w-0 items-center gap-1.5">
+              {active.platform && <PlatformDot platform={active.platform} />}
+              <span className="truncate text-strong text-primary">{active.title}</span>
+            </div>
+            <span className="max-w-full truncate text-small text-tertiary">
+              {active.subtitle} · {Math.min(center, last) + 1} / {covers.length}
+            </span>
+          </div>
+        </>
+      )}
     </div>
   )
 }
