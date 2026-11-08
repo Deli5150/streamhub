@@ -39,6 +39,8 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
   const [page, setPage] = useState<ChannelPageData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<MediaCategory>('streams')
+  // Set once you pick a tab, so the page never switches tabs on you after that.
+  const pickedTab = useRef(false)
   const [playing, setPlaying] = useState<MediaItem | null>(null)
   const [loadingMore, setLoadingMore] = useState<MediaCategory | null>(null)
   const [clipSort, setClipSort] = useState<'newest' | 'oldest'>('newest')
@@ -50,6 +52,7 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
     setPage(null)
     setError(null)
     setTab('streams')
+    pickedTab.current = false
     setPlaying(null)
     const load = (): void => {
       window.api.getChannelPage(channel.key).then(
@@ -69,6 +72,11 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
       off()
     }
   }, [channel.key])
+
+  // A channel with no past streams but with videos opens on Videos.
+  useEffect(() => {
+    if (!pickedTab.current && page?.hasVideos && page.streams.length === 0 && page.videos.length > 0) setTab('videos')
+  }, [page])
 
   const loadMore = async (category: MediaCategory): Promise<void> => {
     const cursor = page?.cursors[category]
@@ -230,7 +238,10 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
                 key={t.id}
                 role="tab"
                 aria-selected={tab === t.id}
-                onClick={() => setTab(t.id)}
+                onClick={() => {
+                  pickedTab.current = true
+                  setTab(t.id)
+                }}
                 className={`flex h-7 items-center rounded-md px-3 text-small-strong transition-colors ${
                   tab === t.id ? 'bg-control-active text-primary shadow-sm' : 'text-secondary hover:text-primary'
                 }`}

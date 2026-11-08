@@ -47,6 +47,8 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
   const [page, setPage] = useState<ChannelPageData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<MediaCategory>('streams')
+  // Set once you pick a tab, so the page never switches tabs on you after that.
+  const pickedTab = useRef(false)
   const [playing, setPlaying] = useState<MediaItem | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [clipSort, setClipSort] = useState<'newest' | 'oldest'>('newest')
@@ -76,6 +78,11 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
       off()
     }
   }, [channel.key])
+
+  // A channel with no past streams but with videos opens on Videos.
+  useEffect(() => {
+    if (!pickedTab.current && page?.hasVideos && page.streams.length === 0 && page.videos.length > 0) setTab('videos')
+  }, [page])
 
   // Guards against asking twice while a batch is on its way (state updates land a frame later).
   const loadingRef = useRef(false)
@@ -220,7 +227,10 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
               key={t.id}
               label={`${t.label}${page ? ` ${(t.id === 'clips' ? page.clips : page[t.id]).length}${page.cursors[t.id] ? '+' : ''}` : ''}`}
               active={tab === t.id}
-              onPress={() => setTab(t.id)}
+              onPress={() => {
+                pickedTab.current = true
+                setTab(t.id)
+              }}
             />
           ))}
         </ScrollView>
