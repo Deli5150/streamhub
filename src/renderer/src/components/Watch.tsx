@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import type { Channel, LiveInfo } from '@shared/types'
 import { channelPageUrl, chatUrl, embedUrl } from '@shared/urls'
-import { formatViewers, uptime, useChannel, useUi } from '../store'
+import { formatViewers, uptime, useChannel, useTheaterEsc, useUi } from '../store'
 import { ChannelAvatar } from './ChannelAvatar'
 import { groupOf } from '../lib/combined'
 import { openPipFor } from './channelMenu'
@@ -53,14 +53,7 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
   const theater = useUi((s) => s.theater)
   const setTheater = (on: boolean): void => useUi.getState().set({ theater: on })
   const showChat = chatOpen && !theater
-  useEffect(() => {
-    if (!theater) return
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') useUi.getState().set({ theater: false })
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [theater])
+  useTheaterEsc(theater)
   // Combined channels: switch which member's stream plays and whose chat shows (independently).
   const members = useLiveMembers(channel)
   const [videoKey, setVideoKey] = useState(channel.key)

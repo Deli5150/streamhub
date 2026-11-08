@@ -10,6 +10,10 @@ const iosUrlScheme = iosClientId ? `com.googleusercontent.apps.${iosClientId.rep
 // with your own Apple ID, set STREAMHUB_IOS_BUNDLE_ID (e.g. com.yourname.streamhub) and build again.
 const iosBundleId = process.env.STREAMHUB_IOS_BUNDLE_ID || 'app.streamhub'
 
+// Android installs an update over the app only when its versionCode isn't lower: 1.2.3 → 10203.
+const [major, minor, patch] = desktop.version.split('.').map(Number)
+const versionCode = major * 10000 + minor * 100 + patch
+
 const config: ExpoConfig = {
   name: 'StreamHub',
   slug: 'streamhub',
@@ -32,6 +36,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'app.streamhub',
+    versionCode,
     adaptiveIcon: {
       backgroundColor: '#0d1117',
       foregroundImage: './assets/android-icon-foreground.png',

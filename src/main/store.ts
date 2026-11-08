@@ -2,7 +2,7 @@ import { app, safeStorage } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { emptyMeta, type SyncMeta } from '@shared/sync'
-import type { Channel, LiveInfo, Platform, SavedItem, Settings } from '@shared/types'
+import type { Channel, ImportedPlaylist, LiveInfo, Platform, SavedItem, Settings } from '@shared/types'
 
 interface Data {
   follows: Partial<Record<Platform, Channel[]>>
@@ -16,6 +16,8 @@ interface Data {
   settings: Partial<Settings>
   /** Watch Later playlist (see main/watchLater.ts). */
   watchLater: SavedItem[]
+  /** Imported YouTube playlists (see ytPlaylists.ts). */
+  ytPlaylists: ImportedPlaylist[]
   /** base64 of safeStorage-encrypted JSON values */
   secrets: Record<string, string>
   /** Sync with Google bookkeeping (see sync.ts). */
@@ -37,6 +39,7 @@ const defaults = (): Data => ({
   liveCache: { at: 0, live: {} },
   settings: {},
   watchLater: [],
+  ytPlaylists: [],
   secrets: {},
   syncMeta: emptyMeta()
 })

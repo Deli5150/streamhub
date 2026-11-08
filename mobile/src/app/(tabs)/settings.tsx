@@ -1,13 +1,15 @@
 import { useState } from 'react'
+import { router } from 'expo-router'
 import { Platform as OS, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Constants from 'expo-constants'
 import { Ionicons } from '@expo/vector-icons'
-import { PLATFORM_LABEL, type AccountInfo, type Platform, type SyncStatus } from '@shared/types'
+import { PLATFORM_LABEL, type AccountInfo, type Platform, type SyncStatus, type UpdateStatus } from '@shared/types'
 import { DEFAULT_THEME_ID, THEMES } from '@shared/themes'
 import { actions, useApp } from '../../lib/hub'
 import { syncNow, syncSignIn, syncSignOut } from '../../lib/sync'
-import { Button, DOCK_SPACE, Group, GroupRow } from '../../ui/components'
+import { checkForUpdates, downloadUpdate, installUpdate } from '../../lib/updater'
+import { Button, DOCK_SPACE, Group, GroupRow, IconButton } from '../../ui/components'
 import { WallpaperSettings } from '../../ui/WallpaperSettings'
 import { PLATFORM_COLOR, errorMessage, useColors } from '../../ui/theme'
 
@@ -26,16 +28,26 @@ export default function SettingsScreen(): React.JSX.Element {
   const c = useColors()
   const insets = useSafeAreaInsets()
   return (
-    <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 16, paddingBottom: insets.bottom + DOCK_SPACE + 16 }}>
+    <ScrollView
+      style={{ backgroundColor: c.bg }}
+      contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 16, paddingBottom: insets.bottom + DOCK_SPACE + 16 }}
+    >
       <Text style={[styles.title, { color: c.fg }]}>Settings</Text>
 
       <Text style={[styles.heading, { color: c.fg2 }]}>SYNC WITH GOOGLE</Text>
       <SyncCard sync={app.sync} />
 
       <Text style={[styles.heading, { color: c.fg2 }]}>ACCOUNTS</Text>
-      <Text style={[styles.intro, { color: c.fg3 }]}>Sign in to each platform once. StreamHub keeps you signed in and keeps the channels you follow in sync.</Text>
+      <Text style={[styles.intro, { color: c.fg3 }]}>
+        Sign in to each platform once. StreamHub keeps you signed in and keeps the channels you follow in sync.
+      </Text>
       {app.accounts.map((a) => (
-        <AccountCard key={a.platform} account={a} syncing={app.syncing.includes(a.platform)} count={app.channels.filter((ch) => ch.platform === a.platform).length} />
+        <AccountCard
+          key={a.platform}
+          account={a}
+          syncing={app.syncing.includes(a.platform)}
+          count={app.channels.filter((ch) => ch.platform === a.platform).length}
+        />
       ))}
 
       <Text style={[styles.heading, { color: c.fg2 }]}>NOTIFICATIONS</Text>
@@ -52,9 +64,18 @@ export default function SettingsScreen(): React.JSX.Element {
         </GroupRow>
       </Group>
 
+      <Text style={[styles.heading, { color: c.fg2 }]}>YOUTUBE PLAYLISTS</Text>
+      <PlaylistsCard />
+
       <Text style={[styles.heading, { color: c.fg2 }]}>THEME</Text>
       <View style={styles.swatches}>
-        <Swatch id={DEFAULT_THEME_ID} name="System" bg={c.dark ? '#1c1c1e' : '#ffffff'} fg={c.dark ? '#f5f5f7' : '#1c1c1e'} accent={c.dark ? '#0a84ff' : '#007aff'} />
+        <Swatch
+          id={DEFAULT_THEME_ID}
+          name="System"
+          bg={c.dark ? '#1c1c1e' : '#ffffff'}
+          fg={c.dark ? '#f5f5f7' : '#1c1c1e'}
+          accent={c.dark ? '#0a84ff' : '#007aff'}
+        />
         {THEMES.map((t) => (
           <Swatch key={t.id} id={t.id} name={t.name} bg={t.background} fg={t.foreground} accent={t.accent} />
         ))}
@@ -62,6 +83,9 @@ export default function SettingsScreen(): React.JSX.Element {
 
       <Text style={[styles.heading, { color: c.fg2 }]}>WALLPAPER</Text>
       <WallpaperSettings />
+
+      <Text style={[styles.heading, { color: c.fg2 }]}>UPDATES</Text>
+      <UpdatesCard update={app.update} checkUpdates={app.settings.checkUpdates} />
 
       <Text style={[styles.version, { color: c.fg3 }]}>StreamHub {Constants.expoConfig?.version ?? ''}</Text>
     </ScrollView>
@@ -72,8 +96,16 @@ function Swatch({ id, name, bg, fg, accent }: { id: string; name: string; bg: st
   const c = useColors()
   const active = useApp((s) => s.app?.settings.theme === id)
   return (
-    <Pressable onPress={() => actions.updateSettings({ theme: id })} style={styles.swatch} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`${name} theme`}>
-      <View style={[styles.swatchBox, { backgroundColor: bg, borderColor: active ? c.accent : c.separator, borderWidth: active ? 2.5 : StyleSheet.hairlineWidth }]}>
+    <Pressable
+      onPress={() => actions.updateSettings({ theme: id })}
+      style={styles.swatch}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${name} theme`}
+    >
+      <View
+        style={[styles.swatchBox, { backgroundColor: bg, borderColor: active ? c.accent : c.separator, borderWidth: active ? 2.5 : StyleSheet.hairlineWidth }]}
+      >
         <Text style={{ color: fg, fontWeight: '700' }}>Aa</Text>
         <View style={[styles.swatchAccent, { backgroundColor: accent }]} />
       </View>
@@ -123,13 +155,26 @@ function AccountCard({ account: a, syncing, count }: { account: AccountInfo; syn
       <View style={[styles.actions, { borderTopColor: c.separator }]}>
         {a.connected ? (
           <>
-            <Button title={syncing ? 'Syncing…' : 'Sync'} icon="refresh" variant="filled" busy={syncing} disabled={busy} onPress={() => run(() => actions.refresh())} />
+            <Button
+              title={syncing ? 'Syncing…' : 'Sync'}
+              icon="refresh"
+              variant="filled"
+              busy={syncing}
+              disabled={busy}
+              onPress={() => run(() => actions.refresh())}
+            />
             {a.error ? <Button title="Reconnect" variant="accent" color={color} disabled={busy} onPress={() => run(() => actions.login(a.platform))} /> : null}
             <View style={{ flex: 1 }} />
             <Button title="Disconnect" variant="danger" disabled={busy} onPress={() => run(() => actions.logout(a.platform))} />
           </>
         ) : (
-          <Button title={busy ? 'Signing in…' : `Sign in with ${PLATFORM_LABEL[a.platform]}`} variant="accent" color={color} busy={busy} onPress={() => run(() => actions.login(a.platform))} />
+          <Button
+            title={busy ? 'Signing in…' : `Sign in with ${PLATFORM_LABEL[a.platform]}`}
+            variant="accent"
+            color={color}
+            busy={busy}
+            onPress={() => run(() => actions.login(a.platform))}
+          />
         )}
       </View>
       {shownError ? (
@@ -137,6 +182,91 @@ function AccountCard({ account: a, syncing, count }: { account: AccountInfo; syn
           <Ionicons name="warning" size={16} color={c.danger} />
           <Text style={{ color: c.danger, flex: 1, fontSize: 13 }}>{shownError}</Text>
         </View>
+      ) : null}
+    </Group>
+  )
+}
+
+/** Settings → YouTube playlists: import from the YouTube account, refresh or remove imported ones. */
+function PlaylistsCard(): React.JSX.Element {
+  const c = useColors()
+  const connected = useApp((s) => Boolean(s.app?.accounts.find((a) => a.platform === 'youtube')?.connected))
+  const playlists = useApp((s) => s.app?.ytPlaylists ?? [])
+  const [busy, setBusy] = useState<string | null>(null)
+  const run = (id: string, op: Promise<void> | void): void => {
+    setBusy(id)
+    Promise.resolve(op)
+      .catch(() => {})
+      .finally(() => setBusy(null))
+  }
+  return (
+    <Group
+      footer={
+        connected
+          ? 'Imported playlists show on Live under Watch Later and stay up to date with YouTube.'
+          : 'Sign in to YouTube under Accounts first, then import your playlists here.'
+      }
+    >
+      {playlists.map((p, i) => (
+        <GroupRow key={p.id} first={i === 0} label={p.title} detail={`${p.items.length} ${p.items.length === 1 ? 'video' : 'videos'}`}>
+          <View style={{ flexDirection: 'row', gap: 4 }}>
+            <IconButton
+              icon={busy === p.id ? 'hourglass-outline' : 'refresh'}
+              label={`Refresh ${p.title}`}
+              onPress={() => busy === null && run(p.id, actions.playlists.refresh(p.id))}
+            />
+            <IconButton icon="trash-outline" label={`Remove ${p.title}`} onPress={() => busy === null && run(p.id, actions.playlists.remove(p.id))} />
+          </View>
+        </GroupRow>
+      ))}
+      <View style={[styles.actions, playlists.length ? { borderTopColor: c.separator } : { borderTopWidth: 0 }]}>
+        <Button title="Import playlists…" icon="download-outline" variant="accent" disabled={!connected} onPress={() => router.push('/import-playlists')} />
+      </View>
+    </Group>
+  )
+}
+
+/** Settings → Updates (src/lib/updater.ts). */
+function UpdatesCard({ update: u, checkUpdates }: { update: UpdateStatus; checkUpdates: boolean }): React.JSX.Element {
+  const c = useColors()
+  const detail =
+    u.state === 'checking'
+      ? 'Checking…'
+      : u.state === 'latest'
+        ? 'You’re up to date.'
+        : u.state === 'available'
+          ? `StreamHub ${u.version} is available.${u.inApp ? '' : ' Install it the way you installed this one.'}`
+          : u.state === 'downloading'
+            ? `Downloading StreamHub ${u.version}… ${Math.round((u.progress ?? 0) * 100)}%`
+            : u.state === 'ready'
+              ? `StreamHub ${u.version} is downloaded. Install opens Android’s installer.`
+              : u.state === 'error'
+                ? (u.error ?? 'Something went wrong.')
+                : `You have StreamHub ${u.current}.`
+  return (
+    <Group footer={u.error && u.state !== 'error' ? u.error : undefined}>
+      <GroupRow first label="Check automatically" detail="When StreamHub opens, at most every few hours">
+        <Switch value={checkUpdates} onValueChange={(v) => actions.updateSettings({ checkUpdates: v })} />
+      </GroupRow>
+      <GroupRow label="StreamHub updates" detail={detail}>
+        {u.state === 'available' ? (
+          <Button title={u.inApp ? 'Update' : 'Get it'} variant="accent" onPress={() => void downloadUpdate()} />
+        ) : u.state === 'ready' ? (
+          <Button title="Install" variant="accent" onPress={installUpdate} />
+        ) : (
+          <Button
+            title="Check"
+            icon="refresh"
+            variant="filled"
+            busy={u.state === 'checking' || u.state === 'downloading'}
+            onPress={() => void checkForUpdates()}
+          />
+        )}
+      </GroupRow>
+      {u.notes && u.version && ['available', 'ready'].includes(u.state) ? (
+        <Text style={{ color: c.fg3, fontSize: 13, padding: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.separator }} numberOfLines={12}>
+          {u.notes.replace(/^#+\s*/gm, '').replace(/\*\*(.+?)\*\*/g, '$1')}
+        </Text>
       ) : null}
     </Group>
   )

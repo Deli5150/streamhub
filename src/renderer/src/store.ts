@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { create } from 'zustand'
 import type { AppState, Channel, CombinedGroup, LiveInfo, Platform } from '@shared/types'
 
@@ -11,7 +12,15 @@ export type View =
   | { kind: 'playlist'; startId?: string }
   /** Video queue (lib/queue.ts), in the same player as Watch Later */
   | { kind: 'queue' }
+  /** An imported YouTube playlist (Settings → YouTube playlists), starting at `startId` */
+  | { kind: 'ytPlaylist'; id: string; startId?: string }
   | { kind: 'accounts' }
+
+/** A short message at the bottom of the window, with an optional button. */
+export interface Toast {
+  text: string
+  action?: { label: string; run(): void }
+}
 
 export interface CombineRequest {
   /** Group being edited, or null to create one. */
@@ -32,12 +41,15 @@ interface UiState {
   /** Player URL currently playing in picture-in-picture (in-app copies are grayed out and silent). */
   pip: string | null
   collapsed: boolean
-  /** Theater mode for live streams: no sidebar and no chat, just the player. */
+  /** Theater mode for live streams and playlists: no sidebar, chat or list, just the player. */
   theater: boolean
   /** Big Picture mode (components/bigpicture): the full-screen, controller-driven interface. */
   bigPicture: boolean
   filter: Platform | 'all'
   search: string
+  toast: (Toast & { id: number }) | null
+  /** The YouTube playlist import pane (Settings → YouTube playlists) is open. */
+  importPlaylists: boolean
   setApp(s: AppState): void
   go(v: View): void
   addToMulti(key: string): void
@@ -45,7 +57,8 @@ interface UiState {
   setMulti(keys: string[]): void
   reorderMulti(sourceKey: string, targetKey: string): void
   focus(key: string): void
-  set(p: Partial<Pick<UiState, 'collapsed' | 'theater' | 'bigPicture' | 'filter' | 'search' | 'multiPicker' | 'combine' | 'pip'>>): void
+  showToast(t: Toast): void
+  set(p: Partial<Pick<UiState, 'collapsed' | 'theater' | 'bigPicture' | 'filter' | 'search' | 'multiPicker' | 'combine' | 'pip' | 'importPlaylists'>>): void
 }
 
 export const MAX_MULTI = 6
@@ -59,7 +72,7 @@ function sidebarFor(view: View, multiCount: number): { collapsed: boolean } | Re
   if (view.kind === 'home') return { collapsed: false }
   if (view.kind === 'channels') return { collapsed: true }
   if (view.kind === 'multi' && multiCount > 0) return { collapsed: true }
-  if (view.kind === 'playlist' || view.kind === 'queue') return { collapsed: true }
+  if (view.kind === 'playlist' || view.kind === 'queue' || view.kind === 'ytPlaylist') return { collapsed: true }
   return {}
 }
 
@@ -82,6 +95,8 @@ export const useUi = create<UiState>((set) => ({
   bigPicture: false,
   filter: 'all',
   search: '',
+  toast: null,
+  importPlaylists: false,
   setApp: (app) => set({ app }),
   go: (view) => set((s) => ({ view, ...persistCollapsed(sidebarFor(view, s.multi.length)) })),
   addToMulti: (key) =>
@@ -116,8 +131,21 @@ export const useUi = create<UiState>((set) => ({
       return { multi }
     }),
   focus: (focused) => set({ focused }),
+  showToast: (t) => set({ toast: { ...t, id: Date.now() } }),
   set: (p) => set(persistCollapsed(p))
 }))
+
+/** Esc leaves theater mode while `on` (the live player and the playlist players). */
+export function useTheaterEsc(on: boolean): void {
+  useEffect(() => {
+    if (!on) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') useUi.getState().set({ theater: false })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [on])
+}
 
 export function useChannel(key: string | null | undefined): { channel?: Channel; live?: LiveInfo } {
   const app = useUi((s) => s.app)

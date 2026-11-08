@@ -127,3 +127,18 @@ describe('logins', () => {
     expect(phone.jar.twitch?.[0].value).toBe('token-1')
   })
 })
+
+describe('imported YouTube playlists', () => {
+  it('sync as one field, newest list winning', () => {
+    const playlist = { id: 'PL1', title: 'Mix', items: [], importedAt: 1, refreshedAt: 1 }
+    const data: SyncedData = { settings: {}, muted: [], follows: {}, ytPlaylists: [playlist] }
+    const meta = emptyMeta()
+    meta.fieldAt.ytPlaylists = 200
+    const local = localDoc(data, [], meta)
+    expect(local.fields.ytPlaylists).toEqual({ at: 200, value: [playlist] })
+    const remote: SyncDoc = { ...emptyDoc(), fields: { ytPlaylists: { at: 300, value: [] } } }
+    const merged = mergeDocs(local, remote)
+    expect(incomingFields(local, merged)).toEqual({ ytPlaylists: { at: 300, value: [] } })
+    expect(fromFields({ ytPlaylists: [] }, data).ytPlaylists).toEqual([])
+  })
+})

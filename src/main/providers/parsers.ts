@@ -1,6 +1,6 @@
 // Pure parsers for scraped / unofficial responses. Kept free of Electron imports so they can be unit tested.
 import * as cheerio from 'cheerio'
-import { channelKey, type AboutPanel, type Channel, type ChannelAbout, type LiveInfo, type MediaItem, type TogetherChannel, type VideoChapter } from '@shared/types'
+import { channelKey, type AboutPanel, type Channel, type ChannelAbout, type LiveInfo, type MediaItem, type SavedItem, type TogetherChannel, type VideoChapter, type YouTubePlaylistSummary } from '@shared/types'
 import { parseCount, rumbleEmbedId } from '@shared/urls'
 
 // ---------- YouTube RSS ----------
@@ -698,6 +698,174 @@ export function parseYouTubeSubscriptions(res: YouTubeSubscriptionsResponse): { 
     return [{ key: channelKey('youtube', id), platform: 'youtube', id, displayName: it.snippet?.title || id, avatarUrl: t?.medium?.url || t?.default?.url || t?.high?.url }]
   })
   return { channels, next: res.nextPageToken || null }
+}
+
+// ---------- YouTube playlists (Settings → YouTube playlists) ----------
+
+type YouTubeThumbs = Partial<Record<'default' | 'medium' | 'high' | 'standard' | 'maxres', { url?: string }>>
+const bestThumb = (t?: YouTubeThumbs): string | undefined => t?.medium?.url || t?.high?.url || t?.standard?.url || t?.maxres?.url || t?.default?.url
+
+/** `youtube/v3/playlists?part=snippet,contentDetails&mine=true`. */
+export interface YouTubePlaylistsResponse {
+  nextPageToken?: string
+  items?: Array<{ id?: string; snippet?: { title?: string; thumbnails?: YouTubeThumbs }; contentDetails?: { itemCount?: number } }>
+}
+
+export function parseYouTubePlaylists(res: YouTubePlaylistsResponse): { playlists: YouTubePlaylistSummary[]; next: string | null } {
+  const playlists = (res.items ?? []).flatMap((it): YouTubePlaylistSummary[] =>
+    it.id ? [{ id: it.id, title: it.snippet?.title || 'Untitled playlist', thumbnail: bestThumb(it.snippet?.thumbnails), count: it.contentDetails?.itemCount }] : []
+  )
+  return { playlists, next: res.nextPageToken || null }
+}
+
+/** `youtube/v3/playlistItems?part=snippet,status&playlistId=…`. */
+export interface YouTubePlaylistItemsResponse {
+  nextPageToken?: string
+  items?: Array<{
+    snippet?: {
+      title?: string
+      thumbnails?: YouTubeThumbs
+      videoOwnerChannelId?: string
+      videoOwnerChannelTitle?: string
+      resourceId?: { videoId?: string }
+    }
+    status?: { privacyStatus?: string }
+  }>
+}
+
+/** A playlist video as a Watch Later-style entry (same id and player URL as the channel pages' videos). */
+export function youTubePlaylistEntry(v: { videoId: string; title: string; channelId?: string; channelTitle?: string; thumbnail?: string; durationText?: string }): Omit<SavedItem, 'savedAt'> {
+  return {
+    id: `vod:youtube:${v.videoId}`,
+    kind: 'vod',
+    channelKey: channelKey('youtube', v.channelId || 'unknown'),
+    platform: 'youtube',
+    displayName: v.channelTitle || 'YouTube',
+    title: v.title,
+    thumbnail: v.thumbnail || `https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg`,
+    media: {
+      id: v.videoId,
+      kind: 'video',
+      title: v.title,
+      thumbnail: v.thumbnail || `https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg`,
+      durationText: v.durationText,
+      playUrl: `https://www.youtube.com/embed/${v.videoId}?autoplay=1`
+    }
+  }
+}
+
+/** A playlist page's playable videos (private and deleted ones are left out). */
+export function parseYouTubePlaylistItems(res: YouTubePlaylistItemsResponse): { items: Array<Omit<SavedItem, 'savedAt'>>; next: string | null } {
+  const items = (res.items ?? []).flatMap((it) => {
+    const s = it.snippet
+    const videoId = s?.resourceId?.videoId
+    const privacy = it.status?.privacyStatus
+    if (!videoId || privacy === 'private' || privacy === 'privacyStatusUnspecified' || !s?.videoOwnerChannelId) return []
+    return [youTubePlaylistEntry({ videoId, title: s.title || 'Untitled', channelId: s.videoOwnerChannelId, channelTitle: s.videoOwnerChannelTitle?.replace(/ - Topic$/, ''), thumbnail: bestThumb(s.thumbnails) })]
+  })
+  return { items, next: res.nextPageToken || null }
+}
+
+const ytText = (t: unknown): string | undefined => {
+  const o = t as { simpleText?: string; runs?: Array<{ text: string }>; content?: string } | undefined
+  return o?.simpleText ?? o?.runs?.map((r) => r.text).join('') ?? o?.content
+}
+
+/** Visits every object in YouTube's initial data that's under one of `keys`. */
+function eachRenderer(data: unknown, keys: string[], fn: (key: string, item: Record<string, unknown>) => void): void {
+  const visit = (node: unknown, depth: number): void => {
+    if (!node || typeof node !== 'object' || depth > 80) return
+    if (Array.isArray(node)) return node.forEach((n) => visit(n, depth + 1))
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      if (keys.includes(k) && v && typeof v === 'object' && !Array.isArray(v)) fn(k, v as Record<string, unknown>)
+      else visit(v, depth + 1)
+    }
+  }
+  visit(data, 0)
+}
+
+/** youtube.com/feed/playlists (signed in): the account's playlists, old grid and new "lockup" shapes. */
+export function parseYouTubePlaylistsPage(data: unknown): YouTubePlaylistSummary[] {
+  const out = new Map<string, YouTubePlaylistSummary>()
+  eachRenderer(data, ['gridPlaylistRenderer', 'playlistRenderer', 'lockupViewModel'], (key, item) => {
+    const json = JSON.stringify(item)
+    if (key === 'lockupViewModel') {
+      if (item.contentType !== 'LOCKUP_CONTENT_TYPE_PLAYLIST' || typeof item.contentId !== 'string') return
+      const meta = (item.metadata as { lockupMetadataViewModel?: { title?: unknown } } | undefined)?.lockupMetadataViewModel
+      const count = json.match(/"text":"([\d,]+) (?:videos?|episodes?)"/)?.[1]
+      out.set(item.contentId, {
+        id: item.contentId,
+        title: ytText(meta?.title) || 'Untitled playlist',
+        thumbnail: json.match(/"url":"(https:\/\/i\.ytimg\.com\/[^"]+)"/)?.[1],
+        count: count ? Number(count.replace(/,/g, '')) : undefined
+      })
+      return
+    }
+    const id = item.playlistId as string | undefined
+    if (!id) return
+    const count = ytText(item.videoCountShortText) ?? ytText(item.videoCountText) ?? (item.videoCount as string | undefined)
+    out.set(id, {
+      id,
+      title: ytText(item.title) || 'Untitled playlist',
+      thumbnail: json.match(/"url":"(https:\/\/i\.ytimg\.com\/[^"]+)"/)?.[1],
+      count: count ? Number(String(count).replace(/[^\d]/g, '')) || undefined : undefined
+    })
+  })
+  return [...out.values()]
+}
+
+/** youtube.com/playlist?list=… : its title and playable videos (the new "lockup" shape and the older renderer). */
+export function parseYouTubePlaylistPage(data: unknown): { title?: string; items: Array<Omit<SavedItem, 'savedAt'>> } {
+  const items: Array<Omit<SavedItem, 'savedAt'>> = []
+  const seen = new Set<string>()
+  eachRenderer(data, ['playlistVideoRenderer', 'lockupViewModel'], (key, item) => {
+    if (key === 'lockupViewModel') {
+      const videoId = item.contentId as string | undefined
+      if (item.contentType !== 'LOCKUP_CONTENT_TYPE_VIDEO' || !videoId || seen.has(videoId)) return
+      const json = JSON.stringify(item)
+      const channelId = json.match(/"browseId":"(UC[\w-]{22})"/)?.[1]
+      if (!channelId) return
+      const meta = (item.metadata as { lockupMetadataViewModel?: { title?: unknown; metadata?: unknown } } | undefined)?.lockupMetadataViewModel
+      const rows = (meta?.metadata as { contentMetadataViewModel?: { metadataRows?: Array<{ metadataParts?: Array<{ text?: unknown }> }> } } | undefined)
+        ?.contentMetadataViewModel?.metadataRows
+      seen.add(videoId)
+      items.push(
+        youTubePlaylistEntry({
+          videoId,
+          title: ytText(meta?.title) || 'Untitled',
+          channelId,
+          channelTitle: ytText(rows?.[0]?.metadataParts?.[0]?.text),
+          durationText: json.match(/"text":"(\d+(?::\d{2}){1,2})"/)?.[1]
+        })
+      )
+      return
+    }
+    const videoId = item.videoId as string | undefined
+    // Deleted and private videos have no playable flag (and no channel).
+    if (!videoId || seen.has(videoId) || item.isPlayable === false) return
+    const byline = (item.shortBylineText as { runs?: Array<{ text?: string; navigationEndpoint?: { browseEndpoint?: { browseId?: string } } }> } | undefined)?.runs?.[0]
+    const channelId = byline?.navigationEndpoint?.browseEndpoint?.browseId
+    if (!channelId) return
+    seen.add(videoId)
+    const thumbs = (item.thumbnail as { thumbnails?: Array<{ url?: string }> } | undefined)?.thumbnails
+    items.push(
+      youTubePlaylistEntry({
+        videoId,
+        title: ytText(item.title) || 'Untitled',
+        channelId,
+        channelTitle: byline?.text,
+        thumbnail: thumbs?.[Math.min(1, thumbs.length - 1)]?.url?.split('?')[0],
+        durationText: ytText(item.lengthText)
+      })
+    )
+  })
+  let title: string | undefined
+  eachRenderer(data, ['playlistHeaderRenderer', 'pageHeaderViewModel'], (_, h) => (title ??= ytText(h.title) || (typeof h.title === 'string' ? h.title : undefined)))
+  if (!title) {
+    const meta = (data as { metadata?: { playlistMetadataRenderer?: { title?: string } } } | undefined)?.metadata?.playlistMetadataRenderer?.title
+    title = meta
+  }
+  return { title, items }
 }
 
 /** YouTube's `navigation/resolve_url` answer for youtube.com/channel/<id>/live. */

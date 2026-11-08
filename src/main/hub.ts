@@ -6,8 +6,10 @@ import { getSettings, SHORTCUT_DEFAULTS } from './settings'
 import { AuthError } from './net'
 import { store } from './store'
 import { startSync, syncStatus } from './sync'
+import { updateStatus } from './updater'
 import { getChannelPage as cachedChannelPage, startPreloading, type LoadPage } from './channelPages'
 import { getSaved, savedOps, syncSaved } from './watchLater'
+import { getPlaylists, importPlaylists, listPlaylists, PLAYLIST_REFRESH_MS, refreshPlaylists, removePlaylist } from './ytPlaylists'
 import { kick } from './providers/kick'
 import { rumble } from './providers/rumble'
 import { twitch } from './providers/twitch'
@@ -48,7 +50,9 @@ export function state(): AppState {
     settings: getSettings(),
     shortcutDefaults: SHORTCUT_DEFAULTS,
     watchLater: getSaved(),
+    ytPlaylists: getPlaylists(),
     sync: syncStatus(),
+    update: updateStatus(),
     accounts: PLATFORMS.map((p) => ({
       platform: p,
       connected: providers[p].isConnected(),
@@ -208,6 +212,8 @@ export function start(window: BrowserWindow): void {
     if (followsStale(p)) syncFollows(p)
   }
   void pollSignedOutMembers(true)
+  // Imported YouTube playlists catch up with changes made on YouTube.
+  void refreshPlaylists(providers.youtube, undefined, PLAYLIST_REFRESH_MS).then(emit, () => {})
   startSync(emit, (p) => void syncFollows(p))
   timer = setInterval(() => {
     for (const p of PLATFORMS) {
@@ -295,6 +301,20 @@ export const actions = {
     toggle: (item: Parameters<typeof savedOps.toggle>[0]) => (savedOps.toggle(item), emit()),
     remove: (id: string) => (savedOps.remove(id), emit()),
     reorder: (sourceId: string, targetId: string) => (savedOps.reorder(sourceId, targetId), emit())
+  },
+
+  playlists: {
+    list: () => listPlaylists(providers.youtube),
+    async import(ids: string[]) {
+      const all = await listPlaylists(providers.youtube)
+      await importPlaylists(providers.youtube, all.filter((p) => ids.includes(p.id)))
+      emit()
+    },
+    async refresh(id?: string) {
+      await refreshPlaylists(providers.youtube, id)
+      emit()
+    },
+    remove: (id: string) => (removePlaylist(id), emit())
   },
 
   async toggleMute(key: string) {

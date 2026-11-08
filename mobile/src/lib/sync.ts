@@ -36,7 +36,7 @@ export function syncStatus(): SyncStatus {
   }
 }
 
-const syncedData = (): SyncedData => ({ settings: getSettings(), muted: store.get('muted'), follows: store.get('follows') })
+const syncedData = (): SyncedData => ({ settings: getSettings(), muted: store.get('muted'), follows: store.get('follows'), ytPlaylists: store.get('ytPlaylists') })
 
 function quietly(fn: () => void): void {
   applying = true
@@ -107,6 +107,7 @@ const device: SyncDevice = {
       if (patch.settings) updateSettings(patch.settings)
       if (patch.muted) store.set('muted', patch.muted)
       if (patch.follows) store.set('follows', { ...store.get('follows'), ...patch.follows })
+      if (patch.ytPlaylists) store.set('ytPlaylists', patch.ytPlaylists)
     })
   },
   setWatchLater: (items) => quietly(() => store.set('watchLater', items)),

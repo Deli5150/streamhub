@@ -269,7 +269,13 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
                       label: 'Add to queue',
                       icon: <ListPlusIcon className="size-3.5" />,
                       disabled: !m.playUrl && !m.hlsUrl,
-                      onSelect: () => addToQueue(item, () => go({ kind: 'queue' }))
+                      onSelect: () => {
+                        const count = addToQueue(item)
+                        useUi.getState().showToast({
+                          text: `Added to queue · ${count} ${count === 1 ? 'video' : 'videos'}`,
+                          action: { label: 'Play queue', run: () => go({ kind: 'queue' }) }
+                        })
+                      }
                     },
                 {
                   label: saved ? 'Remove from Watch Later' : 'Save to Watch Later',

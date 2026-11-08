@@ -1,6 +1,6 @@
 {
   "name": "streamhub",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "All-in-one desktop viewer for Twitch, YouTube, Kick and Rumble",
   "main": "./out/main/index.js",
   "private": true,
@@ -15,7 +15,8 @@
     "dist:win": "electron-vite build && electron-builder --win",
     "dist:linux": "electron-vite build && electron-builder --linux",
     "dist:steam": "npm run dist:linux && node scripts/steam/build-installer.mjs",
-    "steam:art": "electron scripts/steam/render-art.cjs"
+    "steam:art": "electron scripts/steam/render-art.cjs",
+    "release": "node scripts/release.mjs"
   },
   "build": {
     "appId": "app.streamhub",
@@ -37,12 +38,19 @@
           "arch": [
             "universal"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
         }
       ],
       "category": "public.app-category.entertainment",
       "icon": "build/icon.icns",
       "identity": "-",
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "artifactName": "${productName}-${version}-mac.${ext}"
     },
     "dmg": {
       "title": "${productName} ${version}",
@@ -91,7 +99,8 @@
     },
     "appImage": {
       "artifactName": "${productName}-${version}-${arch}.${ext}"
-    }
+    },
+    "publish": null
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -117,5 +126,9 @@
     "react-dom": "^19.3.1",
     "zustand": "^5.0.16"
   },
-  "author": "StreamHub"
+  "author": "StreamHub",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Deli5150/streamhub.git"
+  }
 }

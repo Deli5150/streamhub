@@ -13,6 +13,9 @@ import { Home } from './components/Home'
 import { PlaylistView } from './components/PlaylistView'
 import { MultiView } from './components/MultiView'
 import { Sidebar } from './components/Sidebar'
+import { Toast } from './components/Toast'
+import { UpdatePill } from './components/Updates'
+import { ImportPlaylistsDialog } from './components/YouTubePlaylists'
 import { Watch } from './components/Watch'
 import { BigPicture } from './components/bigpicture/BigPicture'
 
@@ -65,8 +68,9 @@ export function App(): React.JSX.Element {
   }, [setApp, go, set])
 
   const channelCount = app?.channels.length ?? 0
-  // Theater mode (Watch.tsx) gives a live stream the whole window.
-  const theaterOn = theater && view.kind === 'watch' && !view.offline && Boolean(app?.live[view.key])
+  // Theater mode (Watch.tsx, PlaylistView.tsx) gives a live stream or a playlist's video the whole window.
+  const playlistView = view.kind === 'playlist' || view.kind === 'queue' || view.kind === 'ytPlaylist'
+  const theaterOn = theater && (playlistView || (view.kind === 'watch' && !view.offline && Boolean(app?.live[view.key])))
 
   if (bigPicture) return <BigPicture />
 
@@ -99,6 +103,7 @@ export function App(): React.JSX.Element {
         )}
         <div className="flex-1" />
         {app && app.syncing.length > 0 && <span className="mr-1 text-small text-tertiary">Syncing…</span>}
+        <UpdatePill />
         <QuickActions />
         <div className="mx-1 h-4 w-px bg-separator" />
         <TabButton active={view.kind === 'accounts'} onClick={() => go({ kind: 'accounts' })}>
@@ -116,10 +121,13 @@ export function App(): React.JSX.Element {
           {view.kind === 'multi' && <MultiView />}
           {view.kind === 'playlist' && <PlaylistView key={view.startId} startId={view.startId} />}
           {view.kind === 'queue' && <PlaylistView key="queue" source="queue" />}
+          {view.kind === 'ytPlaylist' && <PlaylistView key={`yt:${view.id}:${view.startId ?? ''}`} source={`yt:${view.id}`} startId={view.startId} />}
         </main>
       </div>
       <CombineDialog request={combine} onClose={() => set({ combine: null })} />
       <MultiViewDialog />
+      <ImportPlaylistsDialog />
+      <Toast />
     </div>
   )
 }

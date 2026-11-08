@@ -7,11 +7,14 @@ import {
   PencilIcon,
   PictureInPicture2Icon,
   RadioIcon,
+  RectangleHorizontalIcon,
+  RefreshCwIcon,
   SkipBackIcon,
   SkipForwardIcon,
   Trash2Icon,
   XIcon,
-  Tv2Icon
+  Tv2Icon,
+  ExternalLinkIcon
 } from 'lucide-react'
 import type { SavedItem } from '@shared/types'
 import { embedUrl } from '@shared/urls'
@@ -19,7 +22,7 @@ import { progressFraction, progressKey, resumePosition, useVodProgress, withStar
 import { ChaptersButton, useChapters } from './Chapters'
 import { useQueue } from '../lib/queue'
 import { savedTitle, useWatchLater } from '../lib/watchLater'
-import { useUi } from '../store'
+import { errorMessage, useTheaterEsc, useUi } from '../store'
 import { openPipFor } from './channelMenu'
 import { HlsVideo } from './HlsVideo'
 import { PLATFORM_META, PlatformDot } from './platform'
@@ -30,30 +33,56 @@ import { WebView } from './WebView'
 const overlayButton =
   'flex size-9 items-center justify-center rounded-full bg-black/55 ring-1 ring-white/10 backdrop-blur-md transition-colors hover:bg-black/75'
 
-export type PlaylistSource = 'watchLater' | 'queue'
+/** Watch Later, the video queue, or an imported YouTube playlist (`yt:<playlist id>`, read-only). */
+export type PlaylistSource = 'watchLater' | 'queue' | `yt:${string}`
 
 /** Whether an item can play right now (a video, or a saved stream that's live). */
 function playable(item: SavedItem, live: Record<string, unknown> | undefined): boolean {
   return item.kind === 'vod' ? Boolean(item.media?.playUrl || item.media?.hlsUrl) : Boolean(live?.[item.channelKey])
 }
 
-/** The list a PlaylistView plays, with its edit operations. */
-function usePlaylist(source: PlaylistSource): { items: SavedItem[]; remove(id: string): void; reorder(sourceId: string, targetId: string): void } {
+const NO_ITEMS: SavedItem[] = []
+const ytPlaylistId = (source: PlaylistSource): string | null => (source.startsWith('yt:') ? source.slice(3) : null)
+
+/** The list a PlaylistView plays, with its edit operations (none for an imported playlist). */
+function usePlaylist(source: PlaylistSource): {
+  title: string
+  items: SavedItem[]
+  editable: boolean
+  remove(id: string): void
+  reorder(sourceId: string, targetId: string): void
+} {
   const saved = useWatchLater()
   const queue = useQueue()
+  const ytId = ytPlaylistId(source)
+  const imported = useUi((s) => (ytId ? s.app?.ytPlaylists?.find((p) => p.id === ytId) : undefined))
+  if (ytId) return { title: imported?.title ?? 'Playlist', items: imported?.items ?? NO_ITEMS, editable: false, remove: () => {}, reorder: () => {} }
   return source === 'queue'
-    ? { items: queue.items, remove: queue.remove, reorder: queue.reorder }
-    : { items: saved, remove: (id) => void window.api.removeSaved(id), reorder: (a, b) => void window.api.reorderSaved(a, b) }
+    ? { title: 'Queue', items: queue.items, editable: true, remove: queue.remove, reorder: queue.reorder }
+    : { title: 'Saved · Watch Later', items: saved, editable: true, remove: (id) => void window.api.removeSaved(id), reorder: (a, b) => void window.api.reorderSaved(a, b) }
 }
 
 /**
- * YouTube-style playlist view, for Watch Later and the video queue: the selected item plays on the
- * left and the whole list sits on the right (click to switch, drag to reorder, Edit to delete). When
- * a video finishes, the next playable item starts. The list can be hidden and brought back.
+ * YouTube-style playlist view, for Watch Later, the video queue and imported YouTube playlists: the
+ * selected item plays on the left and the whole list sits on the right (click to switch, drag to
+ * reorder, Edit to delete). When a video finishes, the next playable item starts. The list can be
+ * hidden and brought back, and theater mode gives the video the whole window.
  */
 export function PlaylistView({ source = 'watchLater', startId }: { source?: PlaylistSource; startId?: string }): React.JSX.Element | null {
-  const { items, remove, reorder } = usePlaylist(source)
+  const { title, items, editable, remove, reorder } = usePlaylist(source)
+  const ytId = ytPlaylistId(source)
   const { app, go } = useUi()
+  const theater = useUi((s) => s.theater)
+  useTheaterEsc(theater)
+  const [refreshing, setRefreshing] = useState(false)
+  const refresh = (): void => {
+    if (!ytId) return
+    setRefreshing(true)
+    window.api
+      .refreshYouTubePlaylist(ytId)
+      .catch((e) => useUi.getState().showToast({ text: `Couldn't refresh: ${errorMessage(e)}` }))
+      .finally(() => setRefreshing(false))
+  }
   const pip = useUi((s) => s.pip)
   const [activeId, setActiveIdState] = useState<string | null>(
     () => startId ?? (source === 'queue' ? useQueue.getState().activeId : null) ?? items[0]?.id ?? null
@@ -135,7 +164,7 @@ export function PlaylistView({ source = 'watchLater', startId }: { source?: Play
           onMouseLeave={() => setHover(false)}
         >
           {inPip ? (
-            <div className="flex aspect-video max-h-[calc(100vh-190px)] w-full flex-col items-center justify-center gap-3 text-center">
+            <div className={`flex ${playerBox(theater)} flex-col items-center justify-center gap-3 text-center`}>
               <PictureInPicture2Icon className="size-10 text-white/70" strokeWidth={1.5} />
               <p className="text-strong text-white">Playing in Picture-in-Picture</p>
               <button
@@ -147,7 +176,7 @@ export function PlaylistView({ source = 'watchLater', startId }: { source?: Play
               </button>
             </div>
           ) : (
-            <PlaylistPlayer key={active.id} item={active} onEnded={playNext} onTime={(t) => (lastTime.current = t)} seek={seek} />
+            <PlaylistPlayer key={active.id} item={active} theater={theater} onEnded={playNext} onTime={(t) => (lastTime.current = t)} seek={seek} />
           )}
           <div
             className={`absolute top-1/2 right-3 z-20 flex -translate-y-1/2 flex-col gap-2 transition-opacity duration-200 ${
@@ -161,7 +190,7 @@ export function PlaylistView({ source = 'watchLater', startId }: { source?: Play
             )}
             <ChaptersButton chapters={chapters} currentTime={() => lastTime.current} onSeek={(to) => setSeek({ to })} buttonClass={overlayButton} />
           </div>
-          {!listOpen && (
+          {!listOpen && !theater && (
             <button type="button" onClick={() => setListOpen(true)} title="Show playlist" className={`absolute top-3 right-3 z-20 ${overlayButton} size-8`}>
               <PanelRightOpenIcon className="size-4 text-white" strokeWidth={2.25} />
             </button>
@@ -199,23 +228,39 @@ export function PlaylistView({ source = 'watchLater', startId }: { source?: Play
               <SkipForwardIcon className="size-3.5" />
             </Button>
             <Button
-              onClick={() => go({ kind: 'watch', key: active.channelKey, offline: true })}
-              disabled={!followed}
-              title={followed ? `${active.displayName}'s past streams and videos` : "You don't follow this channel anymore"}
+              variant="plain"
+              onClick={() => useUi.getState().set({ theater: !theater })}
+              title={theater ? 'Exit theater mode (Esc)' : 'Theater mode: hide the sidebar and list'}
+              aria-pressed={theater}
+              className={theater ? 'bg-control text-primary' : undefined}
             >
-              <Tv2Icon className="size-3.5" strokeWidth={2.25} />
-              Go to channel
+              <RectangleHorizontalIcon className="size-3.5" />
             </Button>
+            {followed || !ytId ? (
+              <Button
+                onClick={() => go({ kind: 'watch', key: active.channelKey, offline: true })}
+                disabled={!followed}
+                title={followed ? `${active.displayName}'s past streams and videos` : "You don't follow this channel anymore"}
+              >
+                <Tv2Icon className="size-3.5" strokeWidth={2.25} />
+                Go to channel
+              </Button>
+            ) : (
+              <Button onClick={() => void window.api.openExternal(`https://www.youtube.com/watch?v=${active.media?.id}&list=${ytId}`)} title="Open this video on YouTube">
+                <ExternalLinkIcon className="size-3.5" strokeWidth={2.25} />
+                Open on YouTube
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      {listOpen && (
+      {listOpen && !theater && (
         <div className="flex w-[340px] shrink-0 flex-col p-2">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel bg-well ring-1 ring-separator">
             <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-separator pr-1.5 pl-3">
               <span className="min-w-0 truncate text-small-strong text-primary">
-                {source === 'queue' ? 'Queue' : 'Saved · Watch Later'} <span className="text-tertiary tabular-nums">({items.length})</span>
+                {title} <span className="text-tertiary tabular-nums">({items.length})</span>
               </span>
               <div className="flex shrink-0 items-center gap-1">
                 {source === 'queue' && (
@@ -229,6 +274,19 @@ export function PlaylistView({ source = 'watchLater', startId }: { source?: Play
                     Clear
                   </button>
                 )}
+                {ytId && (
+                  <button
+                    type="button"
+                    onClick={refresh}
+                    disabled={refreshing}
+                    title="Get the playlist's latest videos from YouTube"
+                    className="flex h-7 items-center gap-1 rounded-full px-2.5 text-small-strong text-secondary transition-colors hover:bg-control disabled:opacity-50"
+                  >
+                    <RefreshCwIcon className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </button>
+                )}
+                {editable && (
                 <button
                   type="button"
                   onClick={() => setEditing((v) => !v)}
@@ -240,12 +298,13 @@ export function PlaylistView({ source = 'watchLater', startId }: { source?: Play
                   {!editing && <PencilIcon className="size-3.5" />}
                   {editing ? 'Done' : 'Edit'}
                 </button>
+                )}
                 <button type="button" onClick={() => setListOpen(false)} title="Hide playlist" className="flex size-7 items-center justify-center rounded-full transition-colors hover:bg-control">
                   <PanelRightCloseIcon className="size-4 text-secondary" />
                 </button>
               </div>
             </div>
-            <PlaylistList items={items} activeId={active.id} editing={editing} onPick={setActiveId} onRemove={remove} onReorder={reorder} />
+            <PlaylistList items={items} activeId={active.id} editing={editing} reorderable={editable} onPick={setActiveId} onRemove={remove} onReorder={reorder} />
           </div>
         </div>
       )}
@@ -253,11 +312,12 @@ export function PlaylistView({ source = 'watchLater', startId }: { source?: Play
   )
 }
 
-/** Playlist items, drag to reorder. */
+/** Playlist items, drag to reorder (when `reorderable`). */
 function PlaylistList({
   items,
   activeId,
   editing,
+  reorderable,
   onPick,
   onRemove,
   onReorder
@@ -265,6 +325,7 @@ function PlaylistList({
   items: SavedItem[]
   activeId: string
   editing: boolean
+  reorderable: boolean
   onPick(id: string): void
   onRemove(id: string): void
   onReorder(sourceId: string, targetId: string): void
@@ -289,7 +350,7 @@ function PlaylistList({
         return (
           <div
             key={item.id}
-            draggable
+            draggable={reorderable}
             onDragStart={(e) => {
               dragRef.current = item.id
               setDragId(item.id)
@@ -312,7 +373,7 @@ function PlaylistList({
               overId === item.id && dragId && dragId !== item.id ? 'border-accent' : 'border-transparent'
             } ${dragId === item.id ? 'opacity-50' : ''} ${editing ? '' : 'cursor-pointer'} ${item.id === activeId ? 'bg-control' : 'hover:bg-control-subtle'}`}
           >
-            <GripVerticalIcon className="size-4 shrink-0 cursor-grab text-tertiary" aria-hidden="true" />
+            {reorderable && <GripVerticalIcon className="size-4 shrink-0 cursor-grab text-tertiary" aria-hidden="true" />}
             <div className="relative aspect-video w-[88px] shrink-0 overflow-hidden rounded bg-control-subtle ring-1 ring-separator">
               <Thumbnail src={item.thumbnail} className="[&_svg]:size-5" />
               {item.media?.durationText && (
@@ -354,7 +415,22 @@ function PlaylistList({
 }
 
 /** Plays a saved video (resuming and saving progress), or a saved channel's stream while it's live. */
-function PlaylistPlayer({ item, onEnded, onTime, seek }: { item: SavedItem; onEnded(): void; onTime(t: number): void; seek?: { to: number } }): React.JSX.Element {
+/** The player's frame: 16:9, as wide as fits, a little taller in theater mode (as for live streams). */
+const playerBox = (theater: boolean): string => `aspect-video w-full ${theater ? 'max-h-[calc(100vh-150px)]' : 'max-h-[calc(100vh-190px)]'}`
+
+function PlaylistPlayer({
+  item,
+  theater,
+  onEnded,
+  onTime,
+  seek
+}: {
+  item: SavedItem
+  theater: boolean
+  onEnded(): void
+  onTime(t: number): void
+  seek?: { to: number }
+}): React.JSX.Element {
   const app = useUi((s) => s.app)
   const save = useVodProgress((s) => s.save)
   const key = item.media ? progressKey(item.platform, item.media.id) : ''
@@ -366,7 +442,7 @@ function PlaylistPlayer({ item, onEnded, onTime, seek }: { item: SavedItem; onEn
     },
     [key, save, onTime]
   )
-  const box = 'aspect-video max-h-[calc(100vh-190px)] w-full'
+  const box = playerBox(theater)
 
   if (item.media?.playUrl) {
     return (

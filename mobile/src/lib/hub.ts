@@ -6,12 +6,14 @@ import { rumble } from '../../../src/main/providers/rumble'
 import { twitch } from '../../../src/main/providers/twitch'
 import type { Provider } from '../../../src/main/providers/types'
 import { getSaved, savedOps, syncSaved } from '../../../src/main/watchLater'
+import { getPlaylists, importPlaylists, listPlaylists, PLAYLIST_REFRESH_MS, refreshPlaylists, removePlaylist } from '../../../src/main/ytPlaylists'
 import { AuthError } from '../desktop/net'
 import { flushStore, store } from '../desktop/store'
 import { getChannelPage as cachedChannelPage, setPreloadPaused, startPreloading, type LoadPage } from './channelPages'
 import { readerAvailable } from './reader'
 import { getSettings, updateSettings, type SettingsPatch } from './settings'
 import { startSync, syncOnForeground, syncStatus } from './sync'
+import { autoCheck, startUpdater, updateStatus } from './updater'
 import { twitchLiveFromApi } from './twitchLive'
 import { youtubeProvider } from './youtubeWeb'
 
@@ -52,7 +54,9 @@ export function state(): AppState {
     settings: getSettings(),
     shortcutDefaults: { toggleSidebar: [], multiView: [], pip: [], returnHome: [], toggleMenubarApp: [] },
     watchLater: getSaved(),
+    ytPlaylists: getPlaylists(),
     sync: syncStatus(),
+    update: updateStatus(),
     accounts: PLATFORMS.map((p) => ({
       platform: p,
       connected: providers[p].isConnected(),
@@ -219,8 +223,11 @@ export function start(): void {
     if (followsStale(p)) syncFollows(p)
   }
   void pollSignedOutMembers(true)
+  // Imported YouTube playlists catch up with changes made on YouTube.
+  void refreshPlaylists(providers.youtube, undefined, PLAYLIST_REFRESH_MS).then(emit, () => {})
   timer = setInterval(tick, 15_000)
   startSync(emit, (p) => void syncFollows(p))
+  startUpdater(emit)
 }
 
 function tick(): void {
@@ -238,6 +245,7 @@ export function setForeground(foreground: boolean): void {
   if (foreground) {
     tick()
     syncOnForeground()
+    autoCheck()
   } else void flushStore()
 }
 
@@ -325,6 +333,20 @@ export const actions = {
     toggle: (item: Omit<SavedItem, 'savedAt'>) => (savedOps.toggle(item), emit()),
     remove: (id: string) => (savedOps.remove(id), emit()),
     reorder: (sourceId: string, targetId: string) => (savedOps.reorder(sourceId, targetId), emit())
+  },
+
+  playlists: {
+    list: () => listPlaylists(providers.youtube),
+    async import(ids: string[]) {
+      const all = await listPlaylists(providers.youtube)
+      await importPlaylists(providers.youtube, all.filter((p) => ids.includes(p.id)))
+      emit()
+    },
+    async refresh(id?: string) {
+      await refreshPlaylists(providers.youtube, id)
+      emit()
+    },
+    remove: (id: string) => (removePlaylist(id), emit())
   },
 
   toggleMute(key: string) {

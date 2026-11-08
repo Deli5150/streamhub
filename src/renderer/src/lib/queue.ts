@@ -63,15 +63,10 @@ useQueue.subscribe((s) => {
 })
 
 /**
- * Adds a video to the queue. The first one starts the queue (opens its player); later ones line up
- * behind it while you keep browsing.
+ * Adds a video to the end of the queue and stays where you are, so you can keep lining videos up.
+ * Nothing plays until the queue is opened. Returns the queue's new length.
  */
-export function addToQueue(item: NewSavedItem, open: () => void): void {
-  const q = useQueue.getState()
-  const starting = q.items.length === 0
-  q.add(item)
-  if (starting) {
-    q.setActive(item.id)
-    open()
-  }
+export function addToQueue(item: NewSavedItem): number {
+  useQueue.getState().add(item)
+  return useQueue.getState().items.length
 }

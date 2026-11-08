@@ -1,6 +1,12 @@
 import { Platform as OS } from 'react-native'
 import { channelKey, type Channel, type LiveInfo } from '@shared/types'
-import { extractYtInitialData, parseYouTubeLive, youTubeSignedOut } from '../../../src/main/providers/parsers'
+import {
+  extractYtInitialData,
+  parseYouTubeLive,
+  parseYouTubePlaylistPage,
+  parseYouTubePlaylistsPage,
+  youTubeSignedOut
+} from '../../../src/main/providers/parsers'
 import type { Provider } from '../../../src/main/providers/types'
 import { youtube as youtubeApi } from '../../../src/main/providers/youtube'
 import { signInToYouTubeWeb, youTubeWebSignedIn } from '../desktop/googleAuth'
@@ -20,6 +26,15 @@ import { DESKTOP_UA } from './reader'
 
 const FEED = 'https://www.youtube.com/feed/subscriptions?hl=en'
 
+/** A signed-in youtube.com page's initial data (the app's requests carry the WebViews' cookies). */
+async function signedInPage(url: string): Promise<unknown> {
+  const res = await fetch(url, { headers: { 'User-Agent': DESKTOP_UA, 'Accept-Language': 'en-US,en;q=0.9' } })
+  if (!res.ok) throw new Error(`youtube: HTTP ${res.status}`)
+  const html = await res.text()
+  if (youTubeSignedOut(html)) throw new AuthError('youtube: signed out')
+  return extractYtInitialData(html)
+}
+
 export const youtubeWeb: Provider = {
   ...youtubeApi,
   isConnected: () => Boolean(store.get('usernames').youtube),
@@ -37,8 +52,30 @@ export const youtubeWeb: Provider = {
   },
 
   async getFollows() {
-    const scraped = await readPage<ScrapedYouTubeChannel[]>('youtube', 'follows', 'https://www.youtube.com/feed/channels?hl=en', `(${youtubeSubscriptions.toString()})()`, 120_000)
-    return scraped.map((c): Channel => ({ key: channelKey('youtube', c.id), platform: 'youtube', id: c.id, displayName: c.displayName, avatarUrl: c.avatarUrl }))
+    const scraped = await readPage<ScrapedYouTubeChannel[]>(
+      'youtube',
+      'follows',
+      'https://www.youtube.com/feed/channels?hl=en',
+      `(${youtubeSubscriptions.toString()})()`,
+      120_000
+    )
+    return scraped.map((c): Channel => ({
+      key: channelKey('youtube', c.id),
+      platform: 'youtube',
+      id: c.id,
+      displayName: c.displayName,
+      avatarUrl: c.avatarUrl
+    }))
+  },
+
+  // Playlists from youtube.com/feed/playlists, and each one's page (its first 100 or so videos).
+  async getPlaylists() {
+    const mine = parseYouTubePlaylistsPage(await signedInPage('https://www.youtube.com/feed/playlists?hl=en'))
+    return [{ id: 'LL', title: 'Liked videos' }, ...mine.filter((p) => p.id !== 'LL' && p.id !== 'WL')]
+  },
+
+  async getPlaylistVideos(id) {
+    return parseYouTubePlaylistPage(await signedInPage(`https://www.youtube.com/playlist?list=${encodeURIComponent(id)}&hl=en`)).items
   },
 
   async getLive(channels) {

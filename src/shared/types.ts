@@ -132,6 +132,27 @@ export interface SavedItem {
   savedAt: number
 }
 
+/** One of the signed-in account's YouTube playlists, as listed in the import picker. */
+export interface YouTubePlaylistSummary {
+  id: string
+  title: string
+  thumbnail?: string
+  /** Number of videos, when YouTube says. */
+  count?: number
+}
+
+/** A YouTube playlist imported in Settings: shown on Home and played like Watch Later (read-only). */
+export interface ImportedPlaylist {
+  id: string
+  title: string
+  thumbnail?: string
+  /** Its videos, in the playlist's order ('vod' entries). */
+  items: SavedItem[]
+  importedAt: number
+  /** When its videos were last read from YouTube. */
+  refreshedAt: number
+}
+
 export interface AccountInfo {
   platform: Platform
   connected: boolean
@@ -172,6 +193,8 @@ export interface Settings {
   pipOnMinimize: boolean
   /** Desktop: open straight into Big Picture mode when the app starts. */
   bigPictureOnStartup: boolean
+  /** Look for a new version on launch and every few hours (main/updater.ts). */
+  checkUpdates: boolean
   /** Accelerator overrides, any number per action, e.g. { toggleSidebar: ["Control+Command+S", "F5"] }. */
   shortcuts: Partial<Record<ShortcutAction, string[]>>
   combined: CombinedGroup[]
@@ -187,6 +210,29 @@ export interface SyncStatus {
   error?: string
 }
 
+/** The in-app updater (main/updater.ts). */
+export interface UpdateStatus {
+  /** This version. */
+  current: string
+  state: 'idle' | 'checking' | 'latest' | 'available' | 'downloading' | 'ready' | 'installing' | 'error'
+  /** The newer version, once found. */
+  version?: string
+  notes?: string
+  /** Its release page. */
+  page?: string
+  /** 0–1 while downloading. */
+  progress?: number
+  error?: string
+  /**
+   * Whether this install can update itself in place; otherwise the update button opens the release
+   * page (a development build, or a Linux install StreamHub can't find).
+   */
+  inApp: boolean
+  /** Steam's Game Mode: installing closes StreamHub (start it again from the library) rather than restarting. */
+  closesToInstall?: boolean
+  lastCheck?: number
+}
+
 export interface AppState {
   channels: Channel[]
   live: Record<string, LiveInfo>
@@ -197,7 +243,10 @@ export interface AppState {
   shortcutDefaults: Record<ShortcutAction, string[]>
   /** Watch Later playlist, in the user's order. */
   watchLater: SavedItem[]
+  /** Imported YouTube playlists, in import order. */
+  ytPlaylists: ImportedPlaylist[]
   sync: SyncStatus
+  update: UpdateStatus
 }
 
 export const channelKey = (platform: Platform, id: string): string => `${platform}:${id}`
@@ -241,6 +290,17 @@ export interface Api {
   reorderSaved(sourceId: string, targetId: string): Promise<void>
   /** A YouTube video's chapters (empty when it has none). */
   getChapters(platform: Platform, mediaId: string): Promise<VideoChapter[]>
+  /** The YouTube account's playlists, for the import picker (needs YouTube connected). */
+  listYouTubePlaylists(): Promise<YouTubePlaylistSummary[]>
+  /** Imports these playlists (with their videos); already imported ones are refreshed. */
+  importYouTubePlaylists(ids: string[]): Promise<void>
+  /** Re-reads an imported playlist's videos from YouTube (all of them without an id). */
+  refreshYouTubePlaylist(id?: string): Promise<void>
+  removeYouTubePlaylist(id: string): Promise<void>
+  /** Updater: look for a new version now, download it, then install it and restart. */
+  checkForUpdates(): Promise<void>
+  downloadUpdate(): Promise<void>
+  installUpdate(): Promise<void>
   /** Sync with Google: sign in (opens the browser), sign out, sync now. */
   syncSignIn(): Promise<void>
   syncSignOut(): Promise<void>

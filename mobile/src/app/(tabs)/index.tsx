@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { PLATFORMS, type SavedItem } from '@shared/types'
 import { buildLiveRows, type DisplayRow } from '../../../../src/renderer/src/lib/combined'
 import { actions, useApp } from '../../lib/hub'
 import { savedTitle, useUi } from '../../lib/ui'
+import { downloadUpdate, installUpdate } from '../../lib/updater'
 import { openChannel, openChannelMenu } from '../../ui/channelMenu'
 import { Button, Chip, DOCK_SPACE, EmptyState, LiveCard, PlatformChip, SectionHeader, Thumbnail } from '../../ui/components'
 import { useColors } from '../../ui/theme'
@@ -74,8 +76,12 @@ function LiveList(): React.JSX.Element {
               ))}
             </ScrollView>
           ) : null}
+          <UpdateBanner />
           <WatchLaterStrip items={app.watchLater} />
-          {app.watchLater.length > 0 && rows.length > 0 ? <SectionHeader title="Live now" right={<Text style={{ color: c.fg3 }}>{rows.length}</Text>} /> : null}
+          <PlaylistsStrip />
+          {(app.watchLater.length > 0 || app.ytPlaylists.length > 0) && rows.length > 0 ? (
+            <SectionHeader title="Live now" right={<Text style={{ color: c.fg3 }}>{rows.length}</Text>} />
+          ) : null}
         </>
       ) : null}
     </View>
@@ -140,7 +146,12 @@ function WatchLaterStrip({ items }: { items: SavedItem[] }): React.JSX.Element |
       <SectionHeader title="Watch Later" right={<Button title="Play all" variant="plain" onPress={() => router.push('/playlist')} />} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}>
         {items.map((item) => (
-          <Pressable key={item.id} onPress={() => router.push({ pathname: '/playlist', params: { start: item.id } })} style={{ width: 200 }} accessibilityRole="button">
+          <Pressable
+            key={item.id}
+            onPress={() => router.push({ pathname: '/playlist', params: { start: item.id } })}
+            style={{ width: 200 }}
+            accessibilityRole="button"
+          >
             <Thumbnail uri={item.thumbnail}>
               {item.kind === 'channel' && live?.[item.channelKey] ? (
                 <View style={styles.badge}>
@@ -165,7 +176,83 @@ function WatchLaterStrip({ items }: { items: SavedItem[] }): React.JSX.Element |
   )
 }
 
+/** Imported YouTube playlists (Settings → YouTube playlists), under Watch Later. */
+function PlaylistsStrip(): React.JSX.Element | null {
+  const c = useColors()
+  const playlists = useApp((s) => s.app?.ytPlaylists)
+  if (!playlists?.length) return null
+  return (
+    <View>
+      <SectionHeader title="Your playlists" />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}>
+        {playlists.map((p) => (
+          <Pressable
+            key={p.id}
+            disabled={!p.items.length}
+            onPress={() => router.push({ pathname: '/playlist', params: { yt: p.id } })}
+            style={{ width: 170, opacity: p.items.length ? 1 : 0.5 }}
+            accessibilityRole="button"
+          >
+            <Thumbnail uri={p.thumbnail}>
+              <View style={styles.count}>
+                <Ionicons name="list" size={16} color="#fff" />
+                <Text style={styles.badgeText}>{p.items.length}</Text>
+              </View>
+            </Thumbnail>
+            <Text numberOfLines={1} style={{ color: c.fg, fontSize: 13, fontWeight: '600', marginTop: 6 }}>
+              {p.title}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  )
+}
+
+/** A new version of StreamHub: Android updates from here; an iPhone opens the release page. */
+function UpdateBanner(): React.JSX.Element | null {
+  const c = useColors()
+  const u = useApp((s) => s.app?.update)
+  if (!u?.version || !['available', 'downloading', 'ready'].includes(u.state)) return null
+  const label =
+    u.state === 'downloading' ? `Downloading… ${Math.round((u.progress ?? 0) * 100)}%` : u.state === 'ready' ? 'Install' : u.inApp ? 'Update' : 'Get it'
+  return (
+    <View style={[styles.banner, { backgroundColor: c.bg2 }]}>
+      <Ionicons name="arrow-up-circle" size={22} color={c.accent} />
+      <Text style={{ color: c.fg, flex: 1, fontSize: 14 }}>StreamHub {u.version} is available.</Text>
+      <Button
+        title={label}
+        variant="accent"
+        disabled={u.state === 'downloading'}
+        onPress={() => (u.state === 'ready' ? installUpdate() : void downloadUpdate())}
+      />
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingLeft: 12,
+    paddingRight: 6,
+    paddingVertical: 6,
+    borderRadius: 12
+  },
+  count: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: '38%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    backgroundColor: '#000a'
+  },
   titleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 8 },
   title: { fontSize: 32, fontWeight: '800' },
   search: { marginHorizontal: 16, height: 38, borderRadius: 10, paddingHorizontal: 12, fontSize: 16 },

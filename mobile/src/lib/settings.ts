@@ -11,6 +11,7 @@ export const DEFAULT_SETTINGS: Settings = {
   blockTwitchAds: true,
   pipOnMinimize: false,
   bigPictureOnStartup: false,
+  checkUpdates: true,
   shortcuts: {},
   combined: []
 }

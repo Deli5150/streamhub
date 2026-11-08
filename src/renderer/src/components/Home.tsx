@@ -1,3 +1,5 @@
+import { ListVideoIcon } from 'lucide-react'
+import type { ImportedPlaylist } from '@shared/types'
 import { buildLiveRows } from '../lib/combined'
 import { useWallpaperIsLight } from '../lib/background'
 import { formatViewers, useUi } from '../store'
@@ -10,12 +12,15 @@ import { CombinedPlatformDots, PlatformDot } from './platform'
 import { Thumbnail } from './Thumbnail'
 import { Button } from './ui'
 
+const NO_PLAYLISTS: ImportedPlaylist[] = []
+
 /** Welcome screen: title + the three most-watched live channels right now. */
 export function Home(): React.JSX.Element {
   const { app, go } = useUi()
   const menu = useChannelMenu()
   const isLight = useWallpaperIsLight()
   const saved = useWatchLater()
+  const playlists = useUi((s) => s.app?.ytPlaylists) ?? NO_PLAYLISTS
   if (!app) return <div />
 
   // Over a wallpaper, text switches to black/white (by the image's brightness) with a soft shadow.
@@ -57,6 +62,35 @@ export function Home(): React.JSX.Element {
             textClass={pick('text-primary', 'text-black', 'text-white')}
             shadow={shadow}
           />
+        )}
+        {playlists.length > 0 && (
+          <div className="flex w-full max-w-4xl shrink-0 flex-col items-center gap-3">
+            <span className={`flex items-center gap-1.5 text-small-strong ${pick('text-secondary', 'text-black/75', 'text-white/90')} ${shadow}`}>
+              <ListVideoIcon className="size-3.5" strokeWidth={2.5} />
+              Your playlists
+            </span>
+            <div className="no-scrollbar flex max-w-full gap-3 overflow-x-auto px-1 pb-1">
+              {playlists.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => go({ kind: 'ytPlaylist', id: p.id })}
+                  disabled={p.items.length === 0}
+                  title={p.title}
+                  className="group w-[168px] shrink-0 rounded-xl text-left outline-none disabled:opacity-50"
+                >
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-control-subtle ring-1 ring-separator transition-shadow group-hover:ring-secondary">
+                    <Thumbnail src={p.thumbnail} />
+                    <span className="absolute inset-y-0 right-0 flex w-2/5 flex-col items-center justify-center gap-0.5 bg-black/65 text-white backdrop-blur-sm">
+                      <ListVideoIcon className="size-4" strokeWidth={2.25} />
+                      <span className="text-small-strong tabular-nums">{p.items.length}</span>
+                    </span>
+                  </div>
+                  <span className={`mt-1.5 block truncate text-small-strong ${pick('text-primary', 'text-black', 'text-white')} ${shadow}`}>{p.title}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 

@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron'
-import type { Channel, ChannelAbout, ChannelPageData, TogetherChannel, LiveInfo, MediaCategory, MediaItem, Platform } from '@shared/types'
+import type { Channel, ChannelAbout, ChannelPageData, TogetherChannel, LiveInfo, MediaCategory, MediaItem, Platform, SavedItem, YouTubePlaylistSummary } from '@shared/types'
 import { partition } from '../net'
 
 export interface Provider {
@@ -27,6 +27,10 @@ export interface Provider {
   getAbout(ch: Channel, live?: LiveInfo): Promise<ChannelAbout>
   /** Channels streaming with this one, or mentioned in its title (Twitch only). */
   getTogether?(ch: Channel, live?: LiveInfo): Promise<TogetherChannel[]>
+  /** YouTube: the signed-in account's playlists (Liked videos first). */
+  getPlaylists?(): Promise<YouTubePlaylistSummary[]>
+  /** YouTube: a playlist's playable videos, in order, as Watch Later-style entries. */
+  getPlaylistVideos?(id: string): Promise<Array<Omit<SavedItem, 'savedAt'>>>
 }
 
 /**

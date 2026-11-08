@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { CheckIcon, Gamepad2Icon, ImageIcon, KeyboardIcon, MonitorIcon, PaletteIcon, PlusIcon, RotateCcwIcon, ShieldCheckIcon, Trash2Icon, UploadIcon, XIcon } from 'lucide-react'
+import { CheckIcon, CircleArrowUpIcon, Gamepad2Icon, ImageIcon, KeyboardIcon, ListVideoIcon, MonitorIcon, PaletteIcon, PlusIcon, RotateCcwIcon, ShieldCheckIcon, Trash2Icon, UploadIcon, XIcon } from 'lucide-react'
 import { MENUBAR_THEMES, type MenubarTheme, type ShortcutAction } from '@shared/types'
 import { DARK_THEME_ID, LIGHT_THEME_ID, THEMES, type Colorway } from '@shared/themes'
 import { fileToDataUrl, MAX_WALLPAPERS, useBackground, type BackgroundFit } from '../lib/background'
-import { canonical, MAX_BINDINGS_PER_ACTION, shortcutProblem, type ShortcutBindings } from '@shared/shortcuts'
+import { canonical, MAX_BINDINGS_PER_ACTION, shortcutProblem, TRAY, type ShortcutBindings } from '@shared/shortcuts'
 import { eventToAccelerator, formatAccelerator, isModifierKey, MODIFIER_HINT, SHIFT_NAME, SHORTCUT_META } from '../lib/shortcuts'
 import { useUi } from '../store'
 import { Button, Field, FieldGroup, QuickPopover, SegmentedControl, Slider, Switch } from './ui'
+import { UpdatesSection } from './Updates'
+import { PlaylistsSection } from './YouTubePlaylists'
 
 /** Header buttons that pop the most-used settings categories open in place. */
 export function QuickActions(): React.JSX.Element {
@@ -18,7 +20,7 @@ export function QuickActions(): React.JSX.Element {
       <QuickPopover label="Background" icon={<ImageIcon className="size-4" strokeWidth={2.25} />}>
         <BackgroundSection />
       </QuickPopover>
-      <QuickPopover label="Menu-bar app" icon={<MonitorIcon className="size-4" strokeWidth={2.25} />}>
+      <QuickPopover label={`${TRAY.title} app`} icon={<MonitorIcon className="size-4" strokeWidth={2.25} />}>
         <MenubarSection />
       </QuickPopover>
       <QuickPopover label="Keyboard shortcuts" icon={<KeyboardIcon className="size-4" strokeWidth={2.25} />}>
@@ -26,6 +28,12 @@ export function QuickActions(): React.JSX.Element {
       </QuickPopover>
       <QuickPopover label="Playback" icon={<ShieldCheckIcon className="size-4" strokeWidth={2.25} />}>
         <PlaybackSection />
+      </QuickPopover>
+      <QuickPopover label="YouTube playlists" icon={<ListVideoIcon className="size-4" strokeWidth={2.25} />}>
+        <PlaylistsSection />
+      </QuickPopover>
+      <QuickPopover label="Updates" icon={<CircleArrowUpIcon className="size-4" strokeWidth={2.25} />}>
+        <UpdatesSection />
       </QuickPopover>
       <button
         type="button"
@@ -283,7 +291,7 @@ function BackgroundSection(): React.JSX.Element {
   )
 }
 
-// ---------- Menu-bar app ----------
+// ---------- Menu-bar / system tray app ----------
 
 const MENUBAR_THEME_LABEL: Record<MenubarTheme, string> = {
   default: 'Default',
@@ -301,11 +309,11 @@ function MenubarSection(): React.JSX.Element {
 
   return (
     <div>
-      <SectionHeader title="Menu-bar app" description="A menu-bar icon that lists who's live, one click away from any app." />
+      <SectionHeader title={`${TRAY.title} app`} description={`A ${TRAY.name} icon that lists who's live, one click away from any app.`} />
       <div className="flex flex-col gap-4 px-4">
         <FieldGroup>
-          <Field label="Show in menu bar" description="Adds a StreamHub icon (with the live count) to the macOS menu bar.">
-            <Switch checked={menubar.enabled} onChange={(v) => set({ enabled: v })} label="Show in menu bar" />
+          <Field label={`Show in ${TRAY.name}`} description={`Adds a StreamHub icon (with the live count) to ${TRAY.where}.`}>
+            <Switch checked={menubar.enabled} onChange={(v) => set({ enabled: v })} label={`Show in ${TRAY.name}`} />
           </Field>
           <Field label="Open channels in browser" description="Picking a channel opens it on the platform's website instead of StreamHub.">
             <Switch checked={menubar.openInBrowser} onChange={(v) => set({ openInBrowser: v })} label="Open channels in browser" />
@@ -315,7 +323,7 @@ function MenubarSection(): React.JSX.Element {
           </Field>
         </FieldGroup>
         <div className={menubar.enabled ? '' : 'pointer-events-none opacity-50'}>
-          <span className="text-small font-semibold tracking-wide text-tertiary uppercase">Menu-bar theme</span>
+          <span className="text-small font-semibold tracking-wide text-tertiary uppercase">{TRAY.title} theme</span>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {MENUBAR_THEMES.map((t) => (
               <button

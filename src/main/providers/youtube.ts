@@ -1,4 +1,4 @@
-import type { Channel, ChannelAbout, ChannelPageData, LiveInfo, MediaCategory, MediaItem, VideoChapter } from '@shared/types'
+import type { Channel, ChannelAbout, ChannelPageData, LiveInfo, MediaCategory, MediaItem, SavedItem, VideoChapter, YouTubePlaylistSummary } from '@shared/types'
 import { readPage } from '../hidden'
 import { googleGet, googleSignedIn, googleSignIn, googleSignOut } from '../googleAuth'
 import { getJson, getText, mapLimit } from '../net'
@@ -7,12 +7,16 @@ import {
   extractYtInitialData,
   parseTimeAgo,
   parseYouTubeChapters,
+  parseYouTubePlaylistItems,
+  parseYouTubePlaylists,
   parseYouTubeBanner,
   parseYouTubeDescription,
   parseYouTubeResolve,
   parseYouTubeSubscriptions,
   parseYouTubeVideoStatuses,
   youTubeSelectedTabUrl,
+  type YouTubePlaylistItemsResponse,
+  type YouTubePlaylistsResponse,
   type YouTubeResolveResponse,
   type YouTubeSubscriptionsResponse,
   type YouTubeVideosResponse
@@ -28,6 +32,8 @@ import type { Provider } from './types'
 // units a call, and YouTube's channel RSS feeds no longer exist.)
 
 const API = 'https://www.googleapis.com/youtube/v3'
+/** Imported playlists read up to this many pages of 50 videos. */
+const PLAYLIST_PAGES = 20
 /** Client the URL resolver is called as (any recent web client version is accepted). */
 const RESOLVER_CLIENT = { clientName: 'WEB', clientVersion: '2.20251001.00.00', hl: 'en' }
 
@@ -116,6 +122,40 @@ export const youtube: Provider = {
       }
     })
     return found.filter((l): l is LiveInfo => Boolean(l))
+  },
+
+  async getPlaylists() {
+    const mine: YouTubePlaylistSummary[] = []
+    let page: string | null = null
+    for (let i = 0; i < 20; i++) {
+      const res: YouTubePlaylistsResponse = await googleGet<YouTubePlaylistsResponse>(
+        `${API}/playlists?part=snippet,contentDetails&mine=true&maxResults=50${page ? `&pageToken=${page}` : ''}`
+      )
+      const parsed = parseYouTubePlaylists(res)
+      mine.push(...parsed.playlists)
+      if (!parsed.next) break
+      page = parsed.next
+    }
+    // Liked videos is a playlist too, though it isn't listed with the others. (Watch Later is
+    // hidden from the API altogether.)
+    const me = await googleGet<{ items?: Array<{ contentDetails?: { relatedPlaylists?: { likes?: string } } }> }>(`${API}/channels?part=contentDetails&mine=true`).catch(() => null)
+    const likes = me?.items?.[0]?.contentDetails?.relatedPlaylists?.likes
+    return likes ? [{ id: likes, title: 'Liked videos' }, ...mine] : mine
+  },
+
+  async getPlaylistVideos(id) {
+    const all: Array<Omit<SavedItem, 'savedAt'>> = []
+    let page: string | null = null
+    for (let i = 0; i < PLAYLIST_PAGES; i++) {
+      const res: YouTubePlaylistItemsResponse = await googleGet<YouTubePlaylistItemsResponse>(
+        `${API}/playlistItems?part=snippet,status&playlistId=${encodeURIComponent(id)}&maxResults=50${page ? `&pageToken=${page}` : ''}`
+      )
+      const parsed = parseYouTubePlaylistItems(res)
+      all.push(...parsed.items)
+      if (!parsed.next) break
+      page = parsed.next
+    }
+    return all
   },
 
   async getChannelPage(ch) {

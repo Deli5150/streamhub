@@ -1,4 +1,4 @@
-import { PLATFORMS, type Channel, type Platform, type SavedItem, type Settings } from './types'
+import { PLATFORMS, type Channel, type ImportedPlaylist, type Platform, type SavedItem, type Settings } from './types'
 
 // "Sync with Google": settings, follows, Watch Later and platform logins kept in one JSON
 // file in the user's own Google Drive app folder, shared by the desktop and mobile apps. This module
@@ -51,6 +51,8 @@ export interface SyncedData {
   settings: Partial<Settings>
   muted: string[]
   follows: Partial<Record<Platform, Channel[]>>
+  /** Imported YouTube playlists (one field: the newest list wins). */
+  ytPlaylists?: ImportedPlaylist[]
 }
 
 /** Per-device bookkeeping kept next to the store. */
@@ -72,6 +74,7 @@ export function toFields(d: SyncedData): Record<string, unknown> {
   const out: Record<string, unknown> = { muted: d.muted }
   for (const k of SYNCED_SETTINGS) if (d.settings[k] !== undefined) out[`settings.${k}`] = d.settings[k]
   for (const p of PLATFORMS) if (d.follows[p]) out[`follows.${p}`] = d.follows[p]
+  if (d.ytPlaylists) out.ytPlaylists = d.ytPlaylists
   return out
 }
 
@@ -80,12 +83,14 @@ export function fromFields(fields: Record<string, unknown>, base: SyncedData): S
   const settings: Partial<Settings> = { ...base.settings }
   const follows = { ...base.follows }
   let muted = base.muted
+  let ytPlaylists = base.ytPlaylists
   for (const [k, v] of Object.entries(fields)) {
     if (k === 'muted') muted = v as string[]
+    else if (k === 'ytPlaylists') ytPlaylists = v as ImportedPlaylist[]
     else if (k.startsWith('settings.') && (SYNCED_SETTINGS as readonly string[]).includes(k.slice(9))) (settings as Record<string, unknown>)[k.slice(9)] = v
     else if (k.startsWith('follows.') && PLATFORMS.includes(k.slice(8) as Platform)) follows[k.slice(8) as Platform] = v as Channel[]
   }
-  return { settings, muted, follows }
+  return { settings, muted, follows, ytPlaylists }
 }
 
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b)
@@ -226,7 +231,7 @@ export interface SyncDevice {
   meta(): SyncMeta
   saveMeta(meta: SyncMeta): void
   /** Applies values that changed on another device (settings as a patch, follows per platform). */
-  applyFields(patch: { settings?: Partial<Settings>; muted?: string[]; follows?: SyncedData['follows'] }): void
+  applyFields(patch: FieldPatch): void
   setWatchLater(items: SavedItem[]): void
   usernames(): Partial<Record<Platform, string>>
   cookies(p: Platform): Promise<SyncCookie[]>
@@ -234,11 +239,19 @@ export interface SyncDevice {
   applyLogin(p: Platform, cookies: SyncCookie[] | null, username: string | undefined): Promise<void>
 }
 
+export interface FieldPatch {
+  settings?: Partial<Settings>
+  muted?: string[]
+  follows?: SyncedData['follows']
+  ytPlaylists?: ImportedPlaylist[]
+}
+
 /** Field values to store values (settings as a patch, follows per platform). */
-export function fieldsToPatch(values: Record<string, unknown>): { settings?: Partial<Settings>; muted?: string[]; follows?: SyncedData['follows'] } {
-  const out: { settings?: Partial<Settings>; muted?: string[]; follows?: SyncedData['follows'] } = {}
+export function fieldsToPatch(values: Record<string, unknown>): FieldPatch {
+  const out: FieldPatch = {}
   for (const [k, v] of Object.entries(values)) {
     if (k === 'muted') out.muted = v as string[]
+    else if (k === 'ytPlaylists') out.ytPlaylists = v as ImportedPlaylist[]
     else if (k.startsWith('settings.') && (SYNCED_SETTINGS as readonly string[]).includes(k.slice(9))) out.settings = { ...out.settings, [k.slice(9)]: v }
     else if (k.startsWith('follows.') && PLATFORMS.includes(k.slice(8) as Platform)) out.follows = { ...out.follows, [k.slice(8)]: v as Channel[] }
   }
@@ -298,7 +311,7 @@ export function noteStoreChange(
   current: { data: SyncedData; watchLater: SavedItem[] },
   now: number
 ): boolean {
-  if (key === 'settings' || key === 'muted' || key === 'follows' || key === 'watchLater') {
+  if (key === 'settings' || key === 'muted' || key === 'follows' || key === 'ytPlaylists' || key === 'watchLater') {
     const before = {
       data: { ...current.data, ...(key === 'watchLater' ? {} : { [key]: prev }) } as SyncedData,
       watchLater: key === 'watchLater' ? (prev as SavedItem[]) : current.watchLater

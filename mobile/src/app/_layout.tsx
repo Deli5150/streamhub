@@ -89,6 +89,7 @@ function Themed(): React.JSX.Element {
         <Stack.Screen name="watch/[key]" />
         <Stack.Screen name="playlist" />
         <Stack.Screen name="combine" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="import-playlists" options={{ presentation: 'modal' }} />
       </Stack>
       <LoginSheet />
       <MenuSheet />

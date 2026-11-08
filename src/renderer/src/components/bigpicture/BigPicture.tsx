@@ -54,6 +54,11 @@ export function BigPicture(): React.JSX.Element {
     const timer = setTimeout(() => setToast(null), TOAST_MS)
     return () => clearTimeout(timer)
   }, [toast])
+  // A new version: said once here; it's installed from the usual window (Exit), not mid-stream.
+  const newVersion = useUi((s) => (s.app?.update.state === 'available' ? s.app.update.version : undefined))
+  useEffect(() => {
+    if (newVersion) setToast({ text: `StreamHub ${newVersion} is available. Exit Big Picture to update.`, at: Date.now() })
+  }, [newVersion])
 
   // B on the home screen asks before leaving Big Picture; B elsewhere goes back a screen.
   useBpInput(

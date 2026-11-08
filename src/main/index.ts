@@ -4,6 +4,7 @@ import { PLATFORMS, type MediaCategory, type Platform, type Settings } from '@sh
 import { setupAppMenu } from './appMenu'
 import { actions, emit, pollSignedOutMembers, showMainWindow, start, state } from './hub'
 import { cleanSaved } from './watchLater'
+import { checkForUpdates, downloadUpdate, installUpdate, startUpdater } from './updater'
 import { normalizeBindings } from '@shared/shortcuts'
 import { hasTray, hidePopup, initMenubar, syncMenubar } from './menubar'
 import { browserUserAgent, partition, sessionFor } from './net'
@@ -167,6 +168,13 @@ function registerIpc(): void {
     if (clean) actions.saved.toggle(clean)
   })
   ipcMain.handle('saved-remove', (_, id: string) => actions.saved.remove(String(id)))
+  ipcMain.handle('update-check', () => checkForUpdates())
+  ipcMain.handle('update-download', () => downloadUpdate())
+  ipcMain.handle('update-install', () => installUpdate())
+  ipcMain.handle('yt-playlists-list', () => actions.playlists.list())
+  ipcMain.handle('yt-playlists-import', (_, ids: unknown) => actions.playlists.import(Array.isArray(ids) ? ids.map(String) : []))
+  ipcMain.handle('yt-playlists-refresh', (_, id?: string) => actions.playlists.refresh(id ? String(id) : undefined))
+  ipcMain.handle('yt-playlists-remove', (_, id: string) => actions.playlists.remove(String(id)))
   ipcMain.handle('saved-reorder', (_, sourceId: string, targetId: string) => actions.saved.reorder(String(sourceId), String(targetId)))
   ipcMain.handle('video-chapters', (_, platform: unknown, mediaId: unknown) =>
     platform === 'youtube' && typeof mediaId === 'string' && /^[\w-]{11}$/.test(mediaId) ? youtubeChapters(mediaId) : []
@@ -195,6 +203,7 @@ app.whenReady().then(() => {
   setupAppMenu(() => mainWindow)
   const win = createWindow()
   start(win)
+  startUpdater(emit)
   setPipRenderer((win, query) => loadRenderer(win, 'pip', query))
   initMenubar({
     preload: PRELOAD,

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { emptyMeta, type SyncMeta } from '@shared/sync'
-import type { Channel, LiveInfo, Platform, SavedItem, Settings } from '@shared/types'
+import type { Channel, ImportedPlaylist, LiveInfo, Platform, SavedItem, Settings } from '@shared/types'
 
 // Mobile stand-in for the desktop's src/main/store.ts (same keys and API), kept in memory and saved
 // to AsyncStorage. `loadStore()` must finish before anything reads it (the root layout and the
@@ -14,6 +14,8 @@ interface Data {
   liveCache: { at: number; live: Record<string, LiveInfo> }
   settings: Partial<Settings>
   watchLater: SavedItem[]
+  /** Imported YouTube playlists (see ytPlaylists.ts). */
+  ytPlaylists: ImportedPlaylist[]
   /** Unused on mobile; kept so the desktop store's shape type-checks. */
   secrets: Record<string, string>
   /** Sync with Google bookkeeping (see lib/sync.ts). */
@@ -38,6 +40,7 @@ const defaults = (): Data => ({
   liveCache: { at: 0, live: {} },
   settings: {},
   watchLater: [],
+  ytPlaylists: [],
   secrets: {},
   syncMeta: emptyMeta(),
   syncEnabled: false
