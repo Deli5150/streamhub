@@ -73,9 +73,11 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
     }
   }, [channel.key])
 
-  // A channel with no past streams but with videos opens on Videos.
+  // A channel with no past streams opens on its videos, or else its clips (Twitch, Kick) or Shorts.
   useEffect(() => {
-    if (!pickedTab.current && page?.hasVideos && page.streams.length === 0 && page.videos.length > 0) setTab('videos')
+    if (pickedTab.current || !page || page.streams.length > 0) return
+    if (page.hasVideos && page.videos.length > 0) setTab('videos')
+    else if (page.clipsLabel && page.clips.length > 0) setTab('clips')
   }, [page])
 
   const loadMore = async (category: MediaCategory): Promise<void> => {
