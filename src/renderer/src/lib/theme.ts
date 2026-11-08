@@ -12,6 +12,8 @@ export function applyColorway(id: string): void {
   for (const v of SEEDS) root.style.removeProperty(v)
   root.toggleAttribute('data-theme-ogx', id === 'ogx')
   root.toggleAttribute('data-colorway', !!theme)
+  if (theme) root.setAttribute('data-appearance', theme.appearance)
+  else root.removeAttribute('data-appearance')
   if (!theme) return
   const dark = theme.appearance === 'dark'
   const set = (k: (typeof SEEDS)[number], v: string): void => root.style.setProperty(k, v)

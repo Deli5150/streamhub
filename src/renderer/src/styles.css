@@ -70,6 +70,28 @@
   --menubar-bg: linear-gradient(var(--bg-secondary), var(--bg));
 }
 
+/*
+ * Colorways tint every surface from the theme instead of the text color: the sidebar and side panels
+ * (well), search fields and buttons (controls) and popovers all take --bg-secondary, so a theme reads
+ * as one color rather than gray or white panels over a colored window.
+ */
+:root[data-colorway]:not([data-theme-ogx]) {
+  --color-well: color-mix(in srgb, var(--bg-secondary) 70%, transparent);
+  --color-control-subtle: color-mix(in srgb, var(--bg-secondary), var(--fg) 5%);
+  --color-control: color-mix(in srgb, var(--bg-secondary), var(--fg) 11%);
+  --color-control-active: color-mix(in srgb, var(--bg-secondary), var(--fg) 19%);
+  --color-popover: color-mix(in srgb, var(--bg), var(--bg-secondary) 45%);
+}
+
+/*
+ * Colorways paint the window solid: drawn at 40% over the macOS window material (which follows the
+ * system's light or dark mode, not the theme), light themes washed out to near-white and dark ones to
+ * gray. "Use system" keeps the translucent window.
+ */
+:root[data-colorway]:not([data-theme-ogx]) {
+  --window-bg: var(--bg);
+}
+
 /* No native vibrancy (non-macOS): paint an opaque window instead of a translucent one. */
 :root[data-opaque] {
   --window-bg: color-mix(in srgb, var(--bg), var(--fg) 8%);

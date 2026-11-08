@@ -39,7 +39,7 @@ export function colorsFor(themeId: string, systemDark: boolean): Colors {
     dark,
     bg: theme.background,
     bg2: theme.backgroundSecondary,
-    card: dark ? mix(theme.backgroundSecondary, '#ffffff', 0.04) : mix(theme.background, '#ffffff', 0.55),
+    card: dark ? mix(theme.backgroundSecondary, '#ffffff', 0.04) : mix(theme.backgroundSecondary, theme.background, 0.45),
     fg: theme.foreground,
     fg2: mix(theme.foreground, theme.background, 0.3),
     fg3: mix(theme.foreground, theme.background, 0.5),
