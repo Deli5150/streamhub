@@ -65,12 +65,11 @@ interface UiState {
 export const MAX_MULTI = 6
 
 /**
- * Sidebar state implied by navigating to a view: Home minimizes it (Home's grid already shows
- * everyone live), and Multi-view keeps it minimized while streams are playing.
- * Other views leave it as is.
+ * Sidebar state implied by navigating to a view: Home opens it back up, and Multi-view keeps it
+ * minimized while streams are playing. Other views leave it as is.
  */
 function sidebarFor(view: View, multiCount: number): { collapsed: boolean } | Record<string, never> {
-  if (view.kind === 'home') return { collapsed: true }
+  if (view.kind === 'home') return { collapsed: false }
   if (view.kind === 'multi' && multiCount > 0) return { collapsed: true }
   if (view.kind === 'playlist' || view.kind === 'queue' || view.kind === 'ytPlaylist') return { collapsed: true }
   return {}
