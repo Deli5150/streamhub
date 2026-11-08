@@ -2,6 +2,8 @@ import { app, shell } from 'electron'
 import { spawn, execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
+// Node's own fs: Electron's treats .asar files as folders, so it can't delete an app copy.
+import rawFs from 'original-fs'
 import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
@@ -93,7 +95,7 @@ export async function downloadUpdate(): Promise<void> {
   const asset = release.asset
   set({ state: 'downloading', progress: 0, error: undefined })
   try {
-    fs.rmSync(updateDir(), { recursive: true, force: true })
+    rawFs.rmSync(updateDir(), { recursive: true, force: true })
     fs.mkdirSync(updateDir(), { recursive: true })
     const file = path.join(updateDir(), asset.name)
     const res = await fetch(asset.url, { headers: { 'User-Agent': `StreamHub/${status.current}` } })
@@ -153,7 +155,7 @@ export async function installUpdate(): Promise<void> {
       const next = path.join(unpacked, bundle)
       await run('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', next]).catch(() => {})
       const old = `${target}.old`
-      fs.rmSync(old, { recursive: true, force: true })
+      rawFs.rmSync(old, { recursive: true, force: true })
       fs.renameSync(target, old)
       try {
         fs.renameSync(next, target)
@@ -185,7 +187,7 @@ export async function installUpdate(): Promise<void> {
       await run(downloaded, ['--appimage-extract'], { cwd: updateDir(), env: cleanEnv(), maxBuffer: 64 * 1024 * 1024 })
       const next = path.join(updateDir(), 'squashfs-root')
       const appDir = path.join(STEAM_DIR, 'app')
-      fs.rmSync(`${appDir}.old`, { recursive: true, force: true })
+      rawFs.rmSync(`${appDir}.old`, { recursive: true, force: true })
       fs.renameSync(appDir, `${appDir}.old`)
       fs.renameSync(next, appDir)
       fs.writeFileSync(path.join(STEAM_DIR, 'version'), `${release?.version ?? ''}\n`)
@@ -205,7 +207,7 @@ function cleanUp(): void {
   const leftovers = [updateDir()]
   if (kind === 'mac-app') leftovers.push(`${macBundle()}.old`)
   if (kind === 'steam') leftovers.push(path.join(STEAM_DIR, 'app.old'))
-  for (const p of leftovers) fs.rm(p, { recursive: true, force: true }, () => {})
+  for (const p of leftovers) rawFs.rm(p, { recursive: true, force: true }, () => {})
 }
 
 /** Starts the automatic checks (when the setting is on). */
