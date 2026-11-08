@@ -54,7 +54,7 @@ function inline(text: string): React.ReactNode[] {
     .split(/(\*\*.+?\*\*|\*[^*]+\*)/g)
     .map((part, i) =>
       part.startsWith('**') ? (
-        <strong key={i} className="font-semibold text-primary">
+        <strong key={i} className="note-strong font-semibold">
           {part.slice(2, -2)}
         </strong>
       ) : part.startsWith('*') && part.length > 2 ? (
@@ -66,7 +66,7 @@ function inline(text: string): React.ReactNode[] {
 }
 
 /** Release notes (CHANGELOG.md / GitHub Markdown): headings and bullet lists. */
-function ReleaseNotes({ md }: { md: string }): React.JSX.Element {
+export function ReleaseNotes({ md, className = 'gap-2 text-small text-secondary [&_.note-strong]:text-primary' }: { md: string; className?: string }): React.JSX.Element {
   const blocks: React.ReactNode[] = []
   let list: React.ReactNode[] = []
   const flush = (): void => {
@@ -79,7 +79,7 @@ function ReleaseNotes({ md }: { md: string }): React.JSX.Element {
     if (t.startsWith('#')) {
       flush()
       blocks.push(
-        <p key={`h${blocks.length}`} className="pt-1 text-small-strong text-primary first:pt-0">
+        <p key={`h${blocks.length}`} className="note-strong pt-1 font-semibold first:pt-0">
           {t.replace(/^#+\s*/, '')}
         </p>
       )
@@ -90,7 +90,7 @@ function ReleaseNotes({ md }: { md: string }): React.JSX.Element {
     }
   }
   flush()
-  return <div className="flex flex-col gap-2 text-small text-secondary">{blocks}</div>
+  return <div className={`flex flex-col ${className}`}>{blocks}</div>
 }
 
 function NotesBox({ title, md, link }: { title: string; md: string; link?: { label: string; url: string } }): React.JSX.Element {

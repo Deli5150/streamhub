@@ -33,6 +33,8 @@ let downloaded: string | null = null
 let notify: () => void = () => {}
 
 const STEAM_DIR = path.join(os.homedir(), '.local/share/StreamHub')
+/** This copy was installed by the Steam installer (scripts/steam/install.sh) and runs from its folder. */
+export const isSteamCopy = (): boolean => process.platform === 'linux' && process.execPath.startsWith(path.join(STEAM_DIR, 'app') + path.sep)
 /** Under Steam's Game Mode a restarted app wouldn't be Steam's game anymore, so it just closes. */
 const inGameMode = (): boolean => process.env.SteamGamepadUI === '1' || process.env.XDG_CURRENT_DESKTOP === 'gamescope'
 
@@ -45,7 +47,7 @@ function installKind(): InstallKind {
   if (process.platform === 'win32') return 'win-nsis'
   if (process.platform === 'linux') {
     if (process.env.APPIMAGE) return 'appimage'
-    if (process.execPath.startsWith(path.join(STEAM_DIR, 'app') + path.sep)) return 'steam'
+    if (isSteamCopy()) return 'steam'
   }
   return 'none'
 }

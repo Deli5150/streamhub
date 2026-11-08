@@ -233,6 +233,14 @@ export interface UpdateStatus {
   lastCheck?: number
 }
 
+/** A Google sign-in waiting to be approved on a phone: enter `code` at `url` (google.com/device). */
+export interface PhoneSignIn {
+  target: 'sync' | 'youtube'
+  code: string
+  url: string
+  expiresAt: number
+}
+
 export interface AppState {
   channels: Channel[]
   live: Record<string, LiveInfo>
@@ -247,6 +255,7 @@ export interface AppState {
   ytPlaylists: ImportedPlaylist[]
   sync: SyncStatus
   update: UpdateStatus
+  phoneSignIn: PhoneSignIn | null
 }
 
 export const channelKey = (platform: Platform, id: string): string => `${platform}:${id}`
@@ -279,6 +288,15 @@ export interface Api {
   setFullScreen(on: boolean): Promise<void>
   /** Whether this launch should open in Big Picture (`--big-picture`, or Steam's Game Mode). */
   launchBigPicture(): Promise<boolean>
+  /** The Steam copy: Big Picture is the whole app (no way out to the usual window). */
+  bigPictureOnly(): Promise<boolean>
+  quitApp(): Promise<void>
+  /**
+   * Signs in to Google (Sync, or YouTube) on a phone: the code to enter shows up in the state
+   * (phoneSignIn) and this resolves once it's approved. Rejects if cancelled or it fails.
+   */
+  phoneSignIn(target: 'sync' | 'youtube'): Promise<void>
+  cancelPhoneSignIn(): Promise<void>
   /** `live`: a live stream (no seeking controls). */
   openPip(target: { platform: Platform; url: string; hls?: boolean; startAt?: number; live?: boolean }): Promise<boolean>
   /** Closes the PiP window (the in-app player resumes). */

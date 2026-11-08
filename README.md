@@ -62,6 +62,18 @@ YouTube uses Google's official sign-in for desktop apps: StreamHub opens Google'
 
 A desktop app's "client secret" isn't actually secret (Google ships it in every copy of the app by design); the sign-in is protected by PKCE. YouTube's free quota is 10,000 units a day per project; StreamHub uses about 1 unit per live check (every 2 minutes) plus 1 per 50 subscriptions when syncing.
 
+## Steam Deck sign-in
+
+The Steam copy (from the Steam installer) is Big Picture only: there's no usual window, and **Settings** (the gear at the top right, or Start) covers accounts, Sync with Google, YouTube playlists, playback, updates and quitting. Google sign-ins happen on your phone. **Sign in with phone** shows a QR code for google.com/device and a short code. Enter the code on your phone, approve, and the Deck carries on by itself. Twitch, Kick and Rumble sign-ins come over through Sync with Google from StreamHub on your phone or computer, or you can sign in on the Deck with **Sign in**.
+
+Signing in on a phone uses Google's flow for TVs, which needs a second OAuth client in the same Google Cloud project:
+
+1. Open [Google Cloud Console → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials) for StreamHub's project.
+2. **Create credentials → OAuth client ID**, application type **TVs and Limited Input devices**, name it (e.g. *StreamHub TV*), then **Create**.
+3. Put its client ID and secret in `.env` as `MAIN_VITE_GOOGLE_TV_CLIENT_ID` and `MAIN_VITE_GOOGLE_TV_CLIENT_SECRET`, then build the Steam installer (`npm run dist:steam`).
+
+It uses the same consent screen and scopes (YouTube read-only, Drive app folder) as the desktop client, so nothing else changes. To try the Big Picture only mode on another computer, start StreamHub with `--big-picture-only`.
+
 ## Sync with Google
 
 **Accounts → Sync with Google** keeps your Twitch, YouTube, Kick and Rumble sign-ins, settings, followed channels, combined channels, muted alerts and Watch Later the same on every computer and phone with StreamHub. Signing in with Google on a new device signs it in to your platforms too. Everything is stored in one file (`streamhub-sync.json`) in your Google Drive's hidden app folder. Only StreamHub can see that folder, and it doesn't appear in your Drive. The format and merge rules are in `src/shared/sync.ts`.

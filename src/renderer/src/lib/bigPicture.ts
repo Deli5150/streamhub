@@ -24,6 +24,8 @@ export type BpRoute =
   | { kind: 'vod'; key: string; media: MediaItem }
   /** Watch Later or the queue, from `index`, moving on to the next item when one ends. */
   | { kind: 'list'; source: 'watchLater' | 'queue'; index: number }
+  /** Settings (BpSettings): accounts, Sync, playlists, playback, updates. */
+  | { kind: 'settings' }
 
 type Entry = BpRoute & { focusId?: string }
 
@@ -274,7 +276,8 @@ const KEYS: Record<string, BpAction> = {
   q: 'lb',
   e: 'rb',
   x: 'x',
-  y: 'y'
+  y: 'y',
+  s: 'start'
 }
 
 /** Starts reading the controller, keyboard and mouse for Big Picture mode; returns the stop function. */

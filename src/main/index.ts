@@ -2,9 +2,10 @@ import { app, BrowserWindow, ipcMain, nativeImage, session, shell, systemPrefere
 import path from 'node:path'
 import { PLATFORMS, type MediaCategory, type Platform, type Settings } from '@shared/types'
 import { setupAppMenu } from './appMenu'
-import { actions, emit, pollSignedOutMembers, showMainWindow, start, state } from './hub'
+import { actions, emit, pollSignedOutMembers, setPhoneSignIn, showMainWindow, start, state } from './hub'
 import { cleanSaved } from './watchLater'
-import { checkForUpdates, downloadUpdate, installUpdate, startUpdater } from './updater'
+import { checkForUpdates, downloadUpdate, installUpdate, isSteamCopy, startUpdater } from './updater'
+import { cancelPhoneSignIn, signInOnPhone } from './googleAuth'
 import { normalizeBindings } from '@shared/shortcuts'
 import { hasTray, hidePopup, initMenubar, syncMenubar } from './menubar'
 import { browserUserAgent, partition, sessionFor } from './net'
@@ -26,6 +27,12 @@ const isMac = process.platform === 'darwin'
  * Game Mode (gamepad UI, e.g. on a Steam Deck), where there's only a controller.
  */
 const LAUNCH_BIG_PICTURE = process.argv.includes('--big-picture') || process.env.SteamGamepadUI === '1' || process.env.XDG_CURRENT_DESKTOP === 'gamescope'
+/**
+ * Big Picture is the whole app: the copy the Steam installer put in your Steam library (made for the
+ * TV and the controller, with its own Settings screen). `--big-picture-only` or
+ * STREAMHUB_BIG_PICTURE_ONLY=1 does the same anywhere (for trying it out).
+ */
+const BIG_PICTURE_ONLY = isSteamCopy() || process.argv.includes('--big-picture-only') || process.env.STREAMHUB_BIG_PICTURE_ONLY === '1'
 const PRELOAD = path.join(__dirname, '../preload/index.js')
 let mainWindow: BrowserWindow | null = null
 
@@ -158,7 +165,18 @@ function registerIpc(): void {
   })
   ipcMain.handle('menubar-hide', () => hidePopup())
   ipcMain.handle('close-pip', () => void closePip())
-  ipcMain.handle('launch-big-picture', () => LAUNCH_BIG_PICTURE)
+  ipcMain.handle('launch-big-picture', () => LAUNCH_BIG_PICTURE || BIG_PICTURE_ONLY)
+  ipcMain.handle('big-picture-only', () => BIG_PICTURE_ONLY)
+  ipcMain.handle('quit-app', () => app.quit())
+  // Google sign-in (Sync, or YouTube) approved on a phone: the code to show goes out in the state.
+  ipcMain.handle('google-phone-signin', (_, target: unknown) => {
+    const what = target === 'sync' ? 'sync' : 'youtube'
+    return signInOnPhone(
+      (code) => setPhoneSignIn({ target: what, ...code }),
+      () => (what === 'sync' ? syncSignIn() : actions.login('youtube'))
+    ).finally(() => setPhoneSignIn(null))
+  })
+  ipcMain.handle('google-phone-cancel', () => cancelPhoneSignIn())
   ipcMain.handle('set-fullscreen', (e, on: unknown) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     if (win && !win.isDestroyed()) win.setFullScreen(on === true)

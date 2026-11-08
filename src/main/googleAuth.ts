@@ -11,19 +11,109 @@ import { store } from './store'
 // Two independent sign-ins use it: YouTube (read your subscriptions) and Sync (StreamHub's own file
 // in your Drive's hidden app folder; see sync.ts), so either can be signed out without the other.
 // The OAuth client comes from a Google Cloud project; see README → "YouTube sign-in setup".
+//
+// On a TV or a Steam Deck the sign-in can instead happen on your phone (signInOnPhone): Google's
+// flow for "TVs and limited-input devices" gives a short code; you open google.com/device on the
+// phone (StreamHub shows a QR code for it), enter the code and approve, and StreamHub, which has been
+// asking Google every few seconds, gets the tokens. That flow needs its own OAuth client, of the TV
+// type (MAIN_VITE_GOOGLE_TV_CLIENT_ID/SECRET); its sign-ins are refreshed with that client.
 
 const CLIENT_ID = import.meta.env.MAIN_VITE_GOOGLE_CLIENT_ID ?? ''
 // Google issues desktop clients a "secret" that, by design, isn't secret (it ships in every copy);
 // PKCE is what protects the sign-in.
 const CLIENT_SECRET = import.meta.env.MAIN_VITE_GOOGLE_CLIENT_SECRET ?? ''
+const TV_CLIENT_ID = import.meta.env.MAIN_VITE_GOOGLE_TV_CLIENT_ID ?? ''
+const TV_CLIENT_SECRET = import.meta.env.MAIN_VITE_GOOGLE_TV_CLIENT_SECRET ?? ''
 /** How long to wait for the user to finish signing in in their browser. */
 const SIGN_IN_TIMEOUT_MS = 5 * 60_000
 
+interface Client {
+  id: string
+  secret: string
+}
+const DESKTOP: Client = { id: CLIENT_ID, secret: CLIENT_SECRET }
+const TV: Client = { id: TV_CLIENT_ID, secret: TV_CLIENT_SECRET }
+
 interface Saved {
   refreshToken: string
+  /** Signed in with the TV client (on a phone); refreshed with it too. */
+  tv?: boolean
 }
 
 export const googleConfigured = (): boolean => Boolean(CLIENT_ID)
+/** Whether signing in on a phone (the TV flow) is set up in this copy. */
+export const phoneSignInConfigured = (): boolean => Boolean(TV_CLIENT_ID)
+
+/** What to show while a phone sign-in waits: the code to enter at the address. */
+export interface DeviceCode {
+  code: string
+  url: string
+  expiresAt: number
+}
+
+/** Set while signInOnPhone runs: sign-ins started meanwhile use the TV flow and report their code here. */
+let phone: { onCode(c: DeviceCode): void; cancelled: boolean } | null = null
+
+/**
+ * Runs `signIn` (any Google sign-in: Sync's, or YouTube's through the provider's login) with the
+ * sign-in happening on a phone: `onCode` gets the code and address to show. Rejects if cancelled
+ * (cancelPhoneSignIn), denied on the phone or left until the code expires.
+ */
+export async function signInOnPhone<T>(onCode: (c: DeviceCode) => void, signIn: () => Promise<T>): Promise<T> {
+  if (!TV_CLIENT_ID) {
+    throw new Error("Signing in on your phone isn't set up in this copy of StreamHub (it needs a Google OAuth client for TVs — see README → Steam Deck sign-in)")
+  }
+  if (phone) throw new Error('A phone sign-in is already waiting')
+  phone = { onCode, cancelled: false }
+  try {
+    return await signIn()
+  } finally {
+    phone = null
+  }
+}
+
+export const cancelPhoneSignIn = (): void => {
+  if (phone) phone.cancelled = true
+}
+
+/** The TV flow: asks Google for a code, hands it to the phone context, then waits for approval. */
+async function deviceTokens(scope: string, label: string): Promise<{ access_token: string; expires_in: number; refresh_token?: string }> {
+  const ctx = phone!
+  const res = await net.fetch('https://oauth2.googleapis.com/device/code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: TV.id, scope }).toString()
+  })
+  const start = (await res.json().catch(() => ({}))) as {
+    device_code?: string
+    user_code?: string
+    verification_url?: string
+    expires_in?: number
+    interval?: number
+    error?: string
+    error_description?: string
+  }
+  if (!res.ok || !start.device_code || !start.user_code) {
+    throw new Error(`${label} sign-in failed: ${start.error ?? res.status}${start.error_description ? ` (${start.error_description})` : ''}`)
+  }
+  const expiresAt = Date.now() + (start.expires_in ?? 1800) * 1000
+  ctx.onCode({ code: start.user_code, url: start.verification_url ?? 'https://www.google.com/device', expiresAt })
+  let interval = (start.interval ?? 5) * 1000
+  while (Date.now() < expiresAt) {
+    await new Promise((r) => setTimeout(r, interval))
+    if (ctx.cancelled) throw new Error(`${label} sign-in was cancelled`)
+    try {
+      return await tokenRequest({ device_code: start.device_code, grant_type: 'urn:ietf:params:oauth:grant-type:device_code' }, label, TV)
+    } catch (e) {
+      const message = (e as Error).message
+      if (/authorization_pending/.test(message)) continue
+      if (/slow_down/.test(message)) interval += 5000
+      else if (/access_denied/.test(message)) throw new Error(`${label} sign-in was cancelled on the phone`)
+      else throw e
+    }
+  }
+  throw new Error(`${label} sign-in timed out — try again`)
+}
 
 /** A PKCE verifier and its S256 challenge. */
 export function pkcePair(): { verifier: string; challenge: string } {
@@ -81,7 +171,7 @@ export function googleAccount({ scope, secretKey, label, errorPrefix }: AccountO
     const saved = await store.getSecret<Saved>(secretKey)
     if (!saved?.refreshToken) throw new AuthError(`${errorPrefix}: not signed in`)
     try {
-      const tokens = await tokenRequest({ refresh_token: saved.refreshToken, grant_type: 'refresh_token' }, label)
+      const tokens = await tokenRequest({ refresh_token: saved.refreshToken, grant_type: 'refresh_token' }, label, saved.tv ? TV : DESKTOP)
       access = { token: tokens.access_token, expiresAt: Date.now() + tokens.expires_in * 1000 }
       return access.token
     } catch (e) {
@@ -113,6 +203,13 @@ export function googleAccount({ scope, secretKey, label, errorPrefix }: AccountO
     signedIn: () => store.hasSecret(secretKey),
 
     async signIn() {
+      if (phone) {
+        const tokens = await deviceTokens(scope, label)
+        if (!tokens.refresh_token) throw new Error('Google did not grant offline access — try connecting again')
+        await store.setSecret(secretKey, { refreshToken: tokens.refresh_token, tv: true } satisfies Saved)
+        access = { token: tokens.access_token, expiresAt: Date.now() + tokens.expires_in * 1000 }
+        return
+      }
       if (!CLIENT_ID) {
         throw new Error(`${label} sign-in isn't set up in this copy of StreamHub (it needs a Google OAuth client ID — see README → YouTube sign-in setup)`)
       }
@@ -160,11 +257,15 @@ export const googleSignIn = youtubeAccount.signIn
 export const googleSignOut = youtubeAccount.signOut
 export const googleGet = youtubeAccount.get
 
-async function tokenRequest(params: Record<string, string>, label: string): Promise<{ access_token: string; expires_in: number; refresh_token?: string }> {
+async function tokenRequest(
+  params: Record<string, string>,
+  label: string,
+  client: Client = DESKTOP
+): Promise<{ access_token: string; expires_in: number; refresh_token?: string }> {
   const res = await net.fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: CLIENT_ID, ...(CLIENT_SECRET ? { client_secret: CLIENT_SECRET } : {}), ...params }).toString()
+    body: new URLSearchParams({ client_id: client.id, ...(client.secret ? { client_secret: client.secret } : {}), ...params }).toString()
   })
   const json = (await res.json().catch(() => ({}))) as { access_token?: string; expires_in?: number; refresh_token?: string; error?: string; error_description?: string }
   if (!res.ok || !json.access_token) throw new Error(`${label} sign-in failed: ${json.error ?? res.status}${json.error_description ? ` (${json.error_description})` : ''}`)

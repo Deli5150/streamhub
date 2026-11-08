@@ -1,5 +1,5 @@
 import { BrowserWindow, Notification, shell } from 'electron'
-import { PLATFORMS, type AppState, type Channel, type ChannelAbout, type ChannelPageData, type TogetherChannel, type LiveInfo, type MediaCategory, type MediaItem, type Platform } from '@shared/types'
+import { PLATFORMS, type AppState, type Channel, type ChannelAbout, type ChannelPageData, type TogetherChannel, type LiveInfo, type MediaCategory, type MediaItem, type PhoneSignIn, type Platform } from '@shared/types'
 import { channelPageUrl } from '@shared/urls'
 import { setTrayLiveCount } from './menubar'
 import { getSettings, SHORTCUT_DEFAULTS } from './settings'
@@ -29,6 +29,12 @@ const polling = new Map<Platform, Promise<void>>()
 /** Platforms that finished a first live poll — earlier polls must not fire "went live" alerts. */
 const notifyReady = new Set<Platform>()
 let win: BrowserWindow | null = null
+/** A Google sign-in waiting to be approved on a phone (Big Picture shows its code). */
+let phoneSignIn: PhoneSignIn | null = null
+export function setPhoneSignIn(next: PhoneSignIn | null): void {
+  phoneSignIn = next
+  emit()
+}
 /** About sections / stream descriptions rarely change mid-stream; reopening a stream reuses them. */
 const ABOUT_CACHE_MS = 10 * 60_000
 const aboutCache = new Map<string, { at: number; result: Promise<ChannelAbout> }>()
@@ -53,6 +59,7 @@ export function state(): AppState {
     ytPlaylists: getPlaylists(),
     sync: syncStatus(),
     update: updateStatus(),
+    phoneSignIn,
     accounts: PLATFORMS.map((p) => ({
       platform: p,
       connected: providers[p].isConnected(),

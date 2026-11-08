@@ -204,12 +204,12 @@ const GLYPHS: Record<PadStyle, Record<string, ReactNode>> = {
 }
 const GLYPH_COLORS: Record<string, string> = { A: 'bg-[#3fae49]', B: 'bg-[#e0372f]', X: 'bg-[#2f7de1]', Y: 'bg-[#e8b417]' }
 
-export type Hint = [button: 'A' | 'B' | 'X' | 'Y' | 'LB/RB' | 'LT/RT', label: string]
+export type Hint = [button: 'A' | 'B' | 'X' | 'Y' | 'Start' | 'LB/RB' | 'LT/RT', label: string]
 
 /** The controller's buttons and what they do here (keyboard keys when no controller is connected). */
 export function Hints({ hints }: { hints: Hint[] }): React.JSX.Element {
   const pad = useBp((s) => s.pad)
-  const keys: Record<string, string> = { A: 'Enter', B: 'Esc', X: 'X', Y: 'Y', 'LB/RB': 'Q / E', 'LT/RT': '' }
+  const keys: Record<string, string> = { A: 'Enter', B: 'Esc', X: 'X', Y: 'Y', Start: 'S', 'LB/RB': 'Q / E', 'LT/RT': '' }
   return (
     <div className="flex flex-wrap items-center gap-x-7 gap-y-2 text-[16px] font-semibold text-white/80">
       {hints

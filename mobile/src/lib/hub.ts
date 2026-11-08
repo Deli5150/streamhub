@@ -57,6 +57,7 @@ export function state(): AppState {
     ytPlaylists: getPlaylists(),
     sync: syncStatus(),
     update: updateStatus(),
+    phoneSignIn: null,
     accounts: PLATFORMS.map((p) => ({
       platform: p,
       connected: providers[p].isConnected(),

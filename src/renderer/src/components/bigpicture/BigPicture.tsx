@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BookmarkCheckIcon, BookmarkPlusIcon, Gamepad2Icon, ListPlusIcon, ListXIcon, LogOutIcon, SearchIcon, UserIcon } from 'lucide-react'
+import { BookmarkCheckIcon, BookmarkPlusIcon, Gamepad2Icon, ListPlusIcon, ListXIcon, LogOutIcon, PowerIcon, SearchIcon, SettingsIcon, UserIcon } from 'lucide-react'
 import { focusEl, focusFirst, focusId, resetBp, startBpInput, useBp, useBpInput } from '../../lib/bigPicture'
 import { groupOf } from '../../lib/combined'
 import { useQueue } from '../../lib/queue'
@@ -7,6 +7,7 @@ import { useUi } from '../../store'
 import { BpChannel } from './BpChannel'
 import { BpHome, tabHints, useTabs } from './BpHome'
 import { BpPlayer } from './BpPlayer'
+import { BpSettings, PhoneSignInDialog } from './BpSettings'
 import { BpButton, cardMenu, FOCUS, Hints, type CardMenu, type Hint } from './parts'
 
 /**
@@ -20,7 +21,12 @@ export function BigPicture(): React.JSX.Element {
   const padActive = useBp((s) => s.padActive)
   const route = stack[stack.length - 1]
   const [exitOpen, setExitOpen] = useState(false)
-  const exit = (): void => useUi.getState().set({ bigPicture: false })
+  // The Steam copy has no usual window to go back to: leaving means quitting.
+  const only = useUi((s) => s.bigPictureOnly)
+  const exit = (): void => (only ? void window.api.quitApp() : useUi.getState().set({ bigPicture: false }))
+  const openSettings = (): void => {
+    if (route.kind !== 'settings') useBp.getState().push({ kind: 'settings' })
+  }
   // The intro plays over the interface ('in'), then fades as the interface settles in ('out').
   const [intro, setIntro] = useState<'in' | 'out' | 'done'>('in')
 
@@ -40,7 +46,7 @@ export function BigPicture(): React.JSX.Element {
       // A channel screen places its own focus (its videos load after it opens).
       if (route.kind === 'channel') return
       if (focusId(route.focusId)) return
-      if (route.kind === 'home') focusFirstInMain()
+      if (route.kind === 'home' || route.kind === 'settings') focusFirstInMain()
       else focusFirst()
     })
     return () => cancelAnimationFrame(raf)
@@ -54,15 +60,21 @@ export function BigPicture(): React.JSX.Element {
     const timer = setTimeout(() => setToast(null), TOAST_MS)
     return () => clearTimeout(timer)
   }, [toast])
-  // A new version: said once here; it's installed from the usual window (Exit), not mid-stream.
+  // A new version: said once here; it's installed from Settings, not mid-stream.
   const newVersion = useUi((s) => (s.app?.update.state === 'available' ? s.app.update.version : undefined))
   useEffect(() => {
-    if (newVersion) setToast({ text: `StreamHub ${newVersion} is available. Exit Big Picture to update.`, at: Date.now() })
+    if (newVersion) setToast({ text: `StreamHub ${newVersion} is available: update it in Settings.`, at: Date.now() })
   }, [newVersion])
 
-  // B on the home screen asks before leaving Big Picture; B elsewhere goes back a screen.
+  // B on the home screen asks before leaving Big Picture; B elsewhere goes back a screen. Start opens
+  // Settings (from the home and channel screens; the player uses Start itself).
   useBpInput(
     (action) => {
+      if (action === 'start') {
+        if (route.kind !== 'home' && route.kind !== 'channel') return false
+        openSettings()
+        return true
+      }
       if (action === 'y') {
         const found = cardMenu((document.activeElement as HTMLElement | null)?.dataset?.bpId)
         if (found) setMenu(found)
@@ -79,19 +91,34 @@ export function BigPicture(): React.JSX.Element {
   return (
     <div className={`fixed inset-0 z-[100] flex flex-col bg-[#0b0b10] text-white select-none ${padActive ? 'cursor-none' : ''}`}>
       <div className={`flex min-h-0 flex-1 flex-col ${intro === 'in' ? 'opacity-0' : 'bp-ui-in'}`}>
-        {route.kind === 'home' || route.kind === 'channel' ? (
+        {route.kind === 'home' || route.kind === 'channel' || route.kind === 'settings' ? (
           <>
-            <Header onExit={() => setExitOpen(true)} showTabs={route.kind === 'home'} />
+            <Header onExit={() => setExitOpen(true)} onSettings={openSettings} showTabs={route.kind === 'home'} quits={only} />
             <main className="min-h-0 flex-1">
-              {route.kind === 'home' ? <BpHome /> : <BpChannel key={route.key} channelKey={route.key} restoreId={route.focusId} />}
+              {route.kind === 'home' ? (
+                <BpHome />
+              ) : route.kind === 'settings' ? (
+                <BpSettings onToast={(text) => setToast({ text, at: Date.now() })} />
+              ) : (
+                <BpChannel key={route.key} channelKey={route.key} restoreId={route.focusId} />
+              )}
             </main>
-            <Footer hints={route.kind === 'home' ? [...HOME_HINTS, ...tabHints(tab)] : CHANNEL_HINTS} />
+            <Footer
+              hints={
+                route.kind === 'home'
+                  ? [...(only ? QUIT_HOME_HINTS : HOME_HINTS), ...tabHints(tab)]
+                  : route.kind === 'settings'
+                    ? SETTINGS_HINTS
+                    : CHANNEL_HINTS
+              }
+            />
           </>
         ) : (
           <BpPlayer key={JSON.stringify(route)} route={route} />
         )}
       </div>
-      {exitOpen && <ExitDialog onExit={exit} onCancel={() => setExitOpen(false)} />}
+      {exitOpen && <ExitDialog quits={only} onExit={exit} onCancel={() => setExitOpen(false)} />}
+      <PhoneSignInDialog />
       {menu && <CardMenuDialog menu={menu} onClose={() => setMenu(null)} onDone={(text) => setToast({ text, at: Date.now() })} />}
       {toast && (
         <div
@@ -154,7 +181,19 @@ const HOME_HINTS: Hint[] = [
   ['A', 'Select'],
   ['B', 'Exit Big Picture'],
   ['Y', 'Options'],
+  ['Start', 'Settings'],
   ['LB/RB', 'Switch tab']
+]
+const QUIT_HOME_HINTS: Hint[] = [
+  ['A', 'Select'],
+  ['B', 'Quit'],
+  ['Y', 'Options'],
+  ['Start', 'Settings'],
+  ['LB/RB', 'Switch tab']
+]
+const SETTINGS_HINTS: Hint[] = [
+  ['A', 'Select'],
+  ['B', 'Back']
 ]
 const CHANNEL_HINTS: Hint[] = [
   ['A', 'Select'],
@@ -251,7 +290,7 @@ function MenuItem({ icon, children, onPress, autoFocus }: { icon: React.ReactNod
   )
 }
 
-function Header({ onExit, showTabs }: { onExit(): void; showTabs: boolean }): React.JSX.Element {
+function Header({ onExit, onSettings, showTabs, quits }: { onExit(): void; onSettings(): void; showTabs: boolean; quits: boolean }): React.JSX.Element {
   const tabs = useTabs()
   const tab = useBp((s) => s.tab)
   const setTab = useBp((s) => s.setTab)
@@ -276,8 +315,8 @@ function Header({ onExit, showTabs }: { onExit(): void; showTabs: boolean }): Re
   }, [tabs, tab, setTab])
 
   return (
-    <header data-bp-top="" className="flex h-24 shrink-0 items-center gap-3 px-16">
-      <span className="mr-8 flex items-center gap-3 text-[24px] font-extrabold tracking-tight">
+    <header data-bp-top="" className="flex h-24 shrink-0 items-center gap-3 px-16 max-[1400px]:px-10">
+      <span className="mr-8 flex shrink-0 items-center gap-3 text-[24px] font-extrabold tracking-tight whitespace-nowrap max-[1400px]:mr-3">
         <Gamepad2Icon className="size-8 text-white/80" strokeWidth={2} />
         StreamHub
       </span>
@@ -293,7 +332,7 @@ function Header({ onExit, showTabs }: { onExit(): void; showTabs: boolean }): Re
               data-bp-id={`tab:${t.id}`}
               onClick={() => setTab(t.id)}
               onFocus={() => setTab(t.id)}
-              className={`${FOCUS} h-12 rounded-full px-6 text-[20px] font-bold focus:bg-white focus:text-black ${t.id === tab ? 'bg-white/20 text-white' : 'text-white/55'}`}
+              className={`${FOCUS} h-12 rounded-full px-6 text-[20px] font-bold whitespace-nowrap focus:bg-white focus:text-black max-[1400px]:px-4 ${t.id === tab ? 'bg-white/20 text-white' : 'text-white/55'}`}
             >
               {t.id === 'search' ? <SearchIcon className="size-6" strokeWidth={2.5} /> : t.label}
             </button>
@@ -302,9 +341,10 @@ function Header({ onExit, showTabs }: { onExit(): void; showTabs: boolean }): Re
         </nav>
       )}
       <div className="flex-1" />
-      <span className="mr-4 text-[22px] font-semibold text-white/80 tabular-nums">{now}</span>
-      <BpButton id="exit" onPress={onExit} icon={<LogOutIcon className="size-5" />} title="Exit Big Picture">
-        Exit
+      <span className="mr-4 text-[22px] font-semibold whitespace-nowrap text-white/80 tabular-nums max-[1400px]:mr-1">{now}</span>
+      <BpButton id="settings" onPress={onSettings} icon={<SettingsIcon className="size-5" />} title="Settings (Start)" />
+      <BpButton id="exit" onPress={onExit} icon={quits ? <PowerIcon className="size-5" /> : <LogOutIcon className="size-5" />} title={quits ? 'Quit StreamHub' : 'Exit Big Picture'}>
+        {quits ? 'Quit' : 'Exit'}
       </BpButton>
     </header>
   )
@@ -325,7 +365,7 @@ function Footer({ hints }: { hints: Hint[] }): React.JSX.Element {
   )
 }
 
-function ExitDialog({ onExit, onCancel }: { onExit(): void; onCancel(): void }): React.JSX.Element {
+function ExitDialog({ quits, onExit, onCancel }: { quits: boolean; onExit(): void; onCancel(): void }): React.JSX.Element {
   // Only moving and choosing reach the dialog's buttons; nothing reaches the screen under it.
   useBpInput((action) => {
     if (action === 'back') onCancel()
@@ -340,14 +380,14 @@ function ExitDialog({ onExit, onCancel }: { onExit(): void; onCancel(): void }):
   return (
     <div data-bp-scope="" className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-md">
       <div className="flex w-[560px] flex-col items-center gap-8 rounded-3xl bg-[#1a1a21] p-12 text-center shadow-2xl ring-1 ring-white/10">
-        <Gamepad2Icon className="size-14 text-white/70" strokeWidth={1.5} />
+        {quits ? <PowerIcon className="size-14 text-white/70" strokeWidth={1.5} /> : <Gamepad2Icon className="size-14 text-white/70" strokeWidth={1.5} />}
         <div>
-          <p className="text-[30px] font-bold">Exit Big Picture?</p>
-          <p className="mt-2 text-[18px] text-white/60">StreamHub goes back to its usual window.</p>
+          <p className="text-[30px] font-bold">{quits ? 'Quit StreamHub?' : 'Exit Big Picture?'}</p>
+          <p className="mt-2 text-[18px] text-white/60">{quits ? 'Start it again from your library.' : 'StreamHub goes back to its usual window.'}</p>
         </div>
         <div className="flex gap-4">
           <BpButton id="exit-yes" autoFocus onPress={onExit}>
-            Exit Big Picture
+            {quits ? 'Quit' : 'Exit Big Picture'}
           </BpButton>
           <BpButton id="exit-no" onPress={onCancel}>
             Cancel

@@ -44,6 +44,8 @@ interface UiState {
   theater: boolean
   /** Big Picture mode (components/bigpicture): the full-screen, controller-driven interface. */
   bigPicture: boolean
+  /** The Steam copy: Big Picture is the whole app, with no way out to the usual window. */
+  bigPictureOnly: boolean
   filter: Platform | 'all'
   search: string
   toast: (Toast & { id: number }) | null
@@ -59,7 +61,7 @@ interface UiState {
   reorderMulti(sourceKey: string, targetKey: string): void
   focus(key: string): void
   showToast(t: Toast): void
-  set(p: Partial<Pick<UiState, 'collapsed' | 'theater' | 'bigPicture' | 'filter' | 'search' | 'multiPicker' | 'combine' | 'pip' | 'importPlaylists' | 'channelsOpen'>>): void
+  set(p: Partial<Pick<UiState, 'collapsed' | 'theater' | 'bigPicture' | 'bigPictureOnly' | 'filter' | 'search' | 'multiPicker' | 'combine' | 'pip' | 'importPlaylists' | 'channelsOpen'>>): void
 }
 
 export const MAX_MULTI = 6
@@ -92,6 +94,7 @@ export const useUi = create<UiState>((set) => ({
   collapsed: localStorage.getItem('collapsed') === '1',
   theater: localStorage.getItem('theater') === '1',
   bigPicture: false,
+  bigPictureOnly: false,
   filter: 'all',
   search: '',
   toast: null,

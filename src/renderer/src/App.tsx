@@ -22,7 +22,7 @@ import { BigPicture } from './components/bigpicture/BigPicture'
 let startedBigPicture = false
 
 export function App(): React.JSX.Element {
-  const { view, multi, go, setApp, app, combine, set, theater, bigPicture } = useUi()
+  const { view, multi, go, setApp, app, combine, set, theater, bigPicture, bigPictureOnly } = useUi()
   const theme = app?.settings.theme ?? 'default'
   const queued = useQueue((s) => s.items.length)
 
@@ -49,8 +49,9 @@ export function App(): React.JSX.Element {
 
   useEffect(() => {
     applySystemAppearance()
-    void Promise.all([window.api.getState(), window.api.launchBigPicture()]).then(([state, launch]) => {
+    void Promise.all([window.api.getState(), window.api.launchBigPicture(), window.api.bigPictureOnly()]).then(([state, launch, only]) => {
       setApp(state)
+      if (only) set({ bigPictureOnly: true })
       // Settings → Playback, or launched for it (Steam's Game Mode, --big-picture): start in Big
       // Picture (once, not on every state refresh).
       if ((state.settings.bigPictureOnStartup || launch) && !startedBigPicture) {
@@ -72,7 +73,7 @@ export function App(): React.JSX.Element {
   const playlistView = view.kind === 'playlist' || view.kind === 'queue' || view.kind === 'ytPlaylist'
   const theaterOn = theater && (playlistView || (view.kind === 'watch' && !view.offline && Boolean(app?.live[view.key])))
 
-  if (bigPicture) return <BigPicture />
+  if (bigPicture || bigPictureOnly) return <BigPicture />
 
   return (
     <div className="flex h-full flex-col">
