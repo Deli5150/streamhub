@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+ <title>Some Channel</title>
+ <entry>
+  <id>yt:video:abc123DEF45</id>
+  <yt:videoId>abc123DEF45</yt:videoId>
+  <yt:channelId>UCxxxxxxxxxxxxxxxxxxxxxx</yt:channelId>
+  <title>Live: building a game</title>
+  <published>2026-10-26T18:00:00+00:00</published>
+  <media:group><media:title>Live: building a game</media:title><media:thumbnail url="https://i.ytimg.com/vi/abc123DEF45/hqdefault.jpg" width="480" height="360"/></media:group>
+ </entry>
+ <entry>
+  <yt:videoId>zzz999YYY88</yt:videoId>
+  <title>Older upload</title>
+  <published>2026-09-01T18:00:00+00:00</published>
+ </entry>
+</feed>

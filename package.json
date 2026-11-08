@@ -1,0 +1,121 @@
+{
+  "name": "streamhub",
+  "version": "1.0.7",
+  "description": "All-in-one desktop viewer for Twitch, YouTube, Kick and Rumble",
+  "main": "./out/main/index.js",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "vitest run",
+    "dist": "electron-vite build && electron-builder",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:linux": "electron-vite build && electron-builder --linux",
+    "dist:steam": "npm run dist:linux && node scripts/steam/build-installer.mjs",
+    "steam:art": "electron scripts/steam/render-art.cjs"
+  },
+  "build": {
+    "appId": "app.streamhub",
+    "productName": "StreamHub",
+    "copyright": "Copyright © 2026 StreamHub",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**",
+      "resources/**"
+    ],
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "category": "public.app-category.entertainment",
+      "icon": "build/icon.icns",
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "StreamHub",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "AudioVideo",
+      "synopsis": "Your Twitch, YouTube, Kick and Rumble follows in one app",
+      "description": "Watch the channels you follow on Twitch, YouTube, Kick and Rumble in one place, with chat, multi-view, picture in picture and a controller-friendly Big Picture mode.",
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "StreamHub",
+          "Keywords": "twitch;youtube;kick;rumble;stream;live;"
+        }
+      }
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "hls.js": "^1.7.3",
+    "lucide-react": "^0.542.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zustand": "^5.0.16"
+  },
+  "author": "StreamHub"
+}

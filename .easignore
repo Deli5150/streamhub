@@ -1,0 +1,16 @@
+# What EAS uploads when building the mobile app (see mobile/README.md → Building). The mobile app
+# uses ../src, so the whole folder is uploaded, minus installs, desktop builds and secrets.
+node_modules
+out
+out-test
+dist
+build/*.icns
+.env
+mobile/.env
+mobile/ios
+mobile/android
+mobile/.expo
+*.apk
+*.ipa
+.DS_Store
+mobile/credentials

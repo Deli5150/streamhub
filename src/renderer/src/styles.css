@@ -1,0 +1,352 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens ported from the Glaze StreamHub app (@glaze/core). Seed variables (--bg, --fg,
+ * --accent, …) follow the macOS appearance; every surface/text token derives from them, so the UI
+ * recolors as a whole. --bg composites at 40% over the window's native vibrancy material.
+ */
+
+@font-face {
+  font-family: "InterVariable";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/InterVariable.woff2") format("woff2");
+}
+
+/* OGX colorway's squared display face (Google Fonts, OFL). Regular weight only. */
+@font-face {
+  font-family: "Aldrich";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/Aldrich-Regular.woff2") format("woff2");
+}
+
+:root {
+  --bg: #ffffff;
+  --bg-secondary: #ffffff;
+  --fg: #000000;
+  --selection: #000000;
+  --theme-accent: #138af2;
+  --accent: var(--system-accent, var(--theme-accent));
+  --accent-contrast: #ffffff;
+  --red: #b12424;
+  --green: #006b4f;
+  --popover-base: #fcfcfc;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --bg-secondary: #000000;
+    --fg: #ffffff;
+    --selection: #ffffff;
+    --theme-accent: #4fa3f8;
+    --red: #ff6363;
+    --green: #59d499;
+    --popover-base: #111113;
+    color-scheme: dark;
+  }
+}
+
+:root {
+  --fg-5: rgb(from var(--fg) r g b / 5%);
+  --fg-10: rgb(from var(--fg) r g b / 10%);
+  --fg-20: rgb(from var(--fg) r g b / 20%);
+  --fg-40: rgb(from var(--fg) r g b / 40%);
+  --fg-60: rgb(from var(--fg) r g b / 60%);
+  --bg-40: rgb(from var(--bg) r g b / 40%);
+  --selection-5: rgb(from var(--selection) r g b / 5%);
+  --selection-10: rgb(from var(--selection) r g b / 10%);
+  --window-bg: var(--bg-40);
+  /* The menu-bar popup's panel (an opaque window, so no vibrancy behind it). */
+  --menubar-bg: var(--color-popover);
+}
+
+/* With a colorway picked, the popup uses the app's own background. */
+:root[data-colorway] {
+  --menubar-bg: linear-gradient(var(--bg-secondary), var(--bg));
+}
+
+/* No native vibrancy (non-macOS): paint an opaque window instead of a translucent one. */
+:root[data-opaque] {
+  --window-bg: color-mix(in srgb, var(--bg), var(--fg) 8%);
+}
+
+@theme {
+  --font-sans: "InterVariable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+  --color-background: var(--bg);
+  --color-primary: var(--fg);
+  --color-secondary: var(--fg-60);
+  --color-tertiary: var(--fg-40);
+  --color-quaternary: var(--fg-20);
+  --color-control: var(--fg-10);
+  --color-control-subtle: var(--fg-5);
+  --color-control-active: var(--fg-20);
+  --color-well: rgb(from var(--fg) r g b / 2.5%);
+  --color-popover: color-mix(in srgb, var(--popover-base), var(--bg) 15%);
+  --color-separator: var(--fg-10);
+  --color-list-hover: var(--selection-5);
+  --color-list-selection: var(--selection-10);
+  --color-accent: var(--accent);
+  --color-support-red: var(--red);
+  --color-support-green: var(--green);
+  --color-twitch: #9146ff;
+  --color-rumble: #85c742;
+
+  --radius-control: 12px;
+  --radius-panel: 18px;
+  --radius-popover: 12px;
+  --radius-card: 12px;
+  --radius-pill: 9999px;
+
+  --text-heading1: 24px;
+  --text-heading1--font-weight: 600;
+  --text-heading1--line-height: 30px;
+  --text-heading1--letter-spacing: -0.17px;
+  --text-heading2: 18px;
+  --text-heading2--font-weight: 600;
+  --text-heading2--line-height: 24px;
+  --text-heading2--letter-spacing: -0.12px;
+  --text-large: 16px;
+  --text-large--font-weight: 400;
+  --text-large--line-height: 22px;
+  --text-regular: 13px;
+  --text-regular--font-weight: 400;
+  --text-regular--line-height: 18px;
+  --text-regular--letter-spacing: 0.1px;
+  --text-strong: 13px;
+  --text-strong--font-weight: 500;
+  --text-strong--line-height: 18px;
+  --text-strong--letter-spacing: 0.11px;
+  --text-small: 11px;
+  --text-small--font-weight: 400;
+  --text-small--line-height: 14px;
+  --text-small--letter-spacing: 0.1px;
+  --text-small-strong: 11px;
+  --text-small-strong--font-weight: 500;
+  --text-small-strong--line-height: 14px;
+  --text-small-strong--letter-spacing: 0.11px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--window-bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 18px;
+  -webkit-font-smoothing: antialiased;
+  font-optical-sizing: auto;
+  font-synthesis: none;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+button {
+  cursor: default;
+}
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag,
+.drag-region button,
+.drag-region input {
+  -webkit-app-region: no-drag;
+}
+
+webview {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* Thin overlay-style scrollbars like the native ones Glaze uses. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--fg-20);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * OGX colorway (Opera GX look): Aldrich for all text, an opaque charcoal-violet window with the
+ * lighter glow toward the top right, and every icon in GX red. Icons sitting on a colored fill
+ * (accent buttons, platform badges, destructive buttons) keep their own color so they stay visible.
+ * Our own SVG icons (Kick, Rumble) carry the `icon` class to be included.
+ */
+:root[data-theme-ogx] {
+  --font-sans: "Aldrich", "InterVariable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --ogx-red: #ff0a3c;
+  --window-bg: radial-gradient(120% 90% at 85% 0%, #2a2931 0%, #1f1e25 40%, #1b1a21 70%) fixed, #1b1a21;
+  --menubar-bg: radial-gradient(120% 90% at 85% 0%, #2a2931 0%, #1f1e25 40%, #1b1a21 70%), #1b1a21;
+}
+
+.menubar-panel {
+  background: var(--menubar-bg);
+}
+
+:root[data-theme-ogx] :is(svg.lucide, svg.icon) {
+  color: var(--ogx-red);
+}
+
+/*
+ * Opera GX icon style: thin, hard-edged line icons (square line ends, mitered corners, no
+ * rounded boxes) with a soft red neon glow. Applied to every Lucide icon, so the whole set
+ * changes shape, not just color.
+ */
+:root[data-theme-ogx] svg.lucide {
+  stroke-width: 1.75px;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  filter: drop-shadow(0 0 3px rgb(255 10 60 / 0.55));
+}
+
+:root[data-theme-ogx] svg.lucide rect {
+  rx: 0.75px;
+  ry: 0.75px;
+}
+
+:root[data-theme-ogx] svg.icon {
+  filter: drop-shadow(0 0 3px rgb(255 10 60 / 0.55));
+}
+
+/* Icons on a colored fill keep their normal look (a glow there just blurs them). */
+:root[data-theme-ogx] :is([class*="bg-accent"], [class*="bg-twitch"], [class*="bg-rumble"], [class*="bg-support-"]) :is(svg.lucide, svg.icon) {
+  filter: none;
+}
+
+:root[data-theme-ogx] :is([class*="bg-accent"], [class*="bg-twitch"], [class*="bg-rumble"], [class*="bg-support-"]) :is(svg.lucide, svg.icon) {
+  color: revert-layer;
+}
+
+/* ---------- Big Picture mode's intro (components/bigpicture/BigPicture.tsx) ---------- */
+/* The title arrives, "Big Picture Mode" fades in beneath it, then the intro fades away as the
+   interface settles in behind it. */
+
+@keyframes bp-title-in {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+    filter: blur(14px);
+    letter-spacing: 0.08em;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    letter-spacing: -0.03em;
+  }
+}
+
+@keyframes bp-subtitle-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bp-rule-in {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bp-glow-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bp-intro-out {
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes bp-ui-in {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bp-title-in {
+  animation: bp-title-in 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.bp-subtitle-in {
+  animation: bp-subtitle-in 700ms cubic-bezier(0.16, 1, 0.3, 1) 650ms both;
+}
+.bp-rule-in {
+  animation: bp-rule-in 700ms cubic-bezier(0.16, 1, 0.3, 1) 450ms both;
+}
+.bp-glow-in {
+  animation: bp-glow-in 1400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.bp-intro-out {
+  animation: bp-intro-out 500ms ease-in both;
+}
+.bp-ui-in {
+  animation: bp-ui-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-title-in,
+  .bp-subtitle-in,
+  .bp-rule-in,
+  .bp-glow-in,
+  .bp-intro-out,
+  .bp-ui-in {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}

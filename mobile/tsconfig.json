@@ -1,0 +1,13 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["esnext", "dom"],
+    "resolveJsonModule": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@shared/*": ["../src/shared/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "../src/main/env.d.ts"]
+}
