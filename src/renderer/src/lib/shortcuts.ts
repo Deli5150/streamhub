@@ -1,4 +1,4 @@
-import { codeToKey } from '@shared/shortcuts'
+import { codeToKey, TRAY } from '@shared/shortcuts'
 import type { ShortcutAction } from '@shared/types'
 
 export const SHORTCUT_META: Array<{ action: ShortcutAction; label: string; description: string }> = [
@@ -8,8 +8,8 @@ export const SHORTCUT_META: Array<{ action: ShortcutAction; label: string; descr
   { action: 'returnHome', label: 'Return home', description: 'Jump back to the home screen.' },
   {
     action: 'toggleMenubarApp',
-    label: 'Toggle menu bar app',
-    description: "Show or hide the menu bar popup — works even when StreamHub isn't focused. Requires the menu bar app to be enabled."
+    label: `Toggle ${TRAY.name} app`,
+    description: `Show or hide the ${TRAY.name} popup — works even when StreamHub isn't focused. Requires the ${TRAY.name} app to be enabled.`
   }
 ]
 

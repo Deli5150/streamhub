@@ -18,6 +18,8 @@ const IS_LINUX = nodePlatform ? nodePlatform === 'linux' : /Linux/.test(globalTh
 /** What Linux and Windows call the key Electron names "Command". */
 const SUPER_NAME = IS_LINUX ? 'Super' : 'Win'
 const OS_NAME = IS_MAC ? 'macOS' : IS_LINUX ? 'your desktop' : 'Windows'
+/** Where the StreamHub status icon lives: the menu bar on macOS, the system tray elsewhere. */
+export const TRAY = IS_MAC ? { name: 'menu bar', title: 'Menu bar', where: 'the macOS menu bar' } : { name: 'system tray', title: 'System tray', where: 'the system tray' }
 
 /** The modifiers as this computer's keyboard names them, for messages. */
 export const MODIFIER_HINT = IS_MAC ? '⌘, ⌃ or ⌥' : `Ctrl, Alt or ${SUPER_NAME}`
