@@ -19,6 +19,8 @@ export interface Provider {
    * without the sign-in), so the stream and chat switchers still find them live.
    */
   getLiveSignedOut?(channels: Channel[]): Promise<LiveInfo[]>
+  /** Whether the last getLive answered without some details (YouTube's viewer counts) that a check moments later will have. */
+  liveIsPartial?(): boolean
   /** `background`: a preload nobody is waiting on (kept off the readers used for on-demand loads). */
   getChannelPage(ch: Channel, opts?: { background?: boolean }): Promise<ChannelPageData>
   /** Next batch for one category, from a cursor the page (or a previous call) returned. */

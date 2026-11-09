@@ -88,7 +88,16 @@ export const twitch: Provider = {
     return [...read, ...kept]
   },
 
-  async getLive() {
+  async getLive(channels) {
+    // Fast path: Twitch's public API for the channels you follow (a fraction of a second, no page);
+    // the Following page (several seconds in a hidden window) when it doesn't answer.
+    if (channels.length) {
+      try {
+        return await publicLive(channels)
+      } catch (e) {
+        console.error('[twitch] live status API, reading the Following page instead:', (e as Error).message)
+      }
+    }
     const scraped = await readPage<ScrapedTwitchStream[]>(
       'twitch',
       'live',
@@ -107,29 +116,7 @@ export const twitch: Provider = {
     )
   },
 
-  async getLiveSignedOut(channels) {
-    const live: LiveInfo[] = []
-    for (let i = 0; i < channels.length; i += 35) {
-      const logins = channels.slice(i, i + 35).map((c) => c.id)
-      const res = await getJson<TwitchPublicLiveResponse>('twitch', 'https://gql.twitch.tv/gql', {
-        method: 'POST',
-        headers: { 'Client-Id': TWITCH_WEB_CLIENT_ID, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: `{ users(logins: ${JSON.stringify(logins)}) { login broadcastSettings { title } stream { viewersCount createdAt game { name } } } }` })
-      })
-      for (const u of res.data?.users ?? []) {
-        if (!u?.stream) continue
-        live.push({
-          key: channelKey('twitch', u.login),
-          title: u.broadcastSettings?.title || '',
-          viewers: u.stream.viewersCount,
-          category: u.stream.game?.name || undefined,
-          startedAt: u.stream.createdAt,
-          thumbnail: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${u.login}-640x360.jpg?t=${Math.floor(Date.now() / 60_000)}`
-        })
-      }
-    }
-    return live
-  },
+  getLiveSignedOut: (channels) => publicLive(channels),
 
   async getChannelPage(ch, opts) {
     // Twitch's API gives the first page of past broadcasts and clips in a fraction of a second;
@@ -290,4 +277,36 @@ async function readMedia(ch: Channel, kind: 'videos' | 'clips', target: number, 
           : `https://clips.twitch.tv/embed?clip=${m.id}&parent=twitch.tv&autoplay=true`
     })
   )
+}
+
+/** Live status of these channels from Twitch's public GraphQL API: batches of 35 logins, all at once. */
+async function publicLive(channels: Channel[]): Promise<LiveInfo[]> {
+  const batches: Channel[][] = []
+  for (let i = 0; i < channels.length; i += 35) batches.push(channels.slice(i, i + 35))
+  const answers = await Promise.all(
+    batches.map((batch) =>
+      getJson<TwitchPublicLiveResponse>('twitch', 'https://gql.twitch.tv/gql', {
+        method: 'POST',
+        headers: { 'Client-Id': TWITCH_WEB_CLIENT_ID, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: `{ users(logins: ${JSON.stringify(batch.map((c) => c.id))}) { login broadcastSettings { title } stream { viewersCount createdAt game { name } } } }` })
+      })
+    )
+  )
+  return answers.flatMap((res) => {
+    if (!res.data) throw new Error('no data from Twitch')
+    return (res.data.users ?? []).flatMap((u): LiveInfo[] =>
+      u?.stream
+        ? [
+            {
+              key: channelKey('twitch', u.login),
+              title: u.broadcastSettings?.title || '',
+              viewers: u.stream.viewersCount,
+              category: u.stream.game?.name || undefined,
+              startedAt: u.stream.createdAt,
+              thumbnail: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${u.login}-640x360.jpg?t=${Math.floor(Date.now() / 60_000)}`
+            }
+          ]
+        : []
+    )
+  })
 }

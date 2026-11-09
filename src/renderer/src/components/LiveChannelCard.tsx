@@ -46,7 +46,7 @@ export function LiveChannelCard({
       title={`${channel.displayName}${live.title ? ` — ${live.title}` : ''}`}
     >
       <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-control-subtle">
-        <Thumbnail src={live.thumbnail} className="transition-transform duration-300 group-hover:scale-[1.03]" />
+        <Thumbnail src={live.thumbnail} className="group-hover:scale-[1.03]" />
         {rank && (
           <span className="absolute top-1.5 right-1.5 flex h-5 items-center rounded-md bg-accent px-1.5 text-small font-semibold text-white shadow">
             #{rank}

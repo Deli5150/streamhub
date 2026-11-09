@@ -4,6 +4,7 @@ import { PLATFORMS, type MediaCategory, type Platform, type Settings } from '@sh
 import { setupAppMenu } from './appMenu'
 import { actions, emit, pollSignedOutMembers, setPhoneSignIn, showMainWindow, start, state } from './hub'
 import { cleanSaved } from './watchLater'
+import { store } from './store'
 import { checkForUpdates, downloadUpdate, installUpdate, isSteamCopy, startUpdater } from './updater'
 import { cancelPhoneSignIn, signInOnPhone } from './googleAuth'
 import { normalizeBindings } from '@shared/shortcuts'
@@ -214,6 +215,8 @@ onSettingsChange((next, prev) => {
 })
 
 app.whenReady().then(() => {
+  // The keychain read for saved sign-ins (Google) runs alongside startup rather than when first needed.
+  store.warmSecrets()
   setupSessions()
   if (isMac) app.dock?.setIcon(nativeImage.createFromPath(ICON))
   registerIpc()

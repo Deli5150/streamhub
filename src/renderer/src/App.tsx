@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { CircleUserIcon, HomeIcon, LayoutGridIcon, ListVideoIcon } from 'lucide-react'
 import { useQueue } from './lib/queue'
 import { applyColorway } from './lib/theme'
@@ -17,7 +17,9 @@ import { Toast } from './components/Toast'
 import { UpdatePill } from './components/Updates'
 import { ImportPlaylistsDialog } from './components/YouTubePlaylists'
 import { Watch } from './components/Watch'
-import { BigPicture } from './components/bigpicture/BigPicture'
+
+// Big Picture (and the QR codes it draws) loads when it's first opened, not with the app.
+const BigPicture = lazy(() => import('./components/bigpicture/BigPicture').then((m) => ({ default: m.BigPicture })))
 
 let startedBigPicture = false
 
@@ -73,7 +75,13 @@ export function App(): React.JSX.Element {
   const playlistView = view.kind === 'playlist' || view.kind === 'queue' || view.kind === 'ytPlaylist'
   const theaterOn = theater && (playlistView || (view.kind === 'watch' && !view.offline && Boolean(app?.live[view.key])))
 
-  if (bigPicture || bigPictureOnly) return <BigPicture />
+  if (bigPicture || bigPictureOnly) {
+    return (
+      <Suspense fallback={<div className="fixed inset-0 bg-[#0b0b10]" />}>
+        <BigPicture />
+      </Suspense>
+    )
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -109,7 +117,8 @@ export function App(): React.JSX.Element {
       </header>
       <div className="flex min-h-0 flex-1">
         {!theaterOn && <Sidebar />}
-        <main className="min-w-0 flex-1">
+        {/* Keyed by kind of screen, so each one fades in as it opens (switching channels keeps the player). */}
+        <main key={view.kind} className="ui-fade-in min-w-0 flex-1">
           {view.kind === 'home' && <Home />}
           {view.kind === 'accounts' && <Accounts />}
           {view.kind === 'watch' && <Watch channelKey={view.key} offline={view.offline} />}

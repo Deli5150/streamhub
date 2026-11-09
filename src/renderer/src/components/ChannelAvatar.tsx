@@ -34,6 +34,7 @@ function ChannelAvatarImpl({
         alt={name}
         draggable={false}
         referrerPolicy="no-referrer"
+        loading="lazy"
         decoding="async"
         className={className}
         onError={() => (attempt < MAX_RETRIES ? setAttempt(attempt + 1) : setFailed(true))}

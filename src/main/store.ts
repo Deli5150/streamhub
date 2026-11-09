@@ -26,6 +26,8 @@ interface Data {
 
 type ChangeListener = <K extends keyof Data>(key: K, prev: Data[K], next: Data[K]) => void
 const listeners: ChangeListener[] = []
+/** Decrypted secrets, by their encrypted value (a new value is decrypted afresh). */
+const decrypted = new Map<string, Promise<unknown>>()
 
 const file = (): string => path.join(app.getPath('userData'), 'streamhub.json')
 let data: Data | null = null
@@ -85,17 +87,31 @@ export const store = {
    * show a password prompt (e.g. after an update changes the app's signature), and the synchronous
    * API froze the whole app until it was answered.
    */
-  async getSecret<T>(name: string): Promise<T | undefined> {
+  getSecret<T>(name: string): Promise<T | undefined> {
     const raw = load().secrets[name]
-    if (!raw) return undefined
-    try {
-      const text = (await safeStorage.isAsyncEncryptionAvailable())
-        ? (await safeStorage.decryptStringAsync(Buffer.from(raw, 'base64'))).result
-        : Buffer.from(raw, 'base64').toString('utf8')
-      return JSON.parse(text) as T
-    } catch {
-      return undefined
+    if (!raw) return Promise.resolve(undefined)
+    // Each saved value is decrypted once per run and kept in memory: the first keychain read can
+    // take seconds, and the sign-ins are needed again every hour.
+    let cached = decrypted.get(raw)
+    if (!cached) {
+      cached = (async () => {
+        try {
+          const text = (await safeStorage.isAsyncEncryptionAvailable())
+            ? (await safeStorage.decryptStringAsync(Buffer.from(raw, 'base64'))).result
+            : Buffer.from(raw, 'base64').toString('utf8')
+          return JSON.parse(text) as unknown
+        } catch {
+          decrypted.delete(raw)
+          return undefined
+        }
+      })()
+      decrypted.set(raw, cached)
     }
+    return cached as Promise<T | undefined>
+  },
+  /** Starts decrypting every saved secret now (at launch), so the keychain read is out of the way by the time one is needed. */
+  warmSecrets(): void {
+    for (const name of Object.keys(load().secrets)) void this.getSecret(name)
   },
   async setSecret(name: string, value: unknown): Promise<void> {
     const d = load()

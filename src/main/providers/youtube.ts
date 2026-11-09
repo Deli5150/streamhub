@@ -32,6 +32,38 @@ import type { Provider } from './types'
 // units a call, and YouTube's channel RSS feeds no longer exist.)
 
 const API = 'https://www.googleapis.com/youtube/v3'
+/** How long a live check waits for the Data API before using the public player instead. */
+const API_WAIT_MS = 1500
+/** Whether the last live check went without the Data API's viewer counts (it was slow, not failing). */
+let partial = false
+
+/** Which of these videos are live, with title and viewers, from the Data API (50 per call). */
+async function apiLiveStatuses(ids: string[]): Promise<LiveInfo[]> {
+  const live: LiveInfo[] = []
+  for (let i = 0; i < ids.length; i += 50) {
+    const res = await googleGet<YouTubeVideosResponse>(`${API}/videos?part=snippet,liveStreamingDetails&maxResults=50&id=${ids.slice(i, i + 50).join(',')}`)
+    live.push(...parseYouTubeVideoStatuses(res).live)
+  }
+  return live
+}
+
+/** Whether a channel's video is live now, from YouTube's public player endpoint (no viewer count). */
+async function liveFromPlayer(c: Channel, id: string): Promise<LiveInfo | null> {
+  const player = await youtubei<YouTubePlayerResponse>('player', { videoId: id }).catch(() => null)
+  const v = player?.videoDetails
+  const broadcast = player?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails
+  if (!v?.isLive || v.channelId !== c.id) return null
+  return {
+    key: c.key,
+    title: v.title || '',
+    startedAt: broadcast?.startTimestamp,
+    thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault_live.jpg`,
+    streamId: id
+  }
+}
+
+/** Live checks in flight at once (YouTube's URL resolver). */
+const RESOLVE_CONCURRENCY = 24
 /** Imported playlists read up to this many pages of 50 videos. */
 const PLAYLIST_PAGES = 20
 /** Client the URL resolver is called as (any recent web client version is accepted). */
@@ -88,14 +120,24 @@ export const youtube: Provider = {
   },
 
   async getLive(channels) {
-    // Which channels' /live page leads to a video (public, no quota).
-    const found = await mapLimit(channels, 8, (c) => resolveLive(c))
-    // Which of those videos are live now (vs. scheduled): up to 50 per API call.
+    // Which channels' /live page leads to a video (public, no quota). Each answer is ~1 KB, so many
+    // at once: a few hundred channels take a couple of seconds rather than eight or more.
+    const found = await mapLimit(channels, RESOLVE_CONCURRENCY, (c) => resolveLive(c))
+    // Which of those videos are live now (vs. scheduled), with viewers: the Data API, up to 50 per
+    // call. Its sign-in can take a few seconds to read at launch (the keychain), and the API has a
+    // daily quota, so if it isn't back quickly, YouTube's public player answers instead (live or
+    // not, without viewer counts) and the hub asks again shortly for the viewers.
     const ids = [...new Set(found.filter((id): id is string => Boolean(id)))]
-    const live: LiveInfo[] = []
-    for (let i = 0; i < ids.length; i += 50) {
-      const res = await googleGet<YouTubeVideosResponse>(`${API}/videos?part=snippet,liveStreamingDetails&maxResults=50&id=${ids.slice(i, i + 50).join(',')}`)
-      live.push(...parseYouTubeVideoStatuses(res).live)
+    const fromApi = apiLiveStatuses(ids)
+    const quick = await Promise.race([fromApi.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), API_WAIT_MS))])
+    let live = quick
+    // Without the API's answer, the next check (moments later) brings the viewer counts.
+    partial = !live
+    if (!live) {
+      fromApi.catch(() => undefined)
+      const withVideo = channels.flatMap((c, i) => (found[i] ? [{ c, id: found[i]! }] : []))
+      const statuses = await mapLimit(withVideo, RESOLVE_CONCURRENCY, ({ c, id }) => liveFromPlayer(c, id))
+      live = statuses.filter((l): l is LiveInfo => Boolean(l))
     }
     // One entry per channel (a channel can run two streams at once; keep the bigger one).
     const known = new Set(channels.map((c) => c.key))
@@ -104,22 +146,13 @@ export const youtube: Provider = {
     return [...byKey.values()]
   },
 
+  liveIsPartial: () => partial,
+
   async getLiveSignedOut(channels) {
     // The same public resolver, then YouTube's player endpoint (public too) for whether it's live now.
-    const found = await mapLimit(channels, 8, async (c): Promise<LiveInfo | null> => {
+    const found = await mapLimit(channels, RESOLVE_CONCURRENCY, async (c) => {
       const id = await resolveLive(c)
-      if (!id) return null
-      const player = await youtubei<YouTubePlayerResponse>('player', { videoId: id }).catch(() => null)
-      const v = player?.videoDetails
-      const broadcast = player?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails
-      if (!v?.isLive || v.channelId !== c.id) return null
-      return {
-        key: c.key,
-        title: v.title || '',
-        startedAt: broadcast?.startTimestamp,
-        thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault_live.jpg`,
-        streamId: id
-      }
+      return id ? liveFromPlayer(c, id) : null
     })
     return found.filter((l): l is LiveInfo => Boolean(l))
   },

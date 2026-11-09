@@ -25,6 +25,9 @@ let live: Record<string, LiveInfo> = {}
 const errors: Partial<Record<Platform, string>> = {}
 const syncing = new Set<Platform>()
 const lastPoll: Partial<Record<Platform, number>> = {}
+/** Platforms whose last live check was a quick follow-up (see liveIsPartial), so it isn't repeated. */
+const quickRetry = new Set<Platform>()
+const QUICK_RETRY_MS = 8_000
 const polling = new Map<Platform, Promise<void>>()
 /** Platforms that finished a first live poll — earlier polls must not fire "went live" alerts. */
 const notifyReady = new Set<Platform>()
@@ -136,6 +139,12 @@ async function doPollLive(p: Platform): Promise<void> {
     store.set('liveCache', { at: Date.now(), live })
     syncSaved(p, live, (key) => actions.getChannelPage(key, { fresh: true }), emit)
     console.log(`[${p}] live status in ${((Date.now() - started) / 1000).toFixed(1)}s`)
+    // Some details came back missing (YouTube's viewers, while its sign-in was still loading): ask
+    // again soon, once.
+    if (prov.liveIsPartial?.() && !quickRetry.has(p)) {
+      quickRetry.add(p)
+      setTimeout(() => void pollLive(p, true), QUICK_RETRY_MS)
+    } else quickRetry.delete(p)
   })
   emit()
 }

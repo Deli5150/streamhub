@@ -127,7 +127,7 @@ export function useContextMenu(): {
   const element = menu && (
     <div
       onMouseDown={(e) => e.stopPropagation()}
-      className="fixed z-50 min-w-52 rounded-popover bg-popover p-1 shadow-2xl ring-1 ring-separator backdrop-blur-xl"
+      className="ui-pop-in fixed z-50 min-w-52 rounded-popover bg-popover p-1 shadow-2xl ring-1 ring-separator backdrop-blur-xl"
       style={{ left: Math.min(menu.x, window.innerWidth - 240), top: Math.max(8, Math.min(menu.y, window.innerHeight - menu.items.length * 28 - 16)) }}
     >
       {menu.items.map((item, i) =>
@@ -274,10 +274,10 @@ export function Dialog({
   }, [open, onClose])
   if (!open) return null
   return createPortal(
-    <div className="no-drag fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]" onMouseDown={onClose}>
+    <div className="ui-fade-in no-drag fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]" onMouseDown={onClose}>
       <div
         onMouseDown={(e) => e.stopPropagation()}
-        className={`flex max-h-[85vh] ${width} max-w-[92vw] flex-col overflow-hidden rounded-[24px] bg-popover shadow-2xl ring-1 ring-separator`}
+        className={`ui-dialog-in flex max-h-[85vh] ${width} max-w-[92vw] flex-col overflow-hidden rounded-[24px] bg-popover shadow-2xl ring-1 ring-separator`}
       >
         <div className="shrink-0 px-6 pt-5 pb-3">
           <h2 className="text-large font-semibold text-primary">{title}</h2>
@@ -353,7 +353,7 @@ export function QuickPopover({ icon, label, children }: { icon: ReactNode; label
             role="dialog"
             aria-label={label}
             style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width: POPOVER_WIDTH }}
-            className="no-drag fixed z-50 max-h-[32rem] overflow-y-auto overscroll-contain rounded-popover bg-popover py-4 shadow-2xl ring-1 ring-separator"
+            className="ui-pop-in no-drag fixed z-50 max-h-[32rem] overflow-y-auto overscroll-contain rounded-popover bg-popover py-4 shadow-2xl ring-1 ring-separator"
           >
             {children}
           </div>,

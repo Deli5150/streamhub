@@ -13,6 +13,11 @@ What changed in each version of StreamHub. Each version's downloads are on its [
 - **Import your YouTube playlists.** Settings → YouTube playlists → *Import playlists…* lists every playlist on your account (plus Liked videos), so you pick the ones you want and confirm. They show on Home under *Your playlists* (a carousel like Watch Later's), play like Watch Later (theater mode included), keep up with changes on YouTube, and come over to your other devices with Sync with Google. They're on iPhone and Android too.
 - **More themes.** Dark: Ocean, Grape, Slate, Ember and Arctic. Light: Peach, Sage, Blush and Cloud.
 
+### Faster and smoother
+- **Live status loads much sooner.** Twitch takes about 0.3 seconds instead of 5.6: it asks Twitch's API instead of loading its Following page. YouTube takes about 2 seconds instead of 7–9: it checks many channels at once, and shows who's live before its viewer counts arrive. Your saved sign-ins are read while the app starts instead of when they're first needed. On phones, Twitch's background check gets the same speedup.
+- **The app starts lighter:** the video player library and Big Picture load the first time they're used, which makes the app's startup code about 60% smaller.
+- **Cleaner motion:** menus, popovers and dialogs pop in, messages rise in, screens fade in, and thumbnails fade in as they load. All of it respects the system's reduce-motion setting. Avatars load as they scroll into view.
+
 ### Fixed
 - Adding the first video to an empty queue no longer starts playing it and takes you away from the channel. Videos are just added: a message confirms each one, with a *Play queue* button.
 - On Windows (and Linux) the menu bar settings are now called **System tray**.

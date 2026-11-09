@@ -10,11 +10,9 @@ import { getPlaylists, importPlaylists, listPlaylists, PLAYLIST_REFRESH_MS, refr
 import { AuthError } from '../desktop/net'
 import { flushStore, store } from '../desktop/store'
 import { getChannelPage as cachedChannelPage, setPreloadPaused, startPreloading, type LoadPage } from './channelPages'
-import { readerAvailable } from './reader'
 import { getSettings, updateSettings, type SettingsPatch } from './settings'
 import { startSync, syncOnForeground, syncStatus } from './sync'
 import { autoCheck, startUpdater, updateStatus } from './updater'
-import { twitchLiveFromApi } from './twitchLive'
 import { youtubeProvider } from './youtubeWeb'
 
 // Mobile version of the desktop's src/main/hub.ts: follows sync, live polling, go-live alerts and the
@@ -29,6 +27,9 @@ let live: Record<string, LiveInfo> = {}
 const errors: Partial<Record<Platform, string>> = {}
 const syncing = new Set<Platform>()
 const lastPoll: Partial<Record<Platform, number>> = {}
+/** Platforms whose last live check was a quick follow-up (see liveIsPartial), so it isn't repeated. */
+const quickRetry = new Set<Platform>()
+const QUICK_RETRY_MS = 8_000
 const polling = new Map<Platform, Promise<void>>()
 const notifyReady = new Set<Platform>()
 const ABOUT_CACHE_MS = 10 * 60_000
@@ -89,14 +90,9 @@ function notifyLive(l: LiveInfo): void {
   }).catch((e) => console.error('[notify]', e))
 }
 
-/** Live status for one platform. The background task has no page reader, so Twitch asks its API then. */
+/** Live status for one platform (Twitch asks its API, so this works from the background task too). */
 async function fetchLive(p: Platform, chs: Channel[]): Promise<LiveInfo[]> {
   if (!chs.length) return []
-  if (p === 'twitch' && !readerAvailable()) {
-    const fromApi = await twitchLiveFromApi()
-    if (!fromApi) throw new Error('twitch: live status needs the app open')
-    return fromApi
-  }
   return providers[p].getLive(chs)
 }
 
@@ -128,6 +124,12 @@ async function doPollLive(p: Platform): Promise<void> {
     store.set('liveCache', { at: Date.now(), live })
     syncSaved(p, live, (key) => actions.getChannelPage(key, { fresh: true }), emit)
     console.log(`[${p}] live status in ${((Date.now() - started) / 1000).toFixed(1)}s`)
+    // Some details came back missing (YouTube's viewers, while its sign-in was still loading): ask
+    // again soon, once.
+    if (providers[p].liveIsPartial?.() && !quickRetry.has(p)) {
+      quickRetry.add(p)
+      setTimeout(() => void pollLive(p, true), QUICK_RETRY_MS)
+    } else quickRetry.delete(p)
   })
   emit()
 }
