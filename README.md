@@ -15,9 +15,8 @@ Download the installer for your device from the **[latest release](../../release
 | Linux (x64) | `StreamHub-<version>-x86_64.AppImage` |
 | Steam Deck / SteamOS, into your Steam library | `StreamHub-<version>-Steam-Installer.sh` |
 | Android | `StreamHub-<version>.apk` |
-| iPhone (sideloaded) | `StreamHub-<version>.ipa` |
 
-Once StreamHub is installed, it **updates itself**: when a new version is out, an **Update** button appears at the top right. Click it, and StreamHub downloads the new version and restarts into it. The Updates button (the arrow at the top right) has *Check now*, an on/off switch for the automatic checks, and what's new in the version you have. On Android the update opens the system installer; the first time, Android asks you to allow *Install unknown apps* for StreamHub. iPhone shows that a new version is out, and you install it as before: the `.ipa` is signed with a free Apple ID for one iPhone, so it's installed with Xcode or a sideloading tool (such as AltStore or Sideloadly), and it has to be re-signed every 7 days.
+Once StreamHub is installed, it **updates itself**: when a new version is out, an **Update** button appears at the top right. Click it, and StreamHub downloads the new version and restarts into it. The Updates button (the arrow at the top right) has *Check now*, an on/off switch for the automatic checks, and what's new in the version you have. On Android the update opens the system installer; the first time, Android asks you to allow *Install unknown apps* for StreamHub. iPhone shows that a new version is out, and you install it as before. The iPhone app isn't on the Releases page: it's signed with a free Apple ID for one iPhone, built on the owner's Mac and installed with Xcode or a sideloading tool (such as AltStore or Sideloadly), and it has to be re-signed every 7 days.
 
 The Mac app is universal: it runs natively on both Apple silicon and Intel. The Windows installer carries both an x64 and an ARM64 build and installs the one that matches your PC.
 
@@ -122,7 +121,7 @@ Known limits:
 - `npm run dist:mac`: build the universal Mac installer (`dist/StreamHub-<version>.dmg`)
 - `npm run dist:win`: build the Windows installer for x64 and ARM64 (`dist/StreamHub-Setup-<version>.exe`); works from a Mac too
 - `npm run dist`: build for the current platform
-- `npm run release`: publish the GitHub Release for the version in `package.json`, with the notes from its `CHANGELOG.md` section and every download attached (dmg, Mac zip, Windows setup, AppImage, Steam installer, APK). The in-app updater reads these releases, so keep the file names. Bump the version, add a CHANGELOG section and build everything first.
+- `npm run release`: publish the GitHub Release for the version in `package.json`, with the notes from its `CHANGELOG.md` section and every download attached (dmg, Mac zip, Windows setup, AppImage, Steam installer, APK; not the iPhone app). The in-app updater reads these releases, so keep the file names. Bump the version, add a CHANGELOG section and build everything first.
 
 Updates (`src/main/updater.ts`) come from the latest GitHub Release of the repo named in `src/shared/release.ts`. Because the builds are ad-hoc signed, StreamHub installs updates itself rather than with Electron's updater: on a Mac it swaps in the new app from the release's `-mac.zip`; on Windows it runs the new Setup silently; on Linux it swaps in the new AppImage (or, for the Steam installer's copy, unpacks it into `~/.local/share/StreamHub/app`).
 
