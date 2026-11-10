@@ -4,6 +4,7 @@ import { channelPageUrl } from '@shared/urls'
 import { setTrayLiveCount } from './menubar'
 import { getSettings, SHORTCUT_DEFAULTS } from './settings'
 import { AuthError } from './net'
+import { recoverSession } from './sessionKeeper'
 import { store } from './store'
 import { startSync, syncStatus } from './sync'
 import { updateStatus } from './updater'
@@ -85,13 +86,20 @@ export const showMainWindow = (): void => {
   win.focus()
 }
 
-async function guarded(p: Platform, fn: () => Promise<void>): Promise<void> {
+/**
+ * Runs `fn`, keeping the platform's error for the UI. True when it worked. A signed-out answer first
+ * gets one recovery attempt (see sessionKeeper.ts) and a second try before it counts as expired.
+ */
+async function guarded(p: Platform, fn: () => Promise<void>, retried = false): Promise<boolean> {
   try {
     await fn()
     delete errors[p]
+    return true
   } catch (e) {
+    if (e instanceof AuthError && !retried && providers[p].isConnected() && (await recoverSession(p))) return guarded(p, fn, true)
     errors[p] = e instanceof AuthError ? 'Session expired — reconnect this account' : (e as Error).message
     console.error(`[${p}]`, e)
+    return false
   }
 }
 
@@ -193,20 +201,32 @@ export async function syncFollows(p: Platform): Promise<void> {
   syncing.add(p)
   emit()
   const started = Date.now()
-  await guarded(p, async () => {
+  const ok = await guarded(p, async () => {
     const follows = await providers[p].getFollows()
     store.set('follows', { ...store.get('follows'), [p]: follows })
     store.set('followsSyncedAt', { ...store.get('followsSyncedAt'), [p]: Date.now() })
     console.log(`[${p}] synced ${follows.length} follows in ${((Date.now() - started) / 1000).toFixed(1)}s`)
   })
+  if (ok) delete syncFailures[p]
+  else syncFailures[p] = { count: (syncFailures[p]?.count ?? 0) + 1, at: Date.now() }
   syncing.delete(p)
   await pollLive(p, true)
 }
 
 let timer: NodeJS.Timeout | null = null
 
-const followsStale = (p: Platform): boolean =>
-  !store.get('follows')[p]?.length || Date.now() - (store.get('followsSyncedAt')[p] ?? 0) > FOLLOWS_REFRESH_MS
+/**
+ * Follows reads that failed in a row. A platform whose follows page won't load waits longer each
+ * time before trying again, instead of re-syncing (and reopening its page) every 15 seconds.
+ */
+const syncFailures: Partial<Record<Platform, { count: number; at: number }>> = {}
+const RETRY_AFTER_MS = [60_000, 2 * 60_000, 5 * 60_000, 15 * 60_000, FOLLOWS_REFRESH_MS]
+
+const followsStale = (p: Platform): boolean => {
+  const failed = syncFailures[p]
+  if (failed && Date.now() - failed.at < RETRY_AFTER_MS[Math.min(failed.count, RETRY_AFTER_MS.length) - 1]) return false
+  return Date.now() - (store.get('followsSyncedAt')[p] ?? 0) > FOLLOWS_REFRESH_MS
+}
 
 const loadPage: LoadPage = (ch, opts) => providers[ch.platform].getChannelPage(ch, opts)
 
@@ -245,6 +265,7 @@ export const actions = {
   async login(p: Platform) {
     await providers[p].login()
     delete errors[p]
+    delete syncFailures[p]
     notifyReady.delete(p)
     await syncFollows(p)
   },

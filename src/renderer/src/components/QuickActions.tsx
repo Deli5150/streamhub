@@ -39,7 +39,7 @@ export function QuickActions(): React.JSX.Element {
         type="button"
         title="Big Picture mode: full screen, for a TV and a game controller"
         onClick={() => useUi.getState().set({ bigPicture: true })}
-        className="no-drag flex size-7 shrink-0 items-center justify-center rounded-md text-secondary transition-colors hover:bg-control-subtle hover:text-primary"
+        className="ui-icon-btn no-drag flex size-7 shrink-0 items-center justify-center rounded-md text-secondary transition-colors hover:bg-control-subtle hover:text-primary"
       >
         <Gamepad2Icon className="size-4" strokeWidth={2.25} />
       </button>
@@ -105,7 +105,7 @@ function ThemeSection(): React.JSX.Element {
         </ThemeGrid>
         {(['dark', 'light', 'custom'] as const).map((g) => (
           <div key={g} className="flex flex-col gap-2">
-            <span className="text-small font-semibold tracking-wide text-tertiary uppercase">{g === 'custom' ? 'Custom themes' : g}</span>
+            <span className="text-small font-semibold tracking-wide text-tertiary uppercase">{g === 'custom' ? 'Styled themes' : g}</span>
             <ThemeGrid>
               {group(g).map((t) => (
                 <ThemeSwatch key={t.id} theme={t} selected={theme === t.id} onSelect={() => setTheme(t.id)} />

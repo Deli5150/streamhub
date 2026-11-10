@@ -1,6 +1,7 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import { Icon } from './Icon'
 import { create } from 'zustand'
 import { useColors } from './theme'
 
@@ -54,7 +55,7 @@ export function MenuSheet(): React.JSX.Element {
                 style={({ pressed }) => [styles.item, pressed && { backgroundColor: c.bg2 }, item.disabled && { opacity: 0.35 }]}
                 accessibilityRole="button"
               >
-                {item.icon ? <Ionicons name={item.icon} size={20} color={item.destructive ? c.danger : c.fg2} /> : null}
+                {item.icon ? <Icon name={item.icon} size={20} color={item.destructive ? c.danger : c.fg2} /> : null}
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: item.destructive ? c.danger : c.fg, fontSize: 16 }}>{item.label}</Text>
                   {item.sublabel ? <Text style={{ color: c.fg3, fontSize: 12 }}>{item.sublabel}</Text> : null}

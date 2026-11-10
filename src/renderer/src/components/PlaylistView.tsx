@@ -22,6 +22,7 @@ import { progressFraction, progressKey, resumePosition, useVodProgress, withStar
 import { ChaptersButton, useChapters } from './Chapters'
 import { useQueue } from '../lib/queue'
 import { savedTitle, useWatchLater } from '../lib/watchLater'
+import { leaveFullScreen } from '../lib/fullscreen'
 import { errorMessage, useTheaterEsc, useUi } from '../store'
 import { openPipFor } from './channelMenu'
 import { HlsVideo } from './HlsVideo'
@@ -88,10 +89,16 @@ export function PlaylistView({ source = 'watchLater', startId }: { source?: Play
     () => startId ?? (source === 'queue' ? useQueue.getState().activeId : null) ?? items[0]?.id ?? null
   )
   // The queue remembers what was playing, so returning to it picks up there.
+  // A full-screen video leaves full screen before the next one replaces it (autoplay included):
+  // on Windows, a player removed while full screen left the whole window stuck full screen.
   const setActiveId = useCallback(
     (id: string | null) => {
-      setActiveIdState(id)
-      if (source === 'queue') useQueue.getState().setActive(id)
+      const apply = (): void => {
+        setActiveIdState(id)
+        if (source === 'queue') useQueue.getState().setActive(id)
+      }
+      if (document.fullscreenElement) void leaveFullScreen().then(apply)
+      else apply()
     },
     [source]
   )

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../ui/Icon'
 import { combinedEdits, nameMatches } from '../../../src/renderer/src/lib/combined'
 import { actions, useApp } from '../lib/hub'
 import { Button, ChannelRow } from '../ui/components'
@@ -88,14 +88,14 @@ export default function CombineScreen(): React.JSX.Element {
                   {on ? (
                     <>
                       <Pressable onPress={() => setMainKey(item.key)} hitSlop={6} accessibilityLabel="Show this channel's name and picture">
-                        <Ionicons name={mainKey === item.key ? 'star' : 'star-outline'} size={20} color={mainKey === item.key ? '#ffcc00' : c.fg3} />
+                        <Icon name={mainKey === item.key ? 'star' : 'star-outline'} size={20} color={mainKey === item.key ? '#ffcc00' : c.fg3} />
                       </Pressable>
                       <Pressable onPress={() => setDefaultKey(item.key)} hitSlop={6} accessibilityLabel="Play this channel's stream first">
-                        <Ionicons name={defaultKey === item.key ? 'play-circle' : 'play-circle-outline'} size={22} color={defaultKey === item.key ? c.accent : c.fg3} />
+                        <Icon name={defaultKey === item.key ? 'play-circle' : 'play-circle-outline'} size={22} color={defaultKey === item.key ? c.accent : c.fg3} />
                       </Pressable>
                     </>
                   ) : null}
-                  <Ionicons name={on ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={on ? c.accent : c.fg3} />
+                  <Icon name={on ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={on ? c.accent : c.fg3} />
                 </View>
               }
             />

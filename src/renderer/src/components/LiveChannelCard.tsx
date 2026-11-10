@@ -40,7 +40,7 @@ export function LiveChannelCard({
           onSelect()
         }
       }}
-      className={`group flex cursor-pointer flex-col gap-2.5 rounded-xl bg-popover/85 p-2 text-left shadow-sm ring-1 backdrop-blur-xl transition-[transform,box-shadow] duration-150 outline-none hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-accent ${
+      className={`ui-card group flex cursor-pointer flex-col gap-2.5 rounded-xl bg-popover/85 p-2 text-left shadow-sm ring-1 backdrop-blur-xl transition-[transform,box-shadow] duration-150 outline-none hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-accent ${
         rank ? 'ring-accent/40' : 'ring-separator'
       }`}
       title={`${channel.displayName}${live.title ? ` — ${live.title}` : ''}`}
@@ -48,13 +48,13 @@ export function LiveChannelCard({
       <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-control-subtle">
         <Thumbnail src={live.thumbnail} className="group-hover:scale-[1.03]" />
         {rank && (
-          <span className="absolute top-1.5 right-1.5 flex h-5 items-center rounded-md bg-accent px-1.5 text-small font-semibold text-white shadow">
+          <span className="absolute top-1.5 right-1.5 ui-rank theme-display flex h-5 items-center rounded-md bg-accent px-1.5 text-small font-semibold text-white shadow">
             #{rank}
           </span>
         )}
-        <span className="absolute top-1.5 left-1.5 flex h-5 items-center gap-1 rounded-md bg-black/70 px-1.5 backdrop-blur-sm">
-          <span className="size-1.5 rounded-full bg-support-red" aria-hidden="true" />
-          <span className="text-small font-semibold text-white tabular-nums">{formatViewers(live.viewers) || 'LIVE'}</span>
+        <span className="ui-live-badge absolute top-1.5 left-1.5 flex h-5 items-center gap-1 rounded-md bg-black/70 px-1.5 backdrop-blur-sm">
+          <span className="ui-live-dot size-1.5 rounded-full bg-support-red" aria-hidden="true" />
+          <span className="ui-count text-small font-semibold text-white tabular-nums">{formatViewers(live.viewers) || 'LIVE'}</span>
         </span>
         <span className="absolute bottom-1.5 left-1.5">
           {combinedPlatforms ? <CombinedPlatformDots platforms={combinedPlatforms} className="relative" /> : <PlatformDot platform={channel.platform} />}

@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import * as Linking from 'expo-linking'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../ui/Icon'
 import { PLATFORM_LABEL, type SavedItem } from '@shared/types'
 import { embedUrl } from '@shared/urls'
 import { actions, useApp } from '../lib/hub'
@@ -132,7 +132,7 @@ export default function PlaylistScreen(): React.JSX.Element | null {
                 </Text>
               </View>
               <Pressable onPress={() => itemMenu(item, i)} hitSlop={8} accessibilityLabel="More">
-                <Ionicons name="ellipsis-vertical" size={18} color={c.fg3} />
+                <Icon name="ellipsis-vertical" size={18} color={c.fg3} />
               </Pressable>
             </Pressable>
           )
@@ -170,16 +170,27 @@ function PlaylistPlayer({
         onProgress={(t, d) => save(key, t, d)}
         onEnded={onEnded}
         style={box}
+        castInfo={{ title: savedTitle(item), subtitle: item.displayName, thumbnail: item.thumbnail }}
       />
     )
   }
   const channel = app.channels.find((ch) => ch.key === item.channelKey)
   const live = app.live[item.channelKey]
   const liveUrl = channel && live ? embedUrl(channel, live) : null
-  if (channel && liveUrl) return <Player ref={playerRef} key={liveUrl} platform={channel.platform} url={liveUrl} style={box} />
+  if (channel && liveUrl)
+    return (
+      <Player
+        ref={playerRef}
+        key={liveUrl}
+        platform={channel.platform}
+        url={liveUrl}
+        style={box}
+        castInfo={{ title: live?.title || channel.displayName, subtitle: channel.displayName, thumbnail: live?.thumbnail }}
+      />
+    )
   return (
     <View style={[box, styles.offline]}>
-      <Ionicons name="radio-outline" size={36} color="#fff6" />
+      <Icon name="radio-outline" size={36} color="#fff6" />
       <Text style={{ color: '#fffd', textAlign: 'center' }}>{item.displayName} isn’t live right now.</Text>
       <Text style={{ color: '#fff9', textAlign: 'center', fontSize: 12 }}>
         {item.kind === 'channel'

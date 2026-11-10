@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { router } from 'expo-router'
-import { Platform as OS, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Linking, Platform as OS, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Constants from 'expo-constants'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../ui/Icon'
 import { PLATFORM_LABEL, type AccountInfo, type Platform, type SyncStatus, type UpdateStatus } from '@shared/types'
 import { DEFAULT_THEME_ID, THEMES } from '@shared/themes'
+import { feedbackUrl, feedbackWhere, type FeedbackKind } from '@shared/feedback'
 import { actions, useApp } from '../../lib/hub'
 import { syncNow, syncSignIn, syncSignOut } from '../../lib/sync'
 import { checkForUpdates, downloadUpdate, installUpdate } from '../../lib/updater'
 import { Button, DOCK_SPACE, Group, GroupRow, IconButton } from '../../ui/components'
 import { WallpaperSettings } from '../../ui/WallpaperSettings'
-import { PLATFORM_COLOR, errorMessage, useColors } from '../../ui/theme'
+import { PLATFORM_COLOR, displayFont, errorMessage, useColors } from '../../ui/theme'
 
 const HOW: Record<Platform, string> = {
   twitch: 'Sign in on twitch.tv. The channels you follow are read from your Following page — no developer keys required.',
@@ -32,12 +33,12 @@ export default function SettingsScreen(): React.JSX.Element {
       style={{ backgroundColor: c.bg }}
       contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 16, paddingBottom: insets.bottom + DOCK_SPACE + 16 }}
     >
-      <Text style={[styles.title, { color: c.fg }]}>Settings</Text>
+      <Text style={[styles.title, { color: c.fg }, displayFont(c)]}>Settings</Text>
 
-      <Text style={[styles.heading, { color: c.fg2 }]}>SYNC WITH GOOGLE</Text>
+      <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>SYNC WITH GOOGLE</Text>
       <SyncCard sync={app.sync} />
 
-      <Text style={[styles.heading, { color: c.fg2 }]}>ACCOUNTS</Text>
+      <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>ACCOUNTS</Text>
       <Text style={[styles.intro, { color: c.fg3 }]}>
         Sign in to each platform once. StreamHub keeps you signed in and keeps the channels you follow in sync.
       </Text>
@@ -50,24 +51,24 @@ export default function SettingsScreen(): React.JSX.Element {
         />
       ))}
 
-      <Text style={[styles.heading, { color: c.fg2 }]}>NOTIFICATIONS</Text>
+      <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>NOTIFICATIONS</Text>
       <Group footer="While StreamHub is open, live status is checked every 1–2 minutes. In the background your phone decides how often StreamHub may check (usually every 15 minutes or more). Mute a channel’s alerts by pressing and holding it.">
         <GroupRow first label="Go-live alerts" detail="When a channel you follow starts streaming">
           <Switch value={app.settings.notifyLive} onValueChange={(v) => actions.updateSettings({ notifyLive: v })} />
         </GroupRow>
       </Group>
 
-      <Text style={[styles.heading, { color: c.fg2 }]}>PLAYBACK</Text>
+      <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>PLAYBACK</Text>
       <Group footer="Twitch puts ad breaks into the stream itself. During one, StreamHub switches to a copy of the stream that has no ads, or cuts the ads out. On some iPhones Twitch plays through the system’s own video player; StreamHub then asks for a kind of stream that usually comes without ads, but can’t cut ads that still appear in it.">
         <GroupRow first label="Block Twitch ads" detail="Applies to live streams; reopens the player">
           <Switch value={app.settings.blockTwitchAds} onValueChange={(v) => actions.updateSettings({ blockTwitchAds: v })} />
         </GroupRow>
       </Group>
 
-      <Text style={[styles.heading, { color: c.fg2 }]}>YOUTUBE PLAYLISTS</Text>
+      <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>YOUTUBE PLAYLISTS</Text>
       <PlaylistsCard />
 
-      <Text style={[styles.heading, { color: c.fg2 }]}>THEME</Text>
+      <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>THEME</Text>
       <View style={styles.swatches}>
         <Swatch
           id={DEFAULT_THEME_ID}
@@ -81,11 +82,21 @@ export default function SettingsScreen(): React.JSX.Element {
         ))}
       </View>
 
-      <Text style={[styles.heading, { color: c.fg2 }]}>WALLPAPER</Text>
+      <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>WALLPAPER</Text>
       <WallpaperSettings />
 
-      <Text style={[styles.heading, { color: c.fg2 }]}>UPDATES</Text>
+      <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>UPDATES</Text>
       <UpdatesCard update={app.update} checkUpdates={app.settings.checkUpdates} />
+
+      <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>FEEDBACK</Text>
+      <Group footer="Opens the form on GitHub with your phone and StreamHub’s version filled in. Submitting it needs a free GitHub account.">
+        <GroupRow first label="Report a bug" detail="Something isn’t working right">
+          <Button title="Report" icon="bug-outline" variant="filled" onPress={() => openFeedback('bug')} />
+        </GroupRow>
+        <GroupRow label="Suggest a feature" detail="Something StreamHub should do">
+          <Button title="Suggest" icon="bulb-outline" variant="filled" onPress={() => openFeedback('feature')} />
+        </GroupRow>
+      </Group>
 
       <Text style={[styles.version, { color: c.fg3 }]}>StreamHub {Constants.expoConfig?.version ?? ''}</Text>
     </ScrollView>
@@ -150,7 +161,7 @@ function AccountCard({ account: a, syncing, count }: { account: AccountInfo; syn
             : HOW[a.platform]
         }
       >
-        <Ionicons name={a.connected ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={a.connected ? c.success : c.fg3} />
+        <Icon name={a.connected ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={a.connected ? c.success : c.fg3} />
       </GroupRow>
       <View style={[styles.actions, { borderTopColor: c.separator }]}>
         {a.connected ? (
@@ -179,7 +190,7 @@ function AccountCard({ account: a, syncing, count }: { account: AccountInfo; syn
       </View>
       {shownError ? (
         <View style={[styles.error, { borderTopColor: c.separator }]}>
-          <Ionicons name="warning" size={16} color={c.danger} />
+          <Icon name="warning" size={16} color={c.danger} />
           <Text style={{ color: c.danger, flex: 1, fontSize: 13 }}>{shownError}</Text>
         </View>
       ) : null}
@@ -272,6 +283,12 @@ function UpdatesCard({ update: u, checkUpdates }: { update: UpdateStatus; checkU
   )
 }
 
+/** GitHub's new-issue form for a bug report or feature idea, with this phone and version filled in. */
+function openFeedback(kind: FeedbackKind): void {
+  const url = feedbackUrl({ kind, title: '', text: '', where: feedbackWhere(kind, OS.OS), version: Constants.expoConfig?.version ?? '' })
+  void Linking.openURL(url)
+}
+
 /** How long ago, roughly ("just now", "5 min ago", "3 h ago"). */
 function ago(at: number): string {
   const min = Math.round((Date.now() - at) / 60_000)
@@ -310,7 +327,7 @@ function SyncCard({ sync }: { sync: SyncStatus }): React.JSX.Element {
             : 'Keep your platform sign-ins, settings, channels, combined channels, muted alerts and Watch Later the same on every phone and computer with StreamHub, saved in a private StreamHub folder in your Google Drive.'
         }
       >
-        <Ionicons name={sync.signedIn ? 'cloud-done' : 'cloud-outline'} size={22} color={sync.signedIn ? c.success : c.fg3} />
+        <Icon name={sync.signedIn ? 'cloud-done' : 'cloud-outline'} size={22} color={sync.signedIn ? c.success : c.fg3} />
       </GroupRow>
       <View style={[styles.actions, { borderTopColor: c.separator }]}>
         {sync.signedIn ? (
@@ -325,7 +342,7 @@ function SyncCard({ sync }: { sync: SyncStatus }): React.JSX.Element {
       </View>
       {shownError ? (
         <View style={[styles.error, { borderTopColor: c.separator }]}>
-          <Ionicons name="warning" size={16} color={c.danger} />
+          <Icon name="warning" size={16} color={c.danger} />
           <Text style={{ color: c.danger, flex: 1, fontSize: 13 }}>{shownError}</Text>
         </View>
       ) : null}

@@ -1,0 +1,277 @@
+/*
+ * Nothing colorways, after Nothing OS: monochrome surfaces, red only for what's live or on, dot-matrix
+ * type (Doto) for headings and numbers, a monospaced face (Space Mono) for small labels in capitals,
+ * pill and circle shapes with no borders or shadows, inverted (white-on-black) selected states,
+ * dotted rules, and thin round line icons. Hooks are the ui-* classes on the shared controls.
+ */
+
+/* Small labels: Nothing OS sets these in a monospaced face (Google Fonts, OFL). */
+@font-face {
+  font-family: "Space Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/SpaceMono-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/SpaceMono-700.woff2") format("woff2");
+}
+
+:root[data-theme-style="nothing"] {
+  --nd-red: #d71921;
+  --nd-mono: "Space Mono", ui-monospace, monospace;
+  --nd-dots: "Doto", var(--font-sans);
+  /* Widgets and cards: a flat step up from the window, no outline. */
+  --nd-surface: color-mix(in srgb, var(--bg), var(--fg) 7%);
+  --nd-surface-2: color-mix(in srgb, var(--bg), var(--fg) 12%);
+  --nd-muted: color-mix(in srgb, var(--fg) 55%, var(--bg));
+  --nd-rule: radial-gradient(circle, color-mix(in srgb, var(--fg) 30%, transparent) 0.9px, transparent 1.1px) 0 50% / 5px 3px repeat-x;
+  --radius-control: 9999px;
+  --radius-panel: 28px;
+  --radius-popover: 24px;
+  --radius-card: 22px;
+  --color-well: var(--nd-surface);
+  --color-popover: var(--nd-surface);
+  --color-control-subtle: var(--nd-surface-2);
+  --color-control: var(--nd-surface-2);
+  --color-control-active: color-mix(in srgb, var(--bg), var(--fg) 20%);
+}
+
+:root[data-theme-style="nothing"][data-appearance="dark"] {
+  --window-bg: radial-gradient(circle, rgb(255 255 255 / 0.07) 1px, transparent 1.4px) 0 0 / 16px 16px fixed, #000000;
+}
+:root[data-theme-style="nothing"][data-appearance="light"] {
+  --window-bg: radial-gradient(circle, rgb(0 0 0 / 0.07) 1px, transparent 1.4px) 0 0 / 16px 16px fixed, #f4f4f2;
+}
+
+/* ---------- Type ---------- */
+
+/* Headings in the dot face, set wide (a video's long title stays readable in the usual face). */
+:root[data-theme-style="nothing"] :is(h1, h2, .text-heading1, .text-heading2, .theme-display):not(.line-clamp-2) {
+  font-family: var(--nd-dots);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+/* Short labels (Home's section names, rank badges) in capitals, as Nothing sets them. */
+:root[data-theme-style="nothing"] .theme-display {
+  font-weight: 900;
+  text-transform: uppercase;
+}
+/* Numbers that count something (viewers, queue length) in the dot face. */
+:root[data-theme-style="nothing"] :is(.ui-count, .ui-tab .tabular-nums) {
+  font-family: var(--nd-dots);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+/* ---------- Icons: thin, round line icons ---------- */
+
+:root[data-theme-style="nothing"] svg.lucide {
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/*
+ * Navigation and header icons as dot-matrix glyphs, like Nothing's Glyph and widget icons: the
+ * line icon is drawn bolder, then seen through a grid of dots.
+ */
+:root[data-theme-style="nothing"] :is(.ui-tab, .ui-icon-btn) svg.lucide {
+  stroke-width: 2.6px;
+  -webkit-mask: radial-gradient(circle, #000 0.75px, transparent 0.95px) 0 0 / 2px 2px;
+  mask: radial-gradient(circle, #000 0.75px, transparent 0.95px) 0 0 / 2px 2px;
+}
+
+/* ---------- Tabs and buttons: pills, inverted when selected ---------- */
+
+:root[data-theme-style="nothing"] .ui-tab {
+  height: 30px;
+  border-radius: 9999px;
+  padding-inline: 14px;
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+:root[data-theme-style="nothing"] .ui-tab[aria-pressed="true"] {
+  background: var(--fg);
+  color: var(--bg);
+}
+:root[data-theme-style="nothing"] .ui-tab[aria-pressed="true"] .tabular-nums {
+  color: var(--nd-red);
+}
+
+:root[data-theme-style="nothing"] .ui-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
+}
+:root[data-theme-style="nothing"] .ui-icon-btn[aria-expanded="true"] {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+:root[data-theme-style="nothing"] .ui-btn {
+  border-radius: 9999px;
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+/* The main action is ink-colored (white on black, black on white); red stays for live and on. */
+:root[data-theme-style="nothing"] .ui-btn-accent {
+  background: var(--fg);
+  color: var(--bg);
+}
+:root[data-theme-style="nothing"] .ui-btn-filled {
+  background: var(--nd-surface-2);
+}
+:root[data-theme-style="nothing"] .ui-btn-destructive {
+  color: var(--nd-red);
+}
+
+/* ---------- Switch: Nothing's toggle, gray thumb when off, red track when on ---------- */
+
+:root[data-theme-style="nothing"] .ui-switch {
+  width: 40px;
+  height: 24px;
+  background: var(--nd-surface-2);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 14%, transparent);
+}
+:root[data-theme-style="nothing"] .ui-switch .ui-switch-thumb {
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  background: var(--nd-muted);
+  box-shadow: none;
+  translate: 4px 0;
+}
+:root[data-theme-style="nothing"] .ui-switch[aria-checked="true"] {
+  background: var(--nd-red);
+  box-shadow: none;
+}
+:root[data-theme-style="nothing"] .ui-switch[aria-checked="true"] .ui-switch-thumb {
+  background: #ffffff;
+  translate: 20px 0;
+}
+
+/* ---------- Segmented control: a pill track with the choice inverted ---------- */
+
+:root[data-theme-style="nothing"] .ui-seg {
+  border-radius: 9999px;
+  padding: 3px;
+  background: var(--nd-surface-2);
+  box-shadow: none;
+}
+:root[data-theme-style="nothing"] .ui-seg-item {
+  height: 26px;
+  border-radius: 9999px;
+  padding-inline: 12px;
+  font-family: var(--nd-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+:root[data-theme-style="nothing"] .ui-seg-item[aria-pressed="true"] {
+  background: var(--fg);
+  color: var(--bg);
+  box-shadow: none;
+}
+
+/* ---------- Slider: a dotted track with a solid fill and a ring thumb ---------- */
+
+:root[data-theme-style="nothing"] .ui-slider {
+  height: 4px;
+}
+:root[data-theme-style="nothing"] .ui-slider::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--bg);
+  box-shadow: inset 0 0 0 3px var(--fg);
+}
+
+/* ---------- Surfaces: flat, rounder, no outlines; dotted rules between rows ---------- */
+
+:root[data-theme-style="nothing"] :is(.ui-card, .ui-panel, .ui-sidebar, .ui-group, .ui-popover, .ui-dialog, .ui-toast) {
+  box-shadow: none;
+  backdrop-filter: none;
+}
+:root[data-theme-style="nothing"] :is(.ui-card, .ui-panel, .ui-group) {
+  background: var(--nd-surface);
+}
+:root[data-theme-style="nothing"] .ui-card {
+  border-radius: 22px;
+  padding: 8px;
+}
+:root[data-theme-style="nothing"] .ui-card > .relative {
+  border-radius: 16px;
+}
+:root[data-theme-style="nothing"] .ui-card:hover {
+  transform: none;
+  background: var(--nd-surface-2);
+}
+:root[data-theme-style="nothing"] .ui-group > * {
+  border: 0;
+}
+:root[data-theme-style="nothing"] .ui-group > :not(:last-child) {
+  background: var(--nd-rule);
+  background-position: 16px 100%;
+  background-size: 5px 3px;
+  background-repeat: repeat-x;
+}
+:root[data-theme-style="nothing"] .ui-dialog {
+  border-radius: 32px;
+  background: var(--nd-surface);
+}
+:root[data-theme-style="nothing"] .ui-dialog-footer {
+  border-top: 0;
+  background: var(--nd-rule);
+  background-position: 0 0;
+  background-repeat: repeat-x;
+}
+:root[data-theme-style="nothing"] .ui-toast {
+  background: var(--fg);
+  color: var(--bg);
+  font-family: var(--nd-mono);
+  font-size: 12px;
+}
+:root[data-theme-style="nothing"] .ui-toast button {
+  color: inherit;
+}
+:root[data-theme-style="nothing"] .ui-search {
+  height: 32px;
+  border-radius: 9999px;
+  background: var(--nd-surface-2);
+}
+
+/* ---------- Live: a red dot and a dot-matrix count, nothing boxed ---------- */
+
+:root[data-theme-style="nothing"] .ui-live-badge {
+  height: 22px;
+  border-radius: 9999px;
+  background: rgb(0 0 0 / 0.72);
+  padding-inline: 8px;
+  gap: 6px;
+  backdrop-filter: none;
+}
+:root[data-theme-style="nothing"] .ui-live-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--nd-red);
+  box-shadow: 0 0 0 3px rgb(215 25 33 / 0.25);
+}
+:root[data-theme-style="nothing"] .ui-rank {
+  height: 24px;
+  min-width: 24px;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--nd-red);
+  font-family: var(--nd-dots);
+  font-weight: 900;
+}

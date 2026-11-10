@@ -18,7 +18,7 @@ import { useAutoPip, useLayoutWindow, usePipActive } from './pip'
 import { Player, type PlayerHandle } from './Player'
 import { FloatingButton, HomeButton } from './HomeButton'
 import { CastButton } from './CastButton'
-import { PLATFORM_COLOR, errorMessage, useColors } from './theme'
+import { PLATFORM_COLOR, displayFont, errorMessage, useColors } from './theme'
 
 // A channel's page (the desktop's ChannelPage): banner, past streams / uploads / clips in tabs, and
 // a player at the top for whatever you pick. Opens instantly from the saved copy. The list is a
@@ -82,6 +82,8 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
   // A channel with no past streams opens on its videos, or else its clips (Twitch, Kick) or Shorts.
   useEffect(() => {
     if (pickedTab.current || !page || page.streams.length > 0) return
+    // Once, when the channel's page arrives (the first tab depends on what it has).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (page.hasVideos && page.videos.length > 0) setTab('videos')
     else if (page.clipsLabel && page.clips.length > 0) setTab('clips')
   }, [page])
@@ -158,6 +160,7 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
         hls={!playing.playUrl && Boolean(playing.hlsUrl)}
         resumeAt={resumePosition(progressKey(channel.platform, playing.id))}
         onProgress={(t, d) => saving(progressKey(channel.platform, playing.id), t, d)}
+        castInfo={{ title: playing.title, subtitle: channel.displayName, thumbnail: playing.thumbnail }}
         // 16:9 by width, in picture-in-picture too (see styles.pipSafe on the Watch screen).
         style={{ aspectRatio: 16 / 9, width: '100%' }}
       />
@@ -195,7 +198,7 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           {playing ? <Avatar channel={channel} size={36} /> : null}
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ color: c.fg, fontSize: 22, fontWeight: '800' }}>
+            <Text numberOfLines={1} style={[{ color: c.fg, fontSize: 22, fontWeight: '800' }, displayFont(c)]}>
               {channel.displayName}
             </Text>
             <Text style={{ color: c.fg3 }}>{live ? `${PLATFORM_LABEL[channel.platform]} · Live now` : `${PLATFORM_LABEL[channel.platform]} · Offline`}</Text>

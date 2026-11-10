@@ -4,14 +4,19 @@ import type { Settings, ShortcutAction } from '@shared/types'
 import { getTheme } from '@shared/themes'
 import { store } from './store'
 
-/** All ⌃⌘ combos, so none clash with common single-⌘ system shortcuts. */
+/**
+ * ⌃⌘ combos on macOS, so none clash with common single-⌘ system shortcuts; Ctrl+Alt on Windows and
+ * Linux, where Ctrl+Win (or Ctrl+Super) combos belong to the system (Win+Ctrl+C is Windows' color
+ * filter, Win+Ctrl+D a new desktop). Only shortcuts the user changed are saved, so these follow along.
+ */
+const DEFAULT_MODIFIERS = process.platform === 'darwin' ? 'Control+Command' : 'Control+Alt'
 export const SHORTCUT_DEFAULTS: Record<ShortcutAction, string[]> = {
-  toggleSidebar: ['Control+Command+S'],
-  toggleChannels: ['Control+Command+C'],
-  multiView: ['Control+Command+M'],
-  pip: ['Control+Command+P'],
-  returnHome: ['Control+Command+H'],
-  toggleMenubarApp: ['Control+Command+B']
+  toggleSidebar: [`${DEFAULT_MODIFIERS}+S`],
+  toggleChannels: [`${DEFAULT_MODIFIERS}+C`],
+  multiView: [`${DEFAULT_MODIFIERS}+M`],
+  pip: [`${DEFAULT_MODIFIERS}+P`],
+  returnHome: [`${DEFAULT_MODIFIERS}+H`],
+  toggleMenubarApp: [`${DEFAULT_MODIFIERS}+B`]
 }
 
 export const DEFAULT_SETTINGS: Settings = {

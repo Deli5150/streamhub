@@ -2,6 +2,22 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.9]
+
+### New
+- **Send feedback.** A new Feedback button (the speech bubble at the top right) lets you report a bug or suggest a feature. Write it in the app and it opens on GitHub with everything filled in: the version, your system and, for bugs, the recent app log, with sign-in tokens, emails and your user name taken out. Check it over and submit it there (a free GitHub account is needed). In Big Picture it's in Settings, as a QR code that opens the form on your phone. On iPhone and Android it's in Settings too.
+- **Nothing and Pixel themes.** They restyle the whole app after each phone's own interface, not just its colors. **Nothing Dark** and **Nothing Light**: black or white with red only for what's live or on, dot-matrix headings, counts and header icons, capital monospaced labels, inverted pill tabs and buttons, Nothing's red toggle, and dotted rules over a faint dot grid. **Pixel Dark**, **Pixel Light**, **Pixel Mint** and **Pixel Blossom** follow Material 3 Expressive: Google Sans Flex, Material Symbols icons (filled when selected), a pill indicator behind the selected tab, Material switches with a check, segmented buttons, a bar-handle slider, settings as separate rounded rows, and tonal cards and dialogs. On iPhone and Android, titles take the theme's font, Pixel uses Material icons, and buttons and cards take the theme's shapes. Find them under *Styled themes*, next to OGX.
+- **A launch animation on iPhone and Android**, in Big Picture's colors. Instead of a still icon, the app opens on near-black, a violet-blue glow blooms behind **StreamHub**, and a wave of blue rises from the bottom, fills the screen, then sweeps on up and away to reveal the app. With Reduce Motion on, it just fades.
+- **Cast on Android.** The cast button now works on Android: it finds Chromecasts and Google TVs on your Wi-Fi and sends Twitch, Kick and Rumble streams and videos to the TV. The phone shows what's playing where, with *Stop casting*. YouTube only lets its own app cast its videos, so for YouTube StreamHub offers to open the video in the YouTube app. iPhone keeps AirPlay.
+
+### Fixed
+- **Windows:** the whole app could get stuck in full screen, with no way out but closing it. This happened when the queue (or Watch Later) auto-played into the next video while a video was full screen, or when leaving full screen with Esc. Now the finished video leaves full screen before the next one starts, and as a safeguard the window always leaves full screen when a player closes or Esc is pressed.
+- **Windows:** Twitch kept re-syncing every few seconds and asking for a passkey again and again. The hidden pages StreamHub reads your follows from can no longer ask for a passkey (that's for the sign-in window). And when a platform's follows can't be read, StreamHub now waits longer before each retry (1, 2, 5, 15, then 30 minutes) instead of retrying every 15 seconds, and says so on the account.
+- **Sign-ins no longer run out.** Platforms signed in through their websites (Twitch, Kick, Rumble) could show *Session expired* after a while. StreamHub now opens each signed-in site in the background at launch and every 12 hours, which renews its sign-in as using it in a browser does, and keeps sign-in cookies across restarts. Before reporting an account as expired, it renews the session and retries. With Sync with Google, a sign-in renewed on one device goes to your other devices too, so none of them is left with an outdated copy.
+- **Windows and Linux:** the default keyboard shortcuts are now **Ctrl+Alt** combinations (Ctrl+Alt+C for the Channels panel, Ctrl+Alt+S for the sidebar, and so on), as ⌃⌘ ones are on Mac. They used Ctrl+Win, and Windows keeps many of those for itself. Shortcuts you set yourself stay as they are.
+- The platform buttons at the top of the sidebar now share the full width, so one or two signed-in platforms no longer sit bunched in the corner.
+- **Steam version:** Sync with Google and YouTube now sign in with the usual **Sign in** button, as the other platforms do (sign-in on your phone isn't available).
+
 ## [1.0.8]
 
 ### New

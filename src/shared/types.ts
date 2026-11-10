@@ -273,6 +273,8 @@ export interface Api {
   getTogether(key: string): Promise<TogetherChannel[]>
   toggleMute(key: string): Promise<void>
   openExternal(url: string): Promise<void>
+  /** For the Feedback button: the app's version, whether this is the Steam copy, and the recent log (safe to post). */
+  feedbackInfo(): Promise<{ version: string; steam: boolean; log: string }>
   /** macOS/Windows system accent as #rrggbb, or null where unavailable */
   getAccentColor(): Promise<string | null>
   platform: string
@@ -286,6 +288,8 @@ export interface Api {
    */
   /** Big Picture mode: full screen on or off for the window. */
   setFullScreen(on: boolean): Promise<void>
+  /** A video player is being removed: the window leaves any fullscreen it had (see main/fullscreen.ts). */
+  playerClosed(): Promise<void>
   /** Whether this launch should open in Big Picture (`--big-picture`, or Steam's Game Mode). */
   launchBigPicture(): Promise<boolean>
   /** The Steam copy: Big Picture is the whole app (no way out to the usual window). */

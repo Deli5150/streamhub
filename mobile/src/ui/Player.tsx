@@ -1,11 +1,14 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { Platform as OS, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
+import { ActivityIndicator, Linking, Platform as OS, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { Icon } from './Icon'
 import { useEvent } from 'expo'
 import { VideoView, useVideoPlayer, type VideoView as VideoViewType } from 'expo-video'
 import * as WebBrowser from 'expo-web-browser'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 import type { Platform } from '@shared/types'
 import { useApp } from '../lib/hub'
+import { GoogleCast, useCastPlayback, type CastInfo, type CastPlayback } from '../lib/cast'
 import { DESKTOP_UA } from '../lib/reader'
 import { TWITCH_AD_SCRIPT, type TwitchAdMessage } from '../player/twitchAds'
 import { RUMBLE_AD_SCRIPT, stripRumbleAds } from '../player/rumbleAds'
@@ -30,11 +33,46 @@ interface Props {
   onProgress?(t: number, d: number): void
   onEnded?(): void
   style?: StyleProp<ViewStyle>
+  /** What a TV shows while this is cast to it (Android). */
+  castInfo?: CastInfo
 }
 
 export const Player = forwardRef<PlayerHandle, Props>(function Player(props, ref) {
+  // Cast to a TV (Android): the TV plays it, and the phone shows what's playing where.
+  const cast = useCastPlayback(props.platform, props.url, Boolean(props.hls), props.resumeAt ?? 0, props.castInfo)
+  if (cast) return <CastingView cast={cast} style={props.style} />
   return props.hls ? <HlsPlayer {...props} ref={ref} /> : <WebPlayer {...props} ref={ref} />
 })
+
+/** In place of the player while a TV plays the video. */
+function CastingView({ cast, style }: { cast: CastPlayback; style?: StyleProp<ViewStyle> }): React.JSX.Element {
+  const stop = (): void => void GoogleCast?.default.getSessionManager().endCurrentSession(true)
+  return (
+    <View style={[styles.box, styles.casting, style]}>
+      <Icon name={cast.state === 'error' ? 'alert-circle-outline' : 'tv-outline'} size={34} color="#fffc" />
+      <Text style={styles.castTitle}>
+        {cast.state === 'error' ? `Couldn’t play this on ${cast.device}` : cast.state === 'loading' ? `Sending to ${cast.device}…` : `Playing on ${cast.device}`}
+      </Text>
+      {cast.state === 'loading' ? <ActivityIndicator color="#fffc" /> : null}
+      {cast.state === 'error' && cast.error ? <Text style={styles.castDetail}>{cast.error}</Text> : null}
+      <View style={styles.castActions}>
+        {cast.youtubeId ? (
+          <CastAction icon="logo-youtube" label="Open in YouTube app" onPress={() => void Linking.openURL(`https://www.youtube.com/watch?v=${cast.youtubeId}`)} />
+        ) : null}
+        <CastAction icon="phone-portrait-outline" label={cast.state === 'error' ? 'Play on phone' : 'Stop casting'} onPress={stop} />
+      </View>
+    </View>
+  )
+}
+
+function CastAction({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress(): void }): React.JSX.Element {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.castAction, pressed && { opacity: 0.6 }]} accessibilityRole="button">
+      <Icon name={icon} size={16} color="#fff" />
+      <Text style={styles.castActionText}>{label}</Text>
+    </Pressable>
+  )
+}
 
 /**
  * Runs in the player page: applies the mute state and start position, reports progress and the end
@@ -263,5 +301,11 @@ const styles = StyleSheet.create({
   box: { backgroundColor: '#000', overflow: 'hidden' },
   web: { flex: 1, backgroundColor: '#000' },
   notice: { position: 'absolute', top: 10, alignSelf: 'center', backgroundColor: '#000c', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5 },
-  noticeText: { color: '#fff', fontSize: 12, fontWeight: '600' }
+  noticeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  casting: { aspectRatio: 16 / 9, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16 },
+  castTitle: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  castDetail: { color: '#fffa', fontSize: 13, textAlign: 'center' },
+  castActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 4 },
+  castAction: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ffffff26', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7 },
+  castActionText: { color: '#fff', fontSize: 13, fontWeight: '600' }
 })

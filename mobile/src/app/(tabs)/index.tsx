@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../ui/Icon'
 import { PLATFORMS, type SavedItem } from '@shared/types'
 import { buildLiveRows, type DisplayRow } from '../../../../src/renderer/src/lib/combined'
 import { actions, useApp } from '../../lib/hub'
@@ -10,7 +10,7 @@ import { savedTitle, useUi } from '../../lib/ui'
 import { downloadUpdate, installUpdate } from '../../lib/updater'
 import { openChannel, openChannelMenu } from '../../ui/channelMenu'
 import { Button, Chip, DOCK_SPACE, EmptyState, LiveCard, PlatformChip, SectionHeader, Thumbnail } from '../../ui/components'
-import { useColors } from '../../ui/theme'
+import { displayFont, useColors } from '../../ui/theme'
 import { WallpaperScreen } from '../../ui/WallpaperScreen'
 
 /** Home: everyone you follow who's live, biggest first, with Watch Later along the top. */
@@ -55,7 +55,7 @@ function LiveList(): React.JSX.Element {
   const header = (
     <View>
       <View style={[styles.titleRow, { paddingTop: insets.top + 8 }]}>
-        <Text style={[styles.title, { color: c.fg }]}>Live</Text>
+        <Text style={[styles.title, { color: c.fg }, displayFont(c)]}>Live</Text>
         {app.syncing.length > 0 ? <Text style={{ color: c.fg3 }}>Syncing…</Text> : null}
       </View>
       {connected ? (
@@ -195,7 +195,7 @@ function PlaylistsStrip(): React.JSX.Element | null {
           >
             <Thumbnail uri={p.thumbnail}>
               <View style={styles.count}>
-                <Ionicons name="list" size={16} color="#fff" />
+                <Icon name="list" size={16} color="#fff" />
                 <Text style={styles.badgeText}>{p.items.length}</Text>
               </View>
             </Thumbnail>
@@ -218,7 +218,7 @@ function UpdateBanner(): React.JSX.Element | null {
     u.state === 'downloading' ? `Downloading… ${Math.round((u.progress ?? 0) * 100)}%` : u.state === 'ready' ? 'Install' : u.inApp ? 'Update' : 'Get it'
   return (
     <View style={[styles.banner, { backgroundColor: c.bg2 }]}>
-      <Ionicons name="arrow-up-circle" size={22} color={c.accent} />
+      <Icon name="arrow-up-circle" size={22} color={c.accent} />
       <Text style={{ color: c.fg, flex: 1, fontSize: 14 }}>StreamHub {u.version} is available.</Text>
       <Button
         title={label}

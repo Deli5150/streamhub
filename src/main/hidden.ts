@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron'
+import path from 'node:path'
 import type { Platform } from '@shared/types'
 import { AuthError, partition, sessionFor } from './net'
 
@@ -9,7 +10,7 @@ import { AuthError, partition, sessionFor } from './net'
  * Separate windows per purpose, so a slow follows scroll never delays a live-status check, and
  * background preloads of channel pages (bg-*) never delay a page you just opened.
  */
-export type Slot = 'live' | 'follows' | 'videos' | 'clips' | 'bg-videos' | 'bg-clips'
+export type Slot = 'live' | 'follows' | 'videos' | 'clips' | 'bg-videos' | 'bg-clips' | 'keepalive'
 
 const windows = new Map<string, BrowserWindow>()
 const queues = new Map<string, Promise<unknown>>()
@@ -38,11 +39,11 @@ function windowFor(p: Platform, slot: Slot): BrowserWindow {
       show: false,
       width: 1280,
       height: 900,
-      webPreferences: { partition: partition(p), backgroundThrottling: false }
+      webPreferences: { partition: partition(p), backgroundThrottling: false, preload: path.join(__dirname, '../preload/reader.js') }
     })
     const id = win.webContents.id
     // Live/follows reads don't need images; channel-page reads do (thumbnails come from the page).
-    if (slot === 'live' || slot === 'follows') readerIds.add(id)
+    if (slot === 'live' || slot === 'follows' || slot === 'keepalive') readerIds.add(id)
     win.on('closed', () => readerIds.delete(id))
     win.webContents.setAudioMuted(true)
     windows.set(key, win)
@@ -79,6 +80,27 @@ export function readPage<T>(p: Platform, slot: Slot, url: string, script: string
     } finally {
       // Stop the page's scripts between reads.
       if (!win.isDestroyed()) win.loadURL('about:blank').catch(() => {})
+    }
+  }
+  const next = (queues.get(key) ?? Promise.resolve()).then(run, run)
+  queues.set(key, next.catch(() => {}))
+  return next
+}
+
+/**
+ * Opens `url` in an invisible window on the platform's session for `ms`, then leaves it: the site
+ * runs as it does in a browser tab, which is when sites renew their sign-in cookies.
+ */
+export function visitPage(p: Platform, url: string, ms = 8_000): Promise<void> {
+  const key = `${p}:keepalive`
+  const run = async (): Promise<void> => {
+    const win = windowFor(p, 'keepalive')
+    try {
+      await win.loadURL(url).catch(() => {})
+      await new Promise((r) => setTimeout(r, ms))
+    } finally {
+      if (!win.isDestroyed()) win.loadURL('about:blank').catch(() => {})
+      await sessionFor(p).cookies.flushStore().catch(() => {})
     }
   }
   const next = (queues.get(key) ?? Promise.resolve()).then(run, run)

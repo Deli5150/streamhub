@@ -40,7 +40,7 @@ export function Sidebar(): React.JSX.Element {
   if (collapsed) {
     return (
       <aside className="h-full w-[68px] shrink-0 p-2 pr-0">
-        <div className="no-scrollbar flex h-full flex-col items-center gap-2 overflow-y-auto rounded-panel bg-well pt-3 pb-3 ring-1 ring-separator">
+        <div className="ui-sidebar no-scrollbar flex h-full flex-col items-center gap-2 overflow-y-auto rounded-panel bg-well pt-3 pb-3 ring-1 ring-separator">
           <button
             onClick={() => set({ collapsed: false })}
             title="Expand sidebar"
@@ -79,7 +79,7 @@ export function Sidebar(): React.JSX.Element {
 
   return (
     <aside className="h-full w-[264px] shrink-0 p-2 pr-0">
-      <div className="flex h-full flex-col overflow-hidden rounded-panel bg-well ring-1 ring-separator">
+      <div className="ui-sidebar flex h-full flex-col overflow-hidden rounded-panel bg-well ring-1 ring-separator">
         <div className="flex flex-col gap-2 px-3 pt-3 pb-2">
           <div className="flex items-center gap-1.5">
             <div className="flex-1">
@@ -88,13 +88,14 @@ export function Sidebar(): React.JSX.Element {
             <button
               onClick={() => set({ collapsed: true })}
               title="Collapse sidebar"
-              className="flex size-7 shrink-0 items-center justify-center rounded-md text-secondary transition-colors hover:bg-control-subtle hover:text-primary"
+              className="ui-icon-btn flex size-7 shrink-0 items-center justify-center rounded-md text-secondary transition-colors hover:bg-control-subtle hover:text-primary"
             >
               <PanelLeftCloseIcon className="size-4" strokeWidth={2.25} />
             </button>
           </div>
           {followed.size > 0 && (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(52px,1fr))] gap-1.5">
+            // One button per signed-in platform, sharing the row equally however many there are.
+            <div className="flex gap-1.5">
               {PLATFORM_ORDER.filter((p) => followed.has(p)).map((p) => {
                 const meta = PLATFORM_META[p]
                 const active = filter === p
@@ -104,7 +105,7 @@ export function Sidebar(): React.JSX.Element {
                     onClick={() => set({ filter: active ? 'all' : p })}
                     title={meta.label}
                     aria-pressed={active}
-                    className={`flex h-7 w-full min-w-0 items-center justify-center gap-1.5 rounded-md text-small-strong transition-colors ${
+                    className={`flex h-7 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md text-small-strong transition-colors ${
                       active ? `${meta.activeBg} text-white` : 'bg-control-subtle text-primary hover:bg-control'
                     }`}
                   >

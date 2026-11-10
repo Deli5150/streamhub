@@ -10,6 +10,12 @@ export interface Colorway {
   foreground: string
   accent: string
   group: 'neutral' | 'dark' | 'light' | 'custom'
+  /**
+   * Styled themes that change more than colors (fonts, shapes; see styles.css):
+   * - nothing: Nothing OS — monochrome with red, dot-matrix (Doto) headings, square-ish corners.
+   * - pixel: Google Pixel's Material You — Google Sans Flex everywhere, big rounded corners, pill buttons.
+   */
+  style?: 'nothing' | 'pixel'
 }
 
 export const DEFAULT_THEME_ID = 'default'
@@ -52,6 +58,14 @@ export const THEMES: Colorway[] = [
   dark('arctic', 'Arctic', '#0c1522', '#16263d', '#e6f1ff', '#5fb4ff'),
   // Opera GX look: charcoal with a violet cast, light lavender-gray text, GX red (see styles.css).
   dark('ogx', 'OGX', '#1b1a21', '#24232b', '#e6e3ee', '#ff0a3c', 'custom'),
+  // Nothing OS: true black or paper white, gray panels, Nothing's red.
+  { ...dark('nothing-dark', 'Nothing Dark', '#000000', '#151515', '#f2f2f2', '#d71921', 'custom'), style: 'nothing' },
+  { ...light('nothing-light', 'Nothing Light', '#f4f4f2', '#e2e2df', '#0d0d0d', '#d71921', 'custom'), style: 'nothing' },
+  // Pixel (Material You): tonal surfaces from one seed color, its pastel primary as the accent.
+  { ...dark('pixel-dark', 'Pixel Dark', '#111318', '#1e2229', '#e2e2e9', '#4f8bf0', 'custom'), style: 'pixel' },
+  { ...light('pixel-light', 'Pixel Light', '#f8f9ff', '#e1e6f4', '#191c20', '#0b57d0', 'custom'), style: 'pixel' },
+  { ...dark('pixel-mint', 'Pixel Mint', '#0f1512', '#1b2520', '#dee4de', '#2f9e6e', 'custom'), style: 'pixel' },
+  { ...light('pixel-blossom', 'Pixel Blossom', '#fff8f8', '#f6e0e3', '#22191b', '#984058', 'custom'), style: 'pixel' },
   // Colorways paint the window solid (styles.css), so light ones are soft tints; the secondary color,
   // a step deeper, colors the sidebar, panels and fields.
   light('sky', 'Sky', '#dcefff', '#bcdfff', '#0a2540', '#007aff'),

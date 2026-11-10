@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import Slider from '@react-native-community/slider'
 import { Image } from 'expo-image'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from './Icon'
 import { MAX_WALLPAPERS, useWallpapers, wallpaperUri, type WallpaperFit } from '../lib/wallpapers'
 import { Button, Chip, Group, GroupRow } from './components'
 import { errorMessage, useColors } from './theme'
@@ -51,13 +51,13 @@ export function WallpaperSettings(): React.JSX.Element {
               <View key={w.file} style={[styles.thumb, { backgroundColor: c.bg2 }]}>
                 <Image source={wallpaperUri(w)} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={`Wallpaper ${i + 1}`} />
                 <Pressable onPress={() => bg.remove(i)} style={styles.remove} hitSlop={6} accessibilityLabel={`Remove wallpaper ${i + 1}`}>
-                  <Ionicons name="trash" size={14} color="#fff" />
+                  <Icon name="trash" size={14} color="#fff" />
                 </Pressable>
               </View>
             ))}
             {bg.images.length < MAX_WALLPAPERS ? (
               <Pressable onPress={pick} disabled={busy} style={[styles.thumb, styles.add, { borderColor: c.separator }]} accessibilityRole="button">
-                <Ionicons name="add" size={22} color={c.fg3} />
+                <Icon name="add" size={22} color={c.fg3} />
                 <Text style={{ color: c.fg3, fontSize: 12 }}>{busy ? 'Adding…' : 'Add photos'}</Text>
               </Pressable>
             ) : null}
@@ -73,7 +73,7 @@ export function WallpaperSettings(): React.JSX.Element {
               <Image source={wallpaperUri(bg.images[0])} style={[StyleSheet.absoluteFill, preview]} contentFit={bg.fit} accessibilityLabel="Wallpaper preview" />
             ) : (
               <View style={styles.empty}>
-                <Ionicons name="image-outline" size={30} color={c.fg3} />
+                <Icon name="image-outline" size={30} color={c.fg3} />
                 <Text style={{ color: c.fg3, fontSize: 13 }}>No wallpaper</Text>
               </View>
             )}

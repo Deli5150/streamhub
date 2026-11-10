@@ -19,7 +19,7 @@ export function Toast(): React.JSX.Element | null {
       <div
         key={toast.id}
         role="status"
-        className="ui-rise-in pointer-events-auto flex items-center gap-3 rounded-full bg-popover py-1.5 pr-1.5 pl-4 text-regular text-primary shadow-lg ring-1 ring-separator"
+        className="ui-toast ui-rise-in pointer-events-auto flex items-center gap-3 rounded-full bg-popover py-1.5 pr-1.5 pl-4 text-regular text-primary shadow-lg ring-1 ring-separator"
       >
         <span>{toast.text}</span>
         {toast.action && (

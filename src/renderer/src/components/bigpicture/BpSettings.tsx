@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import QRCode from 'qrcode'
-import { CheckIcon, CloudIcon, DownloadIcon, ListVideoIcon, LogOutIcon, PowerIcon, RefreshCwIcon, SmartphoneIcon, Trash2Icon, UserIcon } from 'lucide-react'
+import { BugIcon, CheckIcon, CloudIcon, DownloadIcon, LightbulbIcon, ListVideoIcon, LogOutIcon, PowerIcon, RefreshCwIcon, SmartphoneIcon, Trash2Icon, UserIcon } from 'lucide-react'
+import { feedbackUrl, feedbackWhere, type FeedbackKind } from '@shared/feedback'
 import { changelogSection } from '@shared/release'
 import { PLATFORM_LABEL, PLATFORMS, type AccountInfo, type Platform, type YouTubePlaylistSummary } from '@shared/types'
 import changelog from '../../../../../CHANGELOG.md?raw'
@@ -13,15 +14,16 @@ import { BpButton, FOCUS } from './parts'
 
 // Big Picture's Settings: everything the usual window's settings and Accounts page offer that
 // matters on a TV, for the controller. On the Steam copy (Big Picture is the whole app) it's the only
-// place for them. Google sign-ins (Sync, YouTube) happen on your phone: a QR code opens Google's
-// device page there. The other platforms' sign-ins come over through Sync with Google from your
-// phone or computer, or happen right here in a sign-in window.
+// place for them. Sign-ins come over through Sync with Google from your phone or computer, or
+// happen right here in a sign-in window. Feedback goes to GitHub through a QR code, so it's written
+// on a phone rather than with the controller.
 
 type Toast = (text: string) => void
 
 export function BpSettings({ onToast }: { onToast: Toast }): React.JSX.Element {
   const app = useUi((s) => s.app)
   const [importing, setImporting] = useState(false)
+  const [feedback, setFeedback] = useState<FeedbackKind | null>(null)
   if (!app) return <div />
   return (
     <div data-bp-scroller="" className="h-full overflow-y-auto pb-24 [scrollbar-width:none]">
@@ -47,9 +49,11 @@ export function BpSettings({ onToast }: { onToast: Toast }): React.JSX.Element {
           />
         </Section>
         <UpdatesSection />
+        <FeedbackSection onOpen={setFeedback} />
         <AppSection />
       </div>
       {importing && <ImportDialog onClose={() => setImporting(false)} onToast={onToast} />}
+      {feedback && <FeedbackQr kind={feedback} onClose={() => setFeedback(null)} />}
     </div>
   )
 }
@@ -162,7 +166,7 @@ function SyncSection({ onToast }: { onToast: Toast }): React.JSX.Element {
               : sync.lastSync
                 ? `Last synced ${ago(sync.lastSync)}`
                 : 'Not synced yet'
-            : 'Sign in with Google on your phone to turn it on.'
+            : 'Sign in with Google to turn it on.'
         }
         error={sync.error}
       >
@@ -182,10 +186,10 @@ function SyncSection({ onToast }: { onToast: Toast }): React.JSX.Element {
         ) : (
           <BpButton
             id="sync:on"
-            icon={<SmartphoneIcon className="size-5" />}
-            onPress={() => run('on', () => window.api.phoneSignIn('sync'), 'Sync with Google is on')}
+            icon={<UserIcon className="size-5" />}
+            onPress={() => run('on', () => window.api.syncSignIn(), 'Sync with Google is on')}
           >
-            {busy === 'on' ? 'Waiting for your phone…' : 'Sign in with phone'}
+            {busy === 'on' ? 'Signing in…' : 'Sign in'}
           </BpButton>
         )}
       </SettingRow>
@@ -237,14 +241,6 @@ function AccountRow({ account: a, count, onToast }: { account: AccountInfo; coun
           onPress={() => run('out', () => window.api.logout(a.platform), `Signed out of ${label}`)}
         >
           Sign out
-        </BpButton>
-      ) : a.platform === 'youtube' ? (
-        <BpButton
-          id={`acct:${a.platform}:in`}
-          icon={<SmartphoneIcon className="size-5" />}
-          onPress={() => run('in', () => window.api.phoneSignIn('youtube'), 'Signed in to YouTube')}
-        >
-          {busy === 'in' ? 'Waiting for your phone…' : 'Sign in with phone'}
         </BpButton>
       ) : (
         <BpButton
@@ -313,6 +309,73 @@ export function PhoneSignInDialog(): React.JSX.Element | null {
           <div>
             <BpButton id="phone:cancel" autoFocus onPress={() => void window.api.cancelPhoneSignIn()}>
               Cancel
+            </BpButton>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------- Feedback ----------
+
+function FeedbackSection({ onOpen }: { onOpen(kind: FeedbackKind): void }): React.JSX.Element {
+  return (
+    <Section title="Feedback" intro="Report a problem or suggest something new. A QR code opens the form on your phone, ready to fill in and send.">
+      <SettingRow icon={<BugIcon className="size-6" />} title="Report a bug" detail="Something isn’t working right.">
+        <BpButton id="fb:bug" onPress={() => onOpen('bug')}>
+          Report
+        </BpButton>
+      </SettingRow>
+      <SettingRow icon={<LightbulbIcon className="size-6" />} title="Suggest a feature" detail="Something StreamHub should do.">
+        <BpButton id="fb:feature" onPress={() => onOpen('feature')}>
+          Suggest
+        </BpButton>
+      </SettingRow>
+    </Section>
+  )
+}
+
+/** The feedback form's QR code: GitHub's issue form, with this device and version filled in. */
+function FeedbackQr({ kind, onClose }: { kind: FeedbackKind; onClose(): void }): React.JSX.Element {
+  const [image, setImage] = useState<string | null>(null)
+  useEffect(() => {
+    let alive = true
+    void window.api.feedbackInfo().then(({ version, steam }) => {
+      const url = feedbackUrl({ kind, title: '', text: '', where: feedbackWhere(kind, window.api.platform, { bigPicture: true, steam }), version })
+      return QRCode.toDataURL(url, { width: 640, margin: 2, errorCorrectionLevel: 'L' }).then((data) => alive && setImage(data))
+    })
+    requestAnimationFrame(() => focusFirst())
+    const before = document.activeElement as HTMLElement | null
+    return () => {
+      alive = false
+      before?.focus({ preventScroll: true })
+    }
+  }, [kind])
+  useBpInput((action) => {
+    if (action === 'back') onClose()
+    return !['up', 'down', 'left', 'right', 'select'].includes(action)
+  })
+  return (
+    <div data-bp-scope="" className="fixed inset-0 z-[112] flex items-center justify-center bg-black/80 backdrop-blur-md">
+      <div className="flex w-[980px] items-center gap-12 rounded-3xl bg-[#1a1a21] p-12 shadow-2xl ring-1 ring-white/10">
+        <div className="grid size-[340px] shrink-0 place-items-center rounded-2xl bg-white p-3">
+          {image ? <img src={image} alt="QR code for the feedback form" className="size-full [image-rendering:pixelated]" /> : null}
+        </div>
+        <div className="flex min-w-0 flex-col gap-6">
+          <div>
+            <p className="flex items-center gap-3 text-[30px] font-bold">
+              {kind === 'bug' ? <BugIcon className="size-7" /> : <LightbulbIcon className="size-7" />}
+              {kind === 'bug' ? 'Report a bug' : 'Suggest a feature'}
+            </p>
+            <p className="mt-3 text-[19px] leading-snug text-white/70">
+              Scan the code with your phone’s camera. The form opens on GitHub with this device and StreamHub’s version filled in; write what happened (or your
+              idea) and submit it. You’ll need a free GitHub account.
+            </p>
+          </div>
+          <div>
+            <BpButton id="fb:close" autoFocus onPress={onClose}>
+              Done
             </BpButton>
           </div>
         </div>

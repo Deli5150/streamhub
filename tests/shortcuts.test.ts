@@ -48,4 +48,10 @@ describe('shortcuts', () => {
     expect(validateBindings({ toggleSidebar: ['F5'], pip: ['F5'] }, defaults)).toMatch(/used twice/)
     expect(validateBindings({ toggleSidebar: [] }, defaults)).toBeNull()
   })
+
+  it('accepts the Windows and Linux defaults (Ctrl+Alt)', () => {
+    const ctrlAlt = Object.fromEntries(Object.entries(defaults).map(([k, v]) => [k, v.map((a) => a.replace('Control+Command', 'Control+Alt'))])) as typeof defaults
+    expect(validateBindings({}, ctrlAlt)).toBeNull()
+    expect(formatAccelerator('Control+Alt+C', false)).toBe('Ctrl+Alt+C')
+  })
 })

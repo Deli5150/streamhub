@@ -13,8 +13,16 @@ export default defineConfig({
   },
   preload: {
     resolve: { alias: shared },
-    // The app's preload, and the picture-in-picture window's (its controls).
-    build: { rollupOptions: { input: { index: resolve(__dirname, 'src/preload/index.ts'), pip: resolve(__dirname, 'src/preload/pip.ts') } } }
+    // The app's preload, the picture-in-picture window's (its controls), and the hidden page readers'.
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/preload/index.ts'),
+          pip: resolve(__dirname, 'src/preload/pip.ts'),
+          reader: resolve(__dirname, 'src/preload/reader.ts')
+        }
+      }
+    }
   },
   renderer: {
     resolve: { alias: shared },

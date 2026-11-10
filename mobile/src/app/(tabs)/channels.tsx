@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { ScrollView, SectionList, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../../ui/Icon'
 import { PLATFORMS, PLATFORM_LABEL, type Channel, type Platform } from '@shared/types'
 import { groupOf } from '../../../../src/renderer/src/lib/combined'
 import { useApp } from '../../lib/hub'
 import { openChannel, openChannelMenu } from '../../ui/channelMenu'
 import { ChannelRow, Chip, DOCK_SPACE, EmptyState, PlatformChip } from '../../ui/components'
-import { PLATFORM_COLOR, useColors } from '../../ui/theme'
+import { PLATFORM_COLOR, displayFont, useColors } from '../../ui/theme'
 import { WallpaperScreen } from '../../ui/WallpaperScreen'
 
 /** Every followed channel, by platform; live ones first. */
@@ -46,7 +46,7 @@ function ChannelList(): React.JSX.Element {
   return (
     <View style={{ flex: 1, paddingTop: insets.top + 8 }}>
       <View style={styles.titleRow}>
-        <Text style={[styles.title, { color: c.fg }]}>Channels</Text>
+        <Text style={[styles.title, { color: c.fg }, displayFont(c)]}>Channels</Text>
         <Text style={{ color: c.fg3 }}>{app.channels.length}</Text>
       </View>
       <TextInput
@@ -89,7 +89,7 @@ function ChannelList(): React.JSX.Element {
             platforms={groupPlatforms(item)}
             onPress={() => openChannel(item.key)}
             onLongPress={() => openChannelMenu(item)}
-            right={app.muted.includes(item.key) ? <Ionicons name="notifications-off-outline" size={16} color={c.fg3} /> : null}
+            right={app.muted.includes(item.key) ? <Icon name="notifications-off-outline" size={16} color={c.fg3} /> : null}
           />
         )}
         ListEmptyComponent={

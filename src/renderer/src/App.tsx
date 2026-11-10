@@ -15,6 +15,7 @@ import { MultiView } from './components/MultiView'
 import { Sidebar } from './components/Sidebar'
 import { Toast } from './components/Toast'
 import { UpdatePill } from './components/Updates'
+import { FeedbackButton, FeedbackDialog } from './components/Feedback'
 import { ImportPlaylistsDialog } from './components/YouTubePlaylists'
 import { Watch } from './components/Watch'
 
@@ -28,7 +29,8 @@ export function App(): React.JSX.Element {
   const theme = app?.settings.theme ?? 'default'
   const queued = useQueue((s) => s.items.length)
 
-  useEffect(() => applyColorway(theme), [theme])
+  // Big Picture has its own TV look: no theme (colors, styled fonts, shapes or icons) while it's open.
+  useEffect(() => applyColorway(bigPicture ? 'default' : theme), [theme, bigPicture])
 
   // Shortcuts arrive from the native Controls menu (so they work even over a focused stream).
   useEffect(
@@ -109,6 +111,7 @@ export function App(): React.JSX.Element {
         {app && app.syncing.length > 0 && <span className="mr-1 text-small text-tertiary">Syncing…</span>}
         <UpdatePill />
         <QuickActions />
+        <FeedbackButton />
         <div className="mx-1 h-4 w-px bg-separator" />
         <TabButton active={view.kind === 'accounts'} onClick={() => go({ kind: 'accounts' })}>
           <CircleUserIcon className="size-4 shrink-0" strokeWidth={2.5} />
@@ -132,6 +135,7 @@ export function App(): React.JSX.Element {
       <MultiViewDialog />
       <ChannelsDrawer />
       <ImportPlaylistsDialog />
+      <FeedbackDialog />
       <Toast />
     </div>
   )
@@ -154,7 +158,7 @@ function TabButton({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={active}
-      className={`no-drag flex h-7 items-center gap-1.5 rounded-md px-3 text-small-strong transition-colors disabled:opacity-40 ${
+      className={`ui-tab no-drag flex h-7 items-center gap-1.5 rounded-md px-3 text-small-strong transition-colors disabled:opacity-40 ${
         active ? 'bg-control text-primary' : 'text-secondary hover:bg-control-subtle hover:text-primary'
       }`}
     >

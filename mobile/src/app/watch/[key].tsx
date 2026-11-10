@@ -69,7 +69,14 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
   const typing = keyboard > 0 && panel === 'chat'
 
   const playerView = url ? (
-    <Player ref={player} key={url} platform={videoChannel.platform} url={url} style={landscape && !inPip ? { flex: 1 } : typing && !landscape ? styles.typingPlayer : styles.pipSafe} />
+    <Player
+      ref={player}
+      key={url}
+      platform={videoChannel.platform}
+      url={url}
+      castInfo={{ title: videoLive?.title || videoChannel.displayName, subtitle: videoChannel.displayName, thumbnail: videoLive?.thumbnail }}
+      style={landscape && !inPip ? { flex: 1 } : typing && !landscape ? styles.typingPlayer : styles.pipSafe}
+    />
   ) : (
     <View style={[styles.unavailable, landscape ? { flex: 1 } : { aspectRatio: 16 / 9 }]}>
       <Text style={{ color: '#aaa' }}>Stream player unavailable</Text>

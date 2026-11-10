@@ -14,7 +14,7 @@ import { Button } from './ui'
 const NO_PLAYLISTS: ImportedPlaylist[] = []
 const HIGHLIGHTED = 3
 /** Frosted panel behind Home's carousels, so they read over any wallpaper. */
-const PANEL = 'rounded-panel bg-popover/80 p-3 shadow-sm ring-1 ring-separator backdrop-blur-xl'
+const PANEL = 'ui-panel rounded-panel bg-popover/80 p-3 shadow-sm ring-1 ring-separator backdrop-blur-xl'
 
 /** The channel a row shows (a combined group's chosen member), and the one it plays. */
 const rowChannel = (r: DisplayRow): Channel => (r.kind === 'group' ? r.display : r.channel)
@@ -66,7 +66,7 @@ export function Home(): React.JSX.Element {
   const over = isLight !== null
   const pick = (themed: string, dark: string, light: string): string => (over ? (isLight ? dark : light) : themed)
   const shadow = over ? (isLight ? '[text-shadow:0_1px_2px_rgba(255,255,255,0.55)]' : '[text-shadow:0_1px_3px_rgba(0,0,0,0.55)]') : ''
-  const heading = `text-strong ${pick('text-primary', 'text-black', 'text-white')} ${shadow}`
+  const heading = `theme-display text-strong ${pick('text-primary', 'text-black', 'text-white')} ${shadow}`
 
   const connected = app.accounts.some((a) => a.connected)
   const live = app.channels.filter((c) => app.live[c.key]).sort((a, b) => (app.live[b.key].viewers ?? 0) - (app.live[a.key].viewers ?? 0))

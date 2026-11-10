@@ -21,14 +21,14 @@ export function Button({
     <button
       type="button"
       {...props}
-      className={`no-drag inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg transition-colors disabled:pointer-events-none disabled:opacity-40 ${sizes} ${variants[variant]} ${className}`}
+      className={`ui-btn ui-btn-${variant} no-drag inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg transition-colors disabled:pointer-events-none disabled:opacity-40 ${sizes} ${variants[variant]} ${className}`}
     />
   )
 }
 
 export function SearchInput(props: React.InputHTMLAttributes<HTMLInputElement>): React.JSX.Element {
   return (
-    <label className="flex h-7 items-center gap-1.5 rounded-pill bg-control-subtle px-2.5 ring-accent focus-within:ring-2">
+    <label className="ui-search flex h-7 items-center gap-1.5 rounded-pill bg-control-subtle px-2.5 ring-accent focus-within:ring-2">
       <SearchIcon className="size-3.5 shrink-0 text-tertiary" strokeWidth={2.25} />
       <input
         type="text"
@@ -64,7 +64,7 @@ export function EmptyState({
 
 /** Rounded group of settings-style rows separated by hairlines. */
 export function FieldGroup({ children }: { children: ReactNode }): React.JSX.Element {
-  return <div className="divide-y divide-separator overflow-hidden rounded-card bg-well ring-1 ring-separator">{children}</div>
+  return <div className="ui-group divide-y divide-separator overflow-hidden rounded-card bg-well ring-1 ring-separator">{children}</div>
 }
 
 export function Field({
@@ -174,10 +174,10 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors ${checked ? 'bg-accent' : 'bg-control-active'}`}
+      className={`ui-switch relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors ${checked ? 'bg-accent' : 'bg-control-active'}`}
     >
       <span
-        className={`absolute top-[2px] left-0 size-[18px] rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
+        className={`ui-switch-thumb absolute top-[2px] left-0 size-[18px] rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
       />
     </button>
   )
@@ -193,7 +193,7 @@ export function SegmentedControl<T extends string>({
   onChange(v: T): void
 }): React.JSX.Element {
   return (
-    <div className="flex shrink-0 rounded-lg bg-control-subtle p-0.5 ring-1 ring-separator">
+    <div className="ui-seg flex shrink-0 rounded-lg bg-control-subtle p-0.5 ring-1 ring-separator">
       {options.map((o) => (
         <button
           key={o.value}
@@ -201,7 +201,7 @@ export function SegmentedControl<T extends string>({
           title={o.title}
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`flex h-6 items-center gap-1 rounded-md px-2.5 text-small-strong transition-colors ${
+          className={`ui-seg-item flex h-6 items-center gap-1 rounded-md px-2.5 text-small-strong transition-colors ${
             value === o.value ? 'bg-control-active text-primary shadow-sm' : 'text-secondary hover:text-primary'
           }`}
         >
@@ -239,7 +239,7 @@ export function Slider({
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(Number(e.target.value))}
-      className={`h-1 cursor-default appearance-none rounded-full disabled:opacity-40 [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:ring-1 [&::-webkit-slider-thumb]:ring-black/20 ${className}`}
+      className={`ui-slider h-1 cursor-default appearance-none rounded-full disabled:opacity-40 [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:ring-1 [&::-webkit-slider-thumb]:ring-black/20 ${className}`}
       style={{ background: `linear-gradient(to right, var(--accent) ${pct}%, var(--fg-20) ${pct}%)` }}
     />
   )
@@ -277,14 +277,14 @@ export function Dialog({
     <div className="ui-fade-in no-drag fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]" onMouseDown={onClose}>
       <div
         onMouseDown={(e) => e.stopPropagation()}
-        className={`ui-dialog-in flex max-h-[85vh] ${width} max-w-[92vw] flex-col overflow-hidden rounded-[24px] bg-popover shadow-2xl ring-1 ring-separator`}
+        className={`ui-dialog ui-dialog-in flex max-h-[85vh] ${width} max-w-[92vw] flex-col overflow-hidden rounded-[24px] bg-popover shadow-2xl ring-1 ring-separator`}
       >
         <div className="shrink-0 px-6 pt-5 pb-3">
           <h2 className="text-large font-semibold text-primary">{title}</h2>
           {description && <p className="mt-1 text-regular text-tertiary">{description}</p>}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-3">{children}</div>
-        {footer && <div className="flex shrink-0 justify-end gap-2 border-t border-separator px-6 py-3">{footer}</div>}
+        {footer && <div className="ui-dialog-footer flex shrink-0 justify-end gap-2 border-t border-separator px-6 py-3">{footer}</div>}
       </div>
     </div>,
     document.body
@@ -340,7 +340,7 @@ export function QuickPopover({ icon, label, children }: { icon: ReactNode; label
         title={label}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className={`no-drag flex size-7 shrink-0 items-center justify-center rounded-md transition-colors ${
+        className={`ui-icon-btn no-drag flex size-7 shrink-0 items-center justify-center rounded-md transition-colors ${
           open ? 'bg-control text-primary' : 'text-secondary hover:bg-control-subtle hover:text-primary'
         }`}
       >
@@ -353,7 +353,7 @@ export function QuickPopover({ icon, label, children }: { icon: ReactNode; label
             role="dialog"
             aria-label={label}
             style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width: POPOVER_WIDTH }}
-            className="ui-pop-in no-drag fixed z-50 max-h-[32rem] overflow-y-auto overscroll-contain rounded-popover bg-popover py-4 shadow-2xl ring-1 ring-separator"
+            className="ui-popover ui-pop-in no-drag fixed z-50 max-h-[32rem] overflow-y-auto overscroll-contain rounded-popover bg-popover py-4 shadow-2xl ring-1 ring-separator"
           >
             {children}
           </div>,

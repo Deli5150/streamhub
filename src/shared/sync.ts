@@ -28,6 +28,11 @@ export interface LoginEntry {
   cookies: SyncCookie[] | null
   /** Account name shown in the app. */
   username?: string
+  /**
+   * When the cookies were last renewed (a site refreshes its sign-in cookies now and then). Devices
+   * sharing this sign-in take renewed cookies, so none of them is left holding an outdated copy.
+   */
+  cookiesAt?: number
 }
 
 export interface SyncDoc {
@@ -63,6 +68,10 @@ export interface SyncMeta {
   orderAt: number
   /** Platform → when it was last signed in/out on this device, or when a synced login was applied. */
   loginAt: Partial<Record<Platform, number>>
+  /** Platform → a fingerprint of this device's sign-in cookies when they last went up or came down. */
+  cookieSig?: Partial<Record<Platform, string>>
+  /** Platform → the `cookiesAt` of the sign-in cookies this device has. */
+  cookiesAt?: Partial<Record<Platform, number>>
   lastSync: number
 }
 
@@ -189,6 +198,26 @@ export const LOGIN_DOMAINS: Record<Platform, string[]> = {
   rumble: ['rumble.com']
 }
 
+/** Cookie names that carry a sign-in (not the anti-forgery tokens, which change on every request). */
+const SIGN_IN_COOKIE = /auth|token|sess|login|sid|remember|persist|^u_s$|^a_s$/i
+const NOT_SIGN_IN_COOKIE = /xsrf|csrf/i
+
+/**
+ * A fingerprint of a sign-in's cookies (their names and values, hashed, so the cookies themselves
+ * aren't kept in the plain sync bookkeeping). It changes when the site renews the sign-in.
+ */
+export function loginSignature(cookies: SyncCookie[]): string {
+  const signIn = cookies.filter((c) => SIGN_IN_COOKIE.test(c.name) && !NOT_SIGN_IN_COOKIE.test(c.name))
+  const text = (signIn.length ? signIn : cookies.filter((c) => c.httpOnly))
+    .map((c) => `${c.name}=${c.value}`)
+    .sort()
+    .join(';')
+  // FNV-1a, 32-bit: enough to notice a change, and the same on every device.
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193) >>> 0
+  return h.toString(16)
+}
+
 export const cookieMatches = (p: Platform, domain: string): boolean => {
   const d = domain.replace(/^\./, '')
   return LOGIN_DOMAINS[p].some((root) => d === root || d.endsWith(`.${root}`))
@@ -292,6 +321,28 @@ export async function syncOnce(device: SyncDevice): Promise<void> {
     const entry = entries[p]!
     await device.applyLogin(p, entry.cookies, entry.username)
     meta.loginAt[p] = entry.at
+    if (entry.cookies) noteCookies(meta, p, loginSignature(entry.cookies), entry.cookiesAt ?? entry.at)
+  }
+
+  // Renewed sign-ins. Devices signed in with the same sign-in share its cookies; when a site renews
+  // them on one device, that device sends the new ones up and the others take them, so no device
+  // keeps an outdated copy that the site has stopped accepting.
+  for (const p of PLATFORMS) {
+    const entry = merged.logins.entries[p]
+    if (!entry?.cookies || !names[p] || meta.loginAt[p] !== entry.at) continue
+    const here = await device.cookies(p)
+    const sig = loginSignature(here)
+    const known = meta.cookieSig?.[p]
+    if (known === undefined) noteCookies(meta, p, sig, entry.cookiesAt ?? entry.at)
+    else if (sig !== known && here.length) {
+      // Always later than what it replaces, so every other device sees it as newer.
+      const now = Math.max(Date.now(), (entry.cookiesAt ?? entry.at) + 1)
+      merged.logins.entries[p] = { ...entry, cookies: here, cookiesAt: now }
+      noteCookies(meta, p, sig, now)
+    } else if ((entry.cookiesAt ?? 0) > (meta.cookiesAt?.[p] ?? 0)) {
+      await device.applyLogin(p, entry.cookies, entry.username)
+      noteCookies(meta, p, loginSignature(entry.cookies), entry.cookiesAt!)
+    }
   }
 
   if (!same({ ...merged, updatedAt: 0 }, { ...remote, updatedAt: 0 })) {
@@ -300,6 +351,11 @@ export async function syncOnce(device: SyncDevice): Promise<void> {
   }
   meta.lastSync = Date.now()
   device.saveMeta(meta)
+}
+
+function noteCookies(meta: SyncMeta, p: Platform, sig: string, at: number): void {
+  meta.cookieSig = { ...meta.cookieSig, [p]: sig }
+  meta.cookiesAt = { ...meta.cookiesAt, [p]: at }
 }
 
 /** Records a local store change in the meta (see stampChanges); returns whether to sync soon. */

@@ -53,7 +53,9 @@ const config: ExpoConfig = {
     './plugins/withReleaseSigning',
     './plugins/withoutCodeShrinking',
     'expo-router',
-    ['expo-splash-screen', { image: './assets/splash-icon.png', imageWidth: 160, backgroundColor: '#0d1117' }],
+    // The launch screen is only Big Picture's near-black (a blank image: no icon); the animated intro
+    // (src/ui/BootIntro.tsx) starts on that frame.
+    ['expo-splash-screen', { image: './assets/splash-blank.png', imageWidth: 1, backgroundColor: '#0b0b10' }],
     ['expo-video', { supportsBackgroundPlayback: true, supportsPictureInPicture: true }],
     'expo-background-task',
     ['expo-notifications', { color: '#2f81f7' }],
@@ -62,7 +64,11 @@ const config: ExpoConfig = {
     // Wallpapers come from the photo library; the camera and microphone are never used.
     ['expo-image-picker', { photosPermission: 'StreamHub uses the photos you pick as wallpapers.', cameraPermission: false, microphonePermission: false }],
     'expo-screen-orientation',
+    // The Nothing and Pixel themes' title fonts (Google Fonts, OFL).
+    ['expo-font', { fonts: ['./assets/fonts/Doto-Bold.ttf', './assets/fonts/GoogleSansFlex-Bold.ttf'] }],
     '@preeternal/react-native-cookie-manager',
+    // Chromecast / Google TV on Android (iPhone uses AirPlay).
+    './plugins/withAndroidCast',
     ...(iosUrlScheme ? [['@react-native-google-signin/google-signin', { iosUrlScheme }] as [string, unknown]] : [])
   ],
   experiments: { typedRoutes: true }

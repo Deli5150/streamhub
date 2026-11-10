@@ -2,6 +2,7 @@ import { memo, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Platform as OS, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
+import { Icon } from './Icon'
 import type { Channel, LiveInfo, Platform } from '@shared/types'
 import { PLATFORM_LABEL } from '@shared/types'
 import { PLATFORM_COLOR, formatViewers, uptime, useColors } from './theme'
@@ -45,11 +46,11 @@ export function Thumbnail({ uri, style, children }: { uri?: string; style?: Styl
   const c = useColors()
   const [failed, setFailed] = useState(false)
   return (
-    <View style={[styles.thumb, { backgroundColor: c.bg2 }, style]}>
+    <View style={[styles.thumb, { backgroundColor: c.bg2 }, c.style && styles.thumbStyled, style]}>
       {uri && !failed ? (
         <Image source={uri} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} onError={() => setFailed(true)} cachePolicy="memory-disk" recyclingKey={uri} />
       ) : (
-        <Ionicons name="videocam-outline" size={28} color={c.fg3} />
+        <Icon name="videocam-outline" size={28} color={c.fg3} />
       )}
       {children}
     </View>
@@ -105,13 +106,13 @@ export const LiveCard = memo(function LiveCard({
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => [styles.card, c.overWallpaper && [styles.panel, { backgroundColor: c.card }], pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`${channel.displayName}, live: ${live.title}`}>
       <Thumbnail uri={live.thumbnail}>
-        <View style={styles.liveBadge}>
-          <Text style={styles.liveText}>LIVE</Text>
+        <View style={[styles.liveBadge, c.style && styles.pill, c.style === 'pixel' && styles.pixelLive, c.style === 'nothing' && styles.nothingLive]}>
+          <Text style={[styles.liveText, c.style === 'nothing' && styles.nothingMono]}>LIVE</Text>
         </View>
         {live.viewers !== undefined && (
-          <View style={styles.viewers}>
+          <View style={[styles.viewers, c.style && styles.pill]}>
             <View style={styles.redDot} />
-            <Text style={styles.viewerText}>{formatViewers(live.viewers)}</Text>
+            <Text style={[styles.viewerText, c.style === 'nothing' && styles.nothingCount]}>{formatViewers(live.viewers)}</Text>
           </View>
         )}
         {live.startedAt && (
@@ -217,10 +218,10 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled || busy}
-      style={({ pressed }) => [styles.button, { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 }]}
+      style={({ pressed }) => [styles.button, c.style && styles.pill, { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 }]}
       accessibilityRole="button"
     >
-      {busy ? <ActivityIndicator size="small" color={fg} /> : icon ? <Ionicons name={icon} size={16} color={fg} /> : null}
+      {busy ? <ActivityIndicator size="small" color={fg} /> : icon ? <Icon name={icon} size={16} color={fg} /> : null}
       <Text style={{ color: fg, fontWeight: '600', fontSize: 15 }}>{title}</Text>
     </Pressable>
   )
@@ -230,7 +231,7 @@ export function IconButton({ icon, onPress, label, color, size = 22, active }: {
   const c = useColors()
   return (
     <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.iconButton, { backgroundColor: active ? c.bg2 : 'transparent', opacity: pressed ? 0.6 : 1 }]}>
-      <Ionicons name={icon} size={size} color={color ?? c.fg} />
+      <Icon name={icon} size={size} color={color ?? c.fg} />
     </Pressable>
   )
 }
@@ -239,7 +240,7 @@ export function EmptyState({ icon, title, text, action }: { icon: keyof typeof I
   const c = useColors()
   return (
     <View style={styles.empty}>
-      <Ionicons name={icon} size={44} color={c.fg3} />
+      <Icon name={icon} size={44} color={c.fg3} />
       <Text style={[styles.emptyTitle, { color: c.fg }]}>{title}</Text>
       {text ? <Text style={[styles.emptyText, { color: c.fg3 }]}>{text}</Text> : null}
       {action}
@@ -262,7 +263,7 @@ export function Group({ children, footer }: { children: ReactNode; footer?: stri
   const c = useColors()
   return (
     <View style={{ marginBottom: 24 }}>
-      <View style={[styles.group, { backgroundColor: c.card, borderColor: c.separator }]}>{children}</View>
+      <View style={[styles.group, { backgroundColor: c.card, borderColor: c.separator }, c.style && styles.groupStyled]}>{children}</View>
       {footer ? <Text style={[styles.footer, { color: c.fg3 }]}>{footer}</Text> : null}
     </View>
   )
@@ -271,7 +272,22 @@ export function Group({ children, footer }: { children: ReactNode; footer?: stri
 export function GroupRow({ label, detail, children, onPress, first }: { label: ReactNode; detail?: string; children?: ReactNode; onPress?(): void; first?: boolean }): React.JSX.Element {
   const c = useColors()
   return (
-    <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.groupRow, !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.separator }, pressed && { backgroundColor: c.bg2 }]}>
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => [
+        styles.groupRow,
+        // Rows are split by a hairline; Pixel splits them into separate rounded-off rows (a gap in the
+        // window color, as Android 16's settings do), Nothing by a dotted rule.
+        !first &&
+          (c.style === 'pixel'
+            ? { borderTopWidth: 3, borderTopColor: c.bg }
+            : c.style === 'nothing'
+              ? { borderTopWidth: 1, borderStyle: 'dotted', borderTopColor: c.fg3 }
+              : { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.separator }),
+        pressed && { backgroundColor: c.bg2 }
+      ]}
+    >
       <View style={{ flex: 1, minWidth: 0 }}>
         {typeof label === 'string' ? <Text style={{ color: c.fg, fontSize: 16 }}>{label}</Text> : label}
         {detail ? <Text style={{ color: c.fg3, fontSize: 13, marginTop: 2 }}>{detail}</Text> : null}
@@ -310,6 +326,14 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 10 },
   sectionTitle: { fontSize: 20, fontWeight: '700' },
   group: { borderRadius: 12, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },
+  // The styled themes (Nothing, Pixel): pills, rounder cards and thumbnails, no outlines.
+  groupStyled: { borderRadius: 24, borderWidth: 0 },
+  thumbStyled: { borderRadius: 16 },
+  pill: { borderRadius: 999 },
+  pixelLive: { backgroundColor: '#b3261e', paddingHorizontal: 8 },
+  nothingLive: { backgroundColor: '#000c', paddingHorizontal: 8 },
+  nothingMono: { fontFamily: 'Doto-Bold', fontWeight: 'normal', letterSpacing: 1 },
+  nothingCount: { fontFamily: 'Doto-Bold', fontWeight: 'normal', letterSpacing: 0.5 },
   groupRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, minHeight: 48 },
   footer: { fontSize: 13, marginTop: 8, marginHorizontal: 16, lineHeight: 18 }
 })

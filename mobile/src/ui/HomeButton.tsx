@@ -2,13 +2,14 @@ import { Platform as OS, Pressable, StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect'
 import { Ionicons } from '@expo/vector-icons'
+import { Icon } from './Icon'
 
 /** Liquid Glass where the system has it (iOS 26+), a translucent circle elsewhere. */
 const glass = OS.OS === 'ios' && isLiquidGlassAvailable() && isGlassEffectAPIAvailable()
 
 /** Round floating button over a player or banner, e.g. back or home. */
 export function FloatingButton({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress(): void }): React.JSX.Element {
-  const body = <Ionicons name={icon} size={20} color="#fff" />
+  const body = <Icon name={icon} size={20} color="#fff" />
   return (
     <Pressable onPress={onPress} hitSlop={6} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.press, pressed && styles.pressed]}>
       {glass ? (

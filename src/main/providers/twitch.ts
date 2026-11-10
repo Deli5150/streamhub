@@ -80,6 +80,9 @@ export const twitch: Provider = {
     const known = new Map(stored.map((c) => [c.id, c]))
     const read = scraped.map((c) => toChannel(c, known.get(c.login)))
     if (complete) return read
+    // Nothing at all: the page didn't load (or Twitch put a check in front of it). An error, so the
+    // account shows it and the read is retried later, rather than a silent, empty follow list.
+    if (read.length === 0) throw new Error("Twitch's Following page didn't load — try Sync again, or reconnect Twitch")
     // Twitch didn't let the whole list be read: keep the channels already known rather than
     // dropping every follow that wasn't in the part that loaded.
     const seen = new Set(read.map((c) => c.id))

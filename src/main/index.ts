@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain, nativeImage, session, shell, systemPrefere
 import path from 'node:path'
 import { PLATFORMS, type MediaCategory, type Platform, type Settings } from '@shared/types'
 import { setupAppMenu } from './appMenu'
+import { flushCookies, startSessionKeeper } from './sessionKeeper'
+import { captureLog, recentLog } from './log'
 import { actions, emit, pollSignedOutMembers, setPhoneSignIn, showMainWindow, start, state } from './hub'
 import { cleanSaved } from './watchLater'
 import { store } from './store'
@@ -10,15 +12,20 @@ import { cancelPhoneSignIn, signInOnPhone } from './googleAuth'
 import { normalizeBindings } from '@shared/shortcuts'
 import { hasTray, hidePopup, initMenubar, syncMenubar } from './menubar'
 import { browserUserAgent, partition, sessionFor } from './net'
+import { guardFullScreen, playerClosed, setAppFullScreen, windowOf } from './fullscreen'
 import { closePip, openPip, registerPipControls, setPipRenderer, setupAutoPip } from './pip'
 import { youtubeChapters } from './providers/youtube'
 import { syncNow, syncOnFocus, syncSignIn, syncSignOut } from './sync'
 import { installTwitchAdFilter } from './twitchAds'
 import { TWITCH_PLAYER_PARTITION } from '@shared/urls'
+import { version } from '../../package.json'
 import { applyNativeTheme, getSettings, onSettingsChange, updateSettings, validateShortcuts } from './settings'
 
 // Embedded players (notably Rumble's) otherwise wait for a click inside the webview before playing.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+
+// Kept from the start, for bug reports (see log.ts).
+captureLog()
 
 const ALLOWED_PARTITIONS = new Set([...PLATFORMS.map(partition), TWITCH_PLAYER_PARTITION])
 const ICON = path.join(__dirname, '../../resources/icon.png')
@@ -95,6 +102,7 @@ function createWindow(): BrowserWindow {
   loadRenderer(win)
   mainWindow = win
   setupAutoPip(win)
+  guardFullScreen(win, win.webContents)
   win.on('focus', syncOnFocus)
   // Windows/Linux: with the tray on, closing the window hides it to the tray (as tray apps do there),
   // so the app keeps running and reopens instantly; quitting from the tray menu really quits.
@@ -112,6 +120,11 @@ function createWindow(): BrowserWindow {
 
 app.on('web-contents-created', (_, contents) => {
   // Only allow <webview>s on the per-platform partitions, and never with a preload script.
+  // A player <webview>'s fullscreen takes over its window; see fullscreen.ts.
+  contents.on('did-attach-webview', (_, guest) => {
+    const win = windowOf(contents)
+    if (win) guardFullScreen(win, guest)
+  })
   contents.on('will-attach-webview', (e, prefs, params) => {
     delete prefs.preload
     prefs.nodeIntegration = false
@@ -144,6 +157,7 @@ function registerIpc(): void {
     isMac || process.platform === 'win32' ? `#${systemPreferences.getAccentColor().slice(0, 6)}` : null
   )
   ipcMain.handle('open-external', (_, url: string) => /^https:\/\//.test(url) && shell.openExternal(url))
+  ipcMain.handle('feedback-info', () => ({ version, steam: isSteamCopy(), log: recentLog() }))
   ipcMain.handle('update-settings', (_, patch: Partial<Settings>) => {
     // Shortcuts go through set-shortcuts (validated); everything else is merged as-is.
     const { shortcuts: _ignored, ...rest } = patch ?? {}
@@ -178,9 +192,13 @@ function registerIpc(): void {
     ).finally(() => setPhoneSignIn(null))
   })
   ipcMain.handle('google-phone-cancel', () => cancelPhoneSignIn())
+  ipcMain.handle('player-closed', (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    if (win) playerClosed(win)
+  })
   ipcMain.handle('set-fullscreen', (e, on: unknown) => {
     const win = BrowserWindow.fromWebContents(e.sender)
-    if (win && !win.isDestroyed()) win.setFullScreen(on === true)
+    if (win && !win.isDestroyed()) setAppFullScreen(win, on === true)
   })
   ipcMain.handle('saved-toggle', (_, item: unknown) => {
     const clean = cleanSaved(item)
@@ -224,6 +242,9 @@ app.whenReady().then(() => {
   setupAppMenu(() => mainWindow)
   const win = createWindow()
   start(win)
+  // Sign-ins don't run out: sites are visited now and then, and a signed-out answer is recovered
+  // from (a visit, then the newest sign-in from Sync with Google) before it's reported.
+  startSessionKeeper((p) => Boolean(store.get('usernames')[p]), () => syncNow())
   startUpdater(emit)
   setPipRenderer((win, query) => loadRenderer(win, 'pip', query))
   initMenubar({
@@ -239,6 +260,7 @@ app.whenReady().then(() => {
 let quitting = false
 app.on('before-quit', () => {
   quitting = true
+  void flushCookies()
 })
 
 app.on('window-all-closed', () => {

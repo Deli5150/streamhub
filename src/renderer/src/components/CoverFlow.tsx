@@ -80,7 +80,7 @@ export function CoverFlow({
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
-      <div className="flex w-full items-center justify-center gap-1.5 px-1 text-small-strong text-secondary">{label}</div>
+      <div className="theme-display flex w-full items-center justify-center gap-1.5 px-1 text-small-strong text-secondary">{label}</div>
       {!active ? (
         <div className="flex h-[168px] w-full items-center justify-center">{empty}</div>
       ) : (

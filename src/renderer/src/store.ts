@@ -51,6 +51,8 @@ interface UiState {
   toast: (Toast & { id: number }) | null
   /** The YouTube playlist import pane (Settings → YouTube playlists) is open. */
   importPlaylists: boolean
+  /** The Feedback dialog (Feedback.tsx). */
+  feedback: boolean
   /** The slide-out list of every followed channel (ChannelsDrawer) is open. */
   channelsOpen: boolean
   setApp(s: AppState): void
@@ -61,7 +63,7 @@ interface UiState {
   reorderMulti(sourceKey: string, targetKey: string): void
   focus(key: string): void
   showToast(t: Toast): void
-  set(p: Partial<Pick<UiState, 'collapsed' | 'theater' | 'bigPicture' | 'bigPictureOnly' | 'filter' | 'search' | 'multiPicker' | 'combine' | 'pip' | 'importPlaylists' | 'channelsOpen'>>): void
+  set(p: Partial<Pick<UiState, 'collapsed' | 'theater' | 'bigPicture' | 'bigPictureOnly' | 'filter' | 'search' | 'multiPicker' | 'combine' | 'pip' | 'importPlaylists' | 'channelsOpen' | 'feedback'>>): void
 }
 
 export const MAX_MULTI = 6
@@ -99,6 +101,7 @@ export const useUi = create<UiState>((set) => ({
   search: '',
   toast: null,
   importPlaylists: false,
+  feedback: false,
   channelsOpen: false,
   setApp: (app) => set({ app }),
   go: (view) => set((s) => ({ view, ...persistCollapsed(sidebarFor(view, s.multi.length)) })),

@@ -22,6 +22,13 @@ export interface Colors {
   onAccent: string
   danger: string
   success: string
+  /**
+   * Font for screen titles and section headings in the styled themes: Nothing's dot matrix (Doto) or
+   * Pixel's Google Sans Flex. Bundled by expo-font (app.config.ts); unset for the other themes.
+   */
+  display?: string
+  /** The styled theme's look (see shared/themes.ts), for icons and shapes. */
+  style?: 'nothing' | 'pixel'
 }
 
 function mix(hex: string, other: string, amount: number): string {
@@ -47,9 +54,15 @@ export function colorsFor(themeId: string, systemDark: boolean): Colors {
     accent: theme.accent,
     onAccent: '#ffffff',
     danger: dark ? '#ff453a' : '#d70015',
-    success: dark ? '#30d158' : '#248a3d'
+    success: dark ? '#30d158' : '#248a3d',
+    style: theme.style,
+    display: theme.style === 'nothing' ? 'Doto-Bold' : theme.style === 'pixel' ? 'GoogleSansFlex-Bold' : undefined
   }
 }
+
+/** Style for a title in the theme's display font (the font file is already bold), or nothing. */
+export const displayFont = (c: Colors): { fontFamily: string; fontWeight: 'normal' } | null =>
+  c.display ? { fontFamily: c.display, fontWeight: 'normal' } : null
 
 /** Colors for a screen drawn over a wallpaper (see overWallpaper); null everywhere else. */
 export const ColorsOverride = createContext<Colors | null>(null)

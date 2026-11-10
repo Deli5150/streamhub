@@ -1,0 +1,293 @@
+/*
+ * Pixel colorways, after Material 3 Expressive (Android 16 on Pixel): Google Sans Flex, tonal surface
+ * containers instead of outlines, pill buttons and a pill "active indicator" behind the selected
+ * tab, Material switches (the thumb grows and shows a check when on), outlined segmented buttons
+ * with a check on the choice, a bar-handle slider, settings lists as separate rounded rows, 28px
+ * dialogs and a snackbar. Icons are Material Symbols Rounded (pixel-icons.css). Hooks are the ui-*
+ * classes on the shared controls.
+ */
+
+:root[data-theme-style="pixel"] {
+  --font-sans: "Google Sans Flex", "InterVariable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  /* Material roles derived from the colorway's seeds. */
+  --m3-primary: var(--accent);
+  --m3-on-primary: #ffffff;
+  --m3-secondary-container: color-mix(in srgb, var(--accent) 24%, var(--bg-secondary));
+  --m3-on-secondary-container: var(--fg);
+  --m3-surface-container-low: color-mix(in srgb, var(--bg-secondary) 45%, var(--bg));
+  --m3-surface-container: color-mix(in srgb, var(--bg-secondary) 75%, var(--bg));
+  --m3-surface-container-high: var(--bg-secondary);
+  --m3-surface-container-highest: color-mix(in srgb, var(--bg-secondary), var(--fg) 7%);
+  --m3-outline: color-mix(in srgb, var(--fg) 50%, var(--bg));
+  --m3-outline-variant: color-mix(in srgb, var(--fg) 18%, var(--bg));
+  --m3-state-hover: color-mix(in srgb, var(--fg) 8%, transparent);
+  --radius-control: 9999px;
+  --radius-panel: 28px;
+  --radius-popover: 16px;
+  --radius-card: 24px;
+  --color-well: var(--m3-surface-container);
+  --color-popover: var(--m3-surface-container);
+  --color-control-subtle: var(--m3-surface-container-high);
+  --color-control: var(--m3-surface-container-highest);
+  --color-control-active: color-mix(in srgb, var(--bg-secondary), var(--fg) 14%);
+}
+
+/* ---------- Navigation: a pill indicator behind the selected tab ---------- */
+
+:root[data-theme-style="pixel"] .ui-tab {
+  height: 32px;
+  border-radius: 9999px;
+  padding-inline: 14px 16px;
+  gap: 8px;
+  font-weight: 500;
+  font-size: 13px;
+}
+:root[data-theme-style="pixel"] .ui-tab:hover {
+  background: var(--m3-state-hover);
+}
+:root[data-theme-style="pixel"] .ui-tab[aria-pressed="true"] {
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+  font-weight: 700;
+}
+:root[data-theme-style="pixel"] :is(.ui-tab, .ui-icon-btn) svg.lucide {
+  width: 18px;
+  height: 18px;
+}
+
+/* Icon buttons: round, with Material's hover state layer. */
+:root[data-theme-style="pixel"] .ui-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+}
+:root[data-theme-style="pixel"] .ui-icon-btn:hover {
+  background: var(--m3-state-hover);
+}
+:root[data-theme-style="pixel"] .ui-icon-btn[aria-expanded="true"] {
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+
+/* ---------- Buttons: filled, tonal and text buttons, all pills ---------- */
+
+:root[data-theme-style="pixel"] .ui-btn {
+  border-radius: 9999px;
+  padding-inline: 16px;
+  font-weight: 500;
+}
+:root[data-theme-style="pixel"] .ui-btn-accent {
+  background: var(--m3-primary);
+  color: var(--m3-on-primary);
+}
+:root[data-theme-style="pixel"] .ui-btn-filled {
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+:root[data-theme-style="pixel"] .ui-btn-plain {
+  color: var(--m3-primary);
+}
+:root[data-theme-style="pixel"] .ui-btn-plain svg {
+  color: inherit;
+}
+
+/* ---------- Switch: Material 3 (outlined small thumb off; filled track, large thumb, check on) ---------- */
+
+:root[data-theme-style="pixel"] .ui-switch {
+  width: 46px;
+  height: 28px;
+  background: var(--m3-surface-container-highest);
+  box-shadow: inset 0 0 0 2px var(--m3-outline);
+}
+:root[data-theme-style="pixel"] .ui-switch .ui-switch-thumb {
+  top: 7px;
+  width: 14px;
+  height: 14px;
+  background: var(--m3-outline);
+  box-shadow: none;
+  translate: 7px 0;
+  transition:
+    translate 200ms cubic-bezier(0.2, 0, 0, 1),
+    width 200ms,
+    height 200ms,
+    top 200ms;
+}
+:root[data-theme-style="pixel"] .ui-switch[aria-checked="true"] {
+  background: var(--m3-primary);
+  box-shadow: none;
+}
+:root[data-theme-style="pixel"] .ui-switch[aria-checked="true"] .ui-switch-thumb {
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  background: var(--m3-on-primary);
+  translate: 21px 0;
+}
+:root[data-theme-style="pixel"] .ui-switch[aria-checked="true"] .ui-switch-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background: var(--m3-primary);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+/* ---------- Segmented buttons: outlined pill, the choice tonal with a check ---------- */
+
+:root[data-theme-style="pixel"] .ui-seg {
+  border-radius: 9999px;
+  padding: 0;
+  gap: 0;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--m3-outline);
+  overflow: hidden;
+}
+:root[data-theme-style="pixel"] .ui-seg-item {
+  height: 32px;
+  border-radius: 0;
+  padding-inline: 14px;
+  font-weight: 500;
+  color: var(--fg);
+}
+:root[data-theme-style="pixel"] .ui-seg-item + .ui-seg-item {
+  box-shadow: inset 1px 0 0 var(--m3-outline);
+}
+:root[data-theme-style="pixel"] .ui-seg-item[aria-pressed="true"] {
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+:root[data-theme-style="pixel"] .ui-seg-item[aria-pressed="true"]::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  margin-right: 2px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+/* ---------- Slider: Material 3 Expressive, a thick track and a bar handle ---------- */
+
+:root[data-theme-style="pixel"] .ui-slider {
+  height: 12px;
+  border-radius: 9999px;
+}
+:root[data-theme-style="pixel"] .ui-slider::-webkit-slider-thumb {
+  width: 4px;
+  height: 26px;
+  border-radius: 2px;
+  background: var(--m3-primary);
+  box-shadow: 0 0 0 4px var(--bg);
+}
+
+/* ---------- Surfaces: tonal containers, no outlines ---------- */
+
+:root[data-theme-style="pixel"] :is(.ui-card, .ui-panel, .ui-sidebar, .ui-popover, .ui-dialog, .ui-search) {
+  box-shadow: none;
+}
+:root[data-theme-style="pixel"] .ui-panel {
+  background: var(--m3-surface-container-low);
+  backdrop-filter: none;
+}
+:root[data-theme-style="pixel"] .ui-card {
+  border-radius: 24px;
+  padding: 8px;
+  background: var(--m3-surface-container);
+  backdrop-filter: none;
+}
+:root[data-theme-style="pixel"] .ui-card > .relative {
+  border-radius: 16px;
+}
+:root[data-theme-style="pixel"] .ui-card:hover {
+  transform: none;
+  background: var(--m3-surface-container-high);
+}
+:root[data-theme-style="pixel"] .ui-popover {
+  background: var(--m3-surface-container);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.15), 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+/* Settings lists as Android 16 draws them: separate rows, rounded at the ends of the group. */
+:root[data-theme-style="pixel"] .ui-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+:root[data-theme-style="pixel"] .ui-group > * {
+  border: 0;
+  border-radius: 6px;
+  background: var(--m3-surface-container-high);
+}
+:root[data-theme-style="pixel"] .ui-group > :first-child {
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+}
+:root[data-theme-style="pixel"] .ui-group > :last-child {
+  border-bottom-left-radius: 22px;
+  border-bottom-right-radius: 22px;
+}
+
+/* Dialogs: 28px corners, a large title, actions as text buttons with no rule above them. */
+:root[data-theme-style="pixel"] .ui-dialog {
+  border-radius: 28px;
+  background: var(--m3-surface-container-high);
+}
+:root[data-theme-style="pixel"] .ui-dialog h2 {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 400;
+}
+:root[data-theme-style="pixel"] .ui-dialog-footer {
+  border-top: 0;
+  padding-bottom: 20px;
+}
+
+/* The toast as a snackbar: inverse colors, the action in the inverse primary. */
+:root[data-theme-style="pixel"] .ui-toast {
+  border-radius: 12px;
+  background: var(--fg);
+  color: var(--bg);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+}
+:root[data-theme-style="pixel"] .ui-toast button:first-of-type {
+  background: transparent;
+  color: color-mix(in srgb, var(--accent) 55%, var(--bg));
+}
+:root[data-theme-style="pixel"] .ui-toast svg {
+  color: var(--bg);
+}
+
+/* The search field as Material's search bar. */
+:root[data-theme-style="pixel"] .ui-search {
+  height: 36px;
+  border-radius: 9999px;
+  padding-inline: 14px;
+  background: var(--m3-surface-container-highest);
+}
+
+/* ---------- Live: Material badges ---------- */
+
+:root[data-theme-style="pixel"] .ui-live-badge {
+  height: 22px;
+  border-radius: 9999px;
+  padding-inline: 8px 9px;
+  background: #b3261e;
+  backdrop-filter: none;
+}
+:root[data-theme-style="pixel"] .ui-live-dot {
+  background: #ffffff;
+}
+:root[data-theme-style="pixel"] .ui-rank {
+  height: 24px;
+  border-radius: 9999px;
+  padding-inline: 9px;
+  background: var(--m3-primary);
+  color: var(--m3-on-primary);
+}

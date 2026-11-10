@@ -50,6 +50,9 @@ export function WebView({ platform, src, muted = false, volume, onVolumeChange, 
   endedRef.current = onEnded
   const volumeChangeRef = useRef(onVolumeChange)
   volumeChangeRef.current = onVolumeChange
+  // A player removed while fullscreen (the queue moving on, another video picked) takes its
+  // fullscreen along; on Windows the window otherwise stayed fullscreen (see main/fullscreen.ts).
+  useEffect(() => () => void window.api.playerClosed(), [])
 
   useEffect(() => {
     const el = ref.current

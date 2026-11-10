@@ -126,6 +126,30 @@ describe('logins', () => {
     expect(phone.usernames.twitch).toBe('delvisonm')
     expect(phone.jar.twitch?.[0].value).toBe('token-1')
   })
+
+  it('passes a renewed sign-in on to the other devices', async () => {
+    const cloud = { doc: emptyDoc() }
+    const desktop = fakeDevice(cloud, { kick: 'me' }, { kick: cookie('token-1') })
+    await syncOnce(desktop.device)
+    const deck = fakeDevice(cloud, {}, {})
+    await syncOnce(deck.device)
+    expect(deck.jar.kick?.[0].value).toBe('token-1')
+    await syncOnce(desktop.device)
+
+    // Kick renews the sign-in on the computer: the new cookies go up, and the Deck takes them.
+    desktop.jar.kick = cookie('token-2')
+    await syncOnce(desktop.device)
+    expect(cloud.doc.logins.entries.kick?.cookies?.[0].value).toBe('token-2')
+    await syncOnce(deck.device)
+    expect(deck.jar.kick?.[0].value).toBe('token-2')
+
+    // Nothing renewed since: no device's cookies change, and the Deck's copy doesn't go up again.
+    const before = JSON.stringify(cloud.doc.logins)
+    await syncOnce(deck.device)
+    await syncOnce(desktop.device)
+    expect(JSON.stringify(cloud.doc.logins)).toBe(before)
+    expect(desktop.jar.kick?.[0].value).toBe('token-2')
+  })
 })
 
 describe('imported YouTube playlists', () => {

@@ -1,5 +1,5 @@
 import '../lib/polyfills'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { AppState } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -19,6 +19,7 @@ import { openChannel } from '../ui/channelMenu'
 import { LoginSheet } from '../ui/LoginSheet'
 import { MenuSheet } from '../ui/Menu'
 import { useColors } from '../ui/theme'
+import { BootIntro, LAUNCH_BACKGROUND } from '../ui/BootIntro'
 
 const OPEN_ON_LAUNCH = 'streamhub:open-on-launch'
 
@@ -26,13 +27,17 @@ void SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout(): React.JSX.Element | null {
   const [ready, setReady] = useState(false)
+  // The launch animation plays over the app while it loads, then gets out of the way.
+  const [intro, setIntro] = useState(true)
+  // The system launch screen goes as soon as the intro is on screen (it starts on the same frame).
+  const introShown = useCallback(() => SplashScreen.hide(), [])
+  const introDone = useCallback(() => setIntro(false), [])
 
   useEffect(() => {
     void (async () => {
       await Promise.all([loadStore(), loadProgress(), loadWallpapers().catch(() => undefined)])
       show()
       setReady(true)
-      SplashScreen.hide()
       setupLiveAlerts().catch((e) => console.error('[alerts]', e))
     })()
     const sub = AppState.addEventListener('change', (s) => setForeground(s === 'active'))
@@ -65,11 +70,11 @@ export default function RootLayout(): React.JSX.Element | null {
     return () => sub.remove()
   }, [ready])
 
-  if (!ready) return null
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: LAUNCH_BACKGROUND }}>
       <SafeAreaProvider>
-        <Themed />
+        {ready ? <Themed /> : null}
+        {intro ? <BootIntro ready={ready} onShown={introShown} onDone={introDone} /> : null}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   )

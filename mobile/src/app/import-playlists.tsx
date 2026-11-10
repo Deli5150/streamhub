@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Icon } from '../ui/Icon'
 import type { YouTubePlaylistSummary } from '@shared/types'
 import { actions, useApp } from '../lib/hub'
 import { Button, Thumbnail } from '../ui/components'
@@ -89,7 +89,7 @@ export default function ImportPlaylistsScreen(): React.JSX.Element {
                   </Text>
                   <Text style={{ color: c.fg3, fontSize: 12 }}>{done ? 'Imported' : item.count !== undefined ? `${item.count} videos` : ''}</Text>
                 </View>
-                <Ionicons name={on ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={on ? c.accent : c.fg3} />
+                <Icon name={on ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={on ? c.accent : c.fg3} />
               </Pressable>
             )
           }}
