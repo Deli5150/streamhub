@@ -7,6 +7,7 @@ import { captureLog, recentLog } from './log'
 import { actions, emit, pollSignedOutMembers, setPhoneSignIn, showMainWindow, start, state } from './hub'
 import { cleanSaved } from './watchLater'
 import { store } from './store'
+import { startLinuxPads } from './linuxPads'
 import { checkForUpdates, downloadUpdate, installUpdate, isSteamCopy, startUpdater } from './updater'
 import { cancelPhoneSignIn, signInOnPhone } from './googleAuth'
 import { normalizeBindings } from '@shared/shortcuts'
@@ -41,6 +42,8 @@ const LAUNCH_BIG_PICTURE = process.argv.includes('--big-picture') || process.env
  * STREAMHUB_BIG_PICTURE_ONLY=1 does the same anywhere (for trying it out).
  */
 const BIG_PICTURE_ONLY = isSteamCopy() || process.argv.includes('--big-picture-only') || process.env.STREAMHUB_BIG_PICTURE_ONLY === '1'
+/** Steam's Game Mode (gamescope): the app is alone on screen, with only a controller. */
+const GAME_MODE = process.platform === 'linux' && (process.env.SteamGamepadUI === '1' || process.env.XDG_CURRENT_DESKTOP === 'gamescope' || Boolean(process.env.GAMESCOPE_WAYLAND_DISPLAY))
 const PRELOAD = path.join(__dirname, '../preload/index.js')
 let mainWindow: BrowserWindow | null = null
 
@@ -104,6 +107,11 @@ function createWindow(): BrowserWindow {
   setupAutoPip(win)
   guardFullScreen(win, win.webContents)
   win.on('focus', syncOnFocus)
+  // Linux with the Steam copy, or in Game Mode: controllers are also read from the input devices.
+  if (process.platform === 'linux' && (GAME_MODE || BIG_PICTURE_ONLY)) {
+    const stopPads = startLinuxPads(win.webContents)
+    win.on('closed', stopPads)
+  }
   // Windows/Linux: with the tray on, closing the window hides it to the tray (as tray apps do there),
   // so the app keeps running and reopens instantly; quitting from the tray menu really quits.
   win.on('close', (e) => {
@@ -182,6 +190,7 @@ function registerIpc(): void {
   ipcMain.handle('close-pip', () => void closePip())
   ipcMain.handle('launch-big-picture', () => LAUNCH_BIG_PICTURE || BIG_PICTURE_ONLY)
   ipcMain.handle('big-picture-only', () => BIG_PICTURE_ONLY)
+  ipcMain.handle('game-mode', () => GAME_MODE)
   ipcMain.handle('quit-app', () => app.quit())
   // Google sign-in (Sync, or YouTube) approved on a phone: the code to show goes out in the state.
   ipcMain.handle('google-phone-signin', (_, target: unknown) => {
@@ -230,6 +239,15 @@ onSettingsChange((next, prev) => {
   if (JSON.stringify(next.shortcuts) !== JSON.stringify(prev.shortcuts) || JSON.stringify(next.menubar) !== JSON.stringify(prev.menubar))
     syncMenubar()
   emit()
+})
+
+// One StreamHub at a time: opening it again while it runs (say from the Start menu, with the window
+// closed to the tray) brings back the window that's already running instead of a second copy.
+if (!app.requestSingleInstanceLock()) app.exit(0)
+app.on('second-instance', () => {
+  if (!app.isReady()) return
+  if (mainWindow) showMainWindow()
+  else start(createWindow())
 })
 
 app.whenReady().then(() => {

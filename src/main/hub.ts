@@ -82,6 +82,7 @@ export const emit = (): void => {
 
 export const showMainWindow = (): void => {
   if (!win || win.isDestroyed()) return
+  if (win.isMinimized()) win.restore()
   win.show()
   win.focus()
 }

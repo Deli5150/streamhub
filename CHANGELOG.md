@@ -2,6 +2,24 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.10]
+
+### New
+- **A queue on iPhone and Android.** Line up videos to play one after another, as on the desktop. On a channel page, press and hold a video and pick **Add to queue**, or tap the **+** under the video that's playing. The queue sits on Home next to Watch Later. Its page lets you play from any video, reorder or remove them, or clear it. ([#4](../../issues/4))
+- **Playlists as a grid on iPhone and Android.** Once you have more than one playlist (Watch Later, the queue, imported YouTube playlists), Home shows them as a grid of tiles instead of stacked rows. A tile opens the playlist's page with its videos: **Play** starts from the top, or tap a video to start there.
+- **A floating dock on Android.** Settings → Dock: keep Android's navigation bar, or switch to a rounded dock that floats over the screen, like the iPhone's.
+
+### Fixed
+- **Windows:** opening StreamHub while it was running in the system tray started a second copy. Now only one copy runs: opening it again brings back the window that's already running. ([#3](../../issues/3))
+- **Steam version:** the controller wasn't detected in Game Mode. StreamHub now reads controllers directly from the system when the browser engine doesn't pass them on, and no longer ignores the controller when Game Mode doesn't count the app as focused.
+- **Steam version:** Updates is now at the top of Settings.
+- **iPhone and Android:** Back while a video plays on a channel page now closes the video and keeps you on the channel, instead of jumping back to the Channels tab. ([#7](../../issues/7))
+- **iPhone and Android:** turned sideways, a video on a channel page, in Watch Later, the queue or a playlist now fills the screen and shows the whole picture. It was too zoomed in, with its bottom cut off. ([#5](../../issues/5))
+- **Android:** full-screen video in landscape is centered whichever way the phone is turned. One way round, it sat against one side next to a wide black bar. ([#6](../../issues/6))
+- **Android:** the ring around live channels' pictures is round again, not square.
+- **iPhone and Android:** in landscape with the chat hidden, the button to bring the chat back is now on the right, where the chat opens.
+- **Android:** Settings explains which TVs the cast button can reach: Google Cast devices (Chromecast, Google TV, TVs with Chromecast built in). Apple TVs, Macs and Fire TV don't accept Google Cast.
+
 ## [1.0.9]
 
 ### New

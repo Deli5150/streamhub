@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { create } from 'zustand'
+import type { LinuxPad } from '@shared/linuxPads'
 import type { MediaItem } from '@shared/types'
 
 // Big Picture mode (components/bigpicture): a full-screen TV-style interface driven by a game
@@ -7,8 +8,8 @@ import type { MediaItem } from '@shared/types'
 //
 // - Screens: a stack of routes over the tabbed home (Live, Following, Watch Later, Queue). Going back
 //   pops one and puts focus back on what was focused before.
-// - Input: the Gamepad API (polled every frame, with key-repeat for held directions) and the
-//   keyboard, turned into actions. Screens can take actions first (useBpInput); otherwise the
+// - Input: the Gamepad API (polled every frame, with key-repeat for held directions; in Steam's Game
+//   Mode also Linux's input devices) and the keyboard, turned into actions. Screens can take actions first (useBpInput); otherwise the
 //   directions move focus and A presses the focused element.
 // - Focus: every navigable element carries `data-bp` (and a stable `data-bp-id` when it should be
 //   refocused on return). Moving picks the nearest element in that direction on screen, within the
@@ -219,16 +220,39 @@ const STICK = 0.55
 
 const padStyle = (id: string): PadStyle => (/054c|playstation|dualsense|dualshock|wireless controller/i.test(id) ? 'playstation' : 'xbox')
 
-/** Reads controllers every frame and dispatches their actions (with repeat for held directions). */
+/** A controller as the loop reads it: from the Gamepad API, or from Linux's input devices. */
+interface Pad {
+  id: string
+  pressed(i: number): boolean
+  axes: readonly number[]
+}
+
+/**
+ * Reads controllers every frame and dispatches their actions (with repeat for held directions).
+ * In Steam's Game Mode, controllers also come from Linux's input devices (main/linuxPads.ts), used
+ * while the Gamepad API sees none; and StreamHub is all that's on screen there, so it doesn't wait
+ * for the window to count as focused (under gamescope it often never does).
+ */
 function startGamepads(): () => void {
   const held = new Map<BpAction, { since: number; last: number }>()
   let frame = 0
+  let linuxPads: LinuxPad[] = []
+  let gameMode = false
+  void window.api.gameMode().then((on) => (gameMode = on))
+  const offLinux = window.api.onLinuxPads((pads) => (linuxPads = pads))
+  let logged = ''
   const tick = (): void => {
     frame = requestAnimationFrame(tick)
-    const pads = [...navigator.getGamepads()].filter((p): p is Gamepad => Boolean(p?.connected))
+    const web: Pad[] = [...navigator.getGamepads()]
+      .filter((p): p is Gamepad => Boolean(p?.connected))
+      .map((p) => ({ id: p.id, pressed: (i) => Boolean(p.buttons[i]?.pressed), axes: p.axes }))
+    const pads: Pad[] = web.length ? web : linuxPads.map((p) => ({ id: p.name, pressed: (i) => p.pressed.includes(i), axes: p.axes }))
+    // Which controllers are in use (in the log, for bug reports from the Steam Deck).
+    const seen = `${web.length ? 'gamepad api' : 'linux'}: ${pads.map((p) => p.id).join(', ')}`
+    if (pads.length && seen !== logged) console.log(`[bp] controllers (${(logged = seen)})`)
     const pressed = new Set<BpAction>()
     for (const pad of pads) {
-      for (const [i, action] of BUTTONS) if (pad.buttons[i]?.pressed) pressed.add(action)
+      for (const [i, action] of BUTTONS) if (pad.pressed(i)) pressed.add(action)
       const [x = 0, y = 0] = pad.axes
       if (x > STICK) pressed.add('right')
       if (x < -STICK) pressed.add('left')
@@ -236,7 +260,7 @@ function startGamepads(): () => void {
       if (y < -STICK) pressed.add('up')
     }
     // Only while StreamHub is the app in front.
-    if (!document.hasFocus()) pressed.clear()
+    if (!gameMode && !document.hasFocus()) pressed.clear()
     const now = performance.now()
     for (const action of pressed) {
       const h = held.get(action)
@@ -250,7 +274,7 @@ function startGamepads(): () => void {
     }
     for (const action of [...held.keys()]) if (!pressed.has(action)) held.delete(action)
   }
-  const fire = (action: BpAction, pad?: Gamepad): void => {
+  const fire = (action: BpAction, pad?: Pad): void => {
     const style = pad ? padStyle(pad.id) : null
     if (useBp.getState().pad !== style || !useBp.getState().padActive) useBp.setState({ pad: style, padActive: true })
     dispatch(action, 'pad')
@@ -260,6 +284,7 @@ function startGamepads(): () => void {
   window.addEventListener('gamepadconnected', onConnect)
   return () => {
     cancelAnimationFrame(frame)
+    offLinux()
     window.removeEventListener('gamepadconnected', onConnect)
   }
 }

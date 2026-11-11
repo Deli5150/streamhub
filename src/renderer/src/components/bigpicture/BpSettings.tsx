@@ -29,6 +29,7 @@ export function BpSettings({ onToast }: { onToast: Toast }): React.JSX.Element {
     <div data-bp-scroller="" className="h-full overflow-y-auto pb-24 [scrollbar-width:none]">
       <div className="mx-auto flex max-w-[1100px] flex-col gap-12 px-16 pt-4">
         <h1 className="text-[44px] font-extrabold tracking-tight">Settings</h1>
+        <UpdatesSection />
         <SyncSection onToast={onToast} />
         <AccountsSection onToast={onToast} />
         <PlaylistsSection onImport={() => setImporting(true)} onToast={onToast} />
@@ -48,7 +49,6 @@ export function BpSettings({ onToast }: { onToast: Toast }): React.JSX.Element {
             onChange={(v) => void window.api.updateSettings({ notifyLive: v })}
           />
         </Section>
-        <UpdatesSection />
         <FeedbackSection onOpen={setFeedback} />
         <AppSection />
       </div>

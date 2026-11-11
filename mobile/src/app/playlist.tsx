@@ -7,17 +7,18 @@ import { Icon } from '../ui/Icon'
 import { PLATFORM_LABEL, type SavedItem } from '@shared/types'
 import { embedUrl } from '@shared/urls'
 import { actions, useApp } from '../lib/hub'
+import { useQueue } from '../lib/queue'
 import { progressKey, resumePosition, savedTitle, useVodProgress } from '../lib/ui'
 import { IconButton, Thumbnail } from '../ui/components'
 import { FloatingButton, HomeButton } from '../ui/HomeButton'
 import { CastButton } from '../ui/CastButton'
 import { showMenu } from '../ui/Menu'
-import { useAutoPip, usePipActive } from '../ui/pip'
+import { useAutoPip, useLayoutWindow, usePipActive } from '../ui/pip'
 import { Player, type PlayerHandle } from '../ui/Player'
 import { useColors } from '../ui/theme'
 
 /**
- * Watch Later and imported YouTube playlists (`yt`: its id), like the desktop's PlaylistView: the
+ * Watch Later, the queue (`queue`) and imported YouTube playlists (`yt`: its id), like the desktop's PlaylistView: the
  * selected item plays at the top and the playlist sits underneath. Finished videos move on to the
  * next item. Press and hold a Watch Later item to reorder or remove it; imported playlists are
  * read-only (refresh them from YouTube).
@@ -25,12 +26,13 @@ import { useColors } from '../ui/theme'
 const NO_ITEMS: SavedItem[] = []
 
 export default function PlaylistScreen(): React.JSX.Element | null {
-  const { start, yt } = useLocalSearchParams<{ start?: string; yt?: string }>()
+  const { start, yt, queue } = useLocalSearchParams<{ start?: string; yt?: string; queue?: string }>()
   const c = useColors()
   const insets = useSafeAreaInsets()
   const imported = useApp((s) => (yt ? s.app?.ytPlaylists.find((p) => p.id === yt) : undefined))
   const watchLater = useApp((s) => s.app?.watchLater ?? NO_ITEMS)
-  const items = yt ? (imported?.items ?? NO_ITEMS) : watchLater
+  const queued = useQueue((s) => s.items)
+  const items = queue ? queued : yt ? (imported?.items ?? NO_ITEMS) : watchLater
   const [refreshing, setRefreshing] = useState(false)
   const [pickedId, setPickedId] = useState<string | null>(start ?? null)
   // The picked item, or the first one if it was removed.
@@ -38,7 +40,11 @@ export default function PlaylistScreen(): React.JSX.Element | null {
   const player = useRef<PlayerHandle>(null)
   // Android picture-in-picture: only the player shows, filling the small window.
   const inPip = usePipActive()
-  const pipHidden = inPip ? styles.hidden : null
+  // Turned sideways, the video fills the screen (16:9 at the full width would be taller than the
+  // screen, cutting it off); the playlist is back in portrait.
+  const { width, height } = useLayoutWindow()
+  const fill = width > height && !inPip
+  const pipHidden = inPip || fill ? styles.hidden : null
   useAutoPip(items.length > 0)
 
   useEffect(() => {
@@ -56,7 +62,14 @@ export default function PlaylistScreen(): React.JSX.Element | null {
   const itemMenu = (item: SavedItem, i: number): void =>
     showMenu(
       savedTitle(item),
-      yt
+      queue
+        ? [
+            { label: 'Play', icon: 'play-outline', onSelect: () => setPickedId(item.id) },
+            { label: 'Move up', icon: 'arrow-up', disabled: i === 0, onSelect: () => useQueue.getState().reorder(item.id, items[i - 1].id) },
+            { label: 'Move down', icon: 'arrow-down', disabled: i === items.length - 1, onSelect: () => useQueue.getState().reorder(item.id, items[i + 1].id) },
+            { label: 'Remove from queue', icon: 'trash-outline', destructive: true, onSelect: () => useQueue.getState().remove(item.id) }
+          ]
+        : yt
         ? [
             { label: 'Play', icon: 'play-outline', onSelect: () => setPickedId(item.id) },
             {
@@ -83,9 +96,15 @@ export default function PlaylistScreen(): React.JSX.Element | null {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <View style={[{ paddingTop: inPip ? 0 : insets.top, backgroundColor: '#000' }, inPip && { flex: 1 }]}>
-        <PlaylistPlayer key={active.id} item={active} playerRef={player} onEnded={playNext} />
-        <View style={[styles.back, { top: insets.top + 4 }, pipHidden]}>
+      <View
+        style={[
+          { paddingTop: inPip ? 0 : insets.top, backgroundColor: '#000' },
+          inPip && { flex: 1 },
+          fill && { flex: 1, paddingTop: 0, paddingLeft: insets.left, paddingRight: insets.right }
+        ]}
+      >
+        <PlaylistPlayer key={active.id} item={active} playerRef={player} onEnded={playNext} fill={fill} />
+        <View style={[styles.back, { top: insets.top + 4 }, inPip && styles.hidden]}>
           <FloatingButton icon="chevron-down" label="Close" onPress={() => router.back()} />
           <HomeButton />
         </View>
@@ -96,7 +115,7 @@ export default function PlaylistScreen(): React.JSX.Element | null {
             {savedTitle(active)}
           </Text>
           <Text style={{ color: c.fg3, fontSize: 12 }}>
-            {yt ? `${imported?.title ?? 'Playlist'} · ${active.displayName}` : `${active.displayName} · ${PLATFORM_LABEL[active.platform]}`} · {index + 1} of{' '}
+            {yt ? `${imported?.title ?? 'Playlist'} · ${active.displayName}` : `${queue ? 'Queue · ' : ''}${active.displayName} · ${PLATFORM_LABEL[active.platform]}`} · {index + 1} of{' '}
             {items.length}
           </Text>
         </View>
@@ -146,18 +165,21 @@ export default function PlaylistScreen(): React.JSX.Element | null {
 function PlaylistPlayer({
   item,
   playerRef,
-  onEnded
+  onEnded,
+  fill
 }: {
   item: SavedItem
   playerRef: React.RefObject<PlayerHandle | null>
   onEnded(): void
+  /** Fill the screen (landscape) rather than 16:9 by width. */
+  fill: boolean
 }): React.JSX.Element {
   const app = useApp((s) => s.app)!
   const save = useVodProgress((s) => s.save)
   const key = item.media ? progressKey(item.platform, item.media.id) : ''
   const [startAt] = useState(() => (key ? resumePosition(key) : 0))
   // 16:9 by width, in picture-in-picture too (see styles.pipSafe on the Watch screen).
-  const box = { width: '100%' as const, aspectRatio: 16 / 9 }
+  const box = fill ? { flex: 1 } : { width: '100%' as const, aspectRatio: 16 / 9 }
   const url = item.media?.playUrl ?? item.media?.hlsUrl
   if (url) {
     return (

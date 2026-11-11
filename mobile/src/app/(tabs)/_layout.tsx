@@ -1,12 +1,15 @@
 import { NativeTabs } from 'expo-router/native-tabs'
+import { Tabs } from 'expo-router/js-tabs'
 import { useApp } from '../../lib/hub'
+import { DOCK_TABS, FloatingDock, useFloatingDock } from '../../ui/FloatingDock'
 import { usePipActive } from '../../ui/pip'
 import { useColors } from '../../ui/theme'
 
 /**
  * The dock: the system's own tab bar, which on iOS 26+ is Apple's floating Liquid Glass bar (it
- * shrinks while you scroll down a list), and Android's Material navigation bar. Screens that hide it
- * (a stream, a channel page, Watch Later) show a home button instead (ui/HomeButton.tsx).
+ * shrinks while you scroll down a list), and Android's Material navigation bar. On Android it can be
+ * a floating dock like the iPhone's instead (Settings → Dock; ui/FloatingDock.tsx). Screens that hide
+ * it (a stream, a channel page, Watch Later) show a home button instead (ui/HomeButton.tsx).
  */
 export default function TabsLayout(): React.JSX.Element {
   const c = useColors()
@@ -14,6 +17,16 @@ export default function TabsLayout(): React.JSX.Element {
   const accountError = useApp((s) => s.app?.accounts.some((a) => a.error) ?? false)
   // Android picture-in-picture shows only the player.
   const inPip = usePipActive()
+  const floating = useFloatingDock()
+  if (floating) {
+    return (
+      <Tabs tabBar={(props) => <FloatingDock {...props} />} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: c.bg } }}>
+        {DOCK_TABS.map((t) => (
+          <Tabs.Screen key={t.name} name={t.name} options={{ title: t.label }} />
+        ))}
+      </Tabs>
+    )
+  }
   return (
     <NativeTabs tintColor={c.accent} badgeBackgroundColor="#eb0400" minimizeBehavior="onScrollDown" hidden={inPip} disableHiddenAnimation>
       <NativeTabs.Trigger name="index">

@@ -1,3 +1,5 @@
+import type { LinuxPad } from './linuxPads'
+
 export const PLATFORMS = ['twitch', 'youtube', 'kick', 'rumble'] as const
 export type Platform = (typeof PLATFORMS)[number]
 
@@ -198,6 +200,8 @@ export interface Settings {
   /** Accelerator overrides, any number per action, e.g. { toggleSidebar: ["Control+Command+S", "F5"] }. */
   shortcuts: Partial<Record<ShortcutAction, string[]>>
   combined: CombinedGroup[]
+  /** Android: the dock's look, Android's own navigation bar or a floating one like the iPhone's. */
+  androidDock?: 'bar' | 'floating'
 }
 
 /** Sync with Google (main/sync.ts). */
@@ -294,6 +298,8 @@ export interface Api {
   launchBigPicture(): Promise<boolean>
   /** The Steam copy: Big Picture is the whole app (no way out to the usual window). */
   bigPictureOnly(): Promise<boolean>
+  /** Running in Steam's Game Mode (gamescope), where the app is all that's on screen. */
+  gameMode(): Promise<boolean>
   quitApp(): Promise<void>
   /**
    * Signs in to Google (Sync, or YouTube) on a phone: the code to enter shows up in the state
@@ -335,6 +341,8 @@ export interface Api {
   onShortcut(cb: (action: ShortcutAction) => void): () => void
   /** Player URL currently in picture-in-picture, or null when PiP closes. */
   onPipState(cb: (url: string | null) => void): () => void
+  /** Controllers read from Linux's input devices (Steam copy and Game Mode; main/linuxPads.ts). */
+  onLinuxPads(cb: (pads: LinuxPad[]) => void): () => void
   /** A channel page was (re)loaded from the site; pushes its fresh data. */
   onChannelPage(cb: (key: string, data: ChannelPageData) => void): () => void
 }

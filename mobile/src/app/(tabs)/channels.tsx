@@ -6,7 +6,7 @@ import { PLATFORMS, PLATFORM_LABEL, type Channel, type Platform } from '@shared/
 import { groupOf } from '../../../../src/renderer/src/lib/combined'
 import { useApp } from '../../lib/hub'
 import { openChannel, openChannelMenu } from '../../ui/channelMenu'
-import { ChannelRow, Chip, DOCK_SPACE, EmptyState, PlatformChip } from '../../ui/components'
+import { ChannelRow, Chip, useDockSpace, EmptyState, PlatformChip } from '../../ui/components'
 import { PLATFORM_COLOR, displayFont, useColors } from '../../ui/theme'
 import { WallpaperScreen } from '../../ui/WallpaperScreen'
 
@@ -25,6 +25,7 @@ function ChannelList(): React.JSX.Element {
   const [filter, setFilter] = useState<Platform | 'all'>('all')
   const c = useColors()
   const insets = useSafeAreaInsets()
+  const dockSpace = useDockSpace()
   const q = search.trim().toLowerCase()
   const followedPlatforms = PLATFORMS.filter((p) => app.channels.some((ch) => ch.platform === p))
 
@@ -70,7 +71,7 @@ function ChannelList(): React.JSX.Element {
         keyExtractor={(ch) => ch.key}
         stickySectionHeadersEnabled
         keyboardDismissMode="on-drag"
-        contentContainerStyle={{ paddingBottom: insets.bottom + DOCK_SPACE, flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + dockSpace, flexGrow: 1 }}
         initialNumToRender={20}
         windowSize={11}
         renderSectionHeader={({ section }) => (

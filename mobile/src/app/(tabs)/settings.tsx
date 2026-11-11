@@ -10,7 +10,7 @@ import { feedbackUrl, feedbackWhere, type FeedbackKind } from '@shared/feedback'
 import { actions, useApp } from '../../lib/hub'
 import { syncNow, syncSignIn, syncSignOut } from '../../lib/sync'
 import { checkForUpdates, downloadUpdate, installUpdate } from '../../lib/updater'
-import { Button, DOCK_SPACE, Group, GroupRow, IconButton } from '../../ui/components'
+import { Button, useDockSpace, Group, GroupRow, IconButton } from '../../ui/components'
 import { WallpaperSettings } from '../../ui/WallpaperSettings'
 import { PLATFORM_COLOR, displayFont, errorMessage, useColors } from '../../ui/theme'
 
@@ -28,10 +28,11 @@ export default function SettingsScreen(): React.JSX.Element {
   const app = useApp((s) => s.app)!
   const c = useColors()
   const insets = useSafeAreaInsets()
+  const dockSpace = useDockSpace()
   return (
     <ScrollView
       style={{ backgroundColor: c.bg }}
-      contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 16, paddingBottom: insets.bottom + DOCK_SPACE + 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 16, paddingBottom: insets.bottom + dockSpace + 16 }}
     >
       <Text style={[styles.title, { color: c.fg }, displayFont(c)]}>Settings</Text>
 
@@ -65,6 +66,12 @@ export default function SettingsScreen(): React.JSX.Element {
         </GroupRow>
       </Group>
 
+      {OS.OS === 'android' ? (
+        <Text style={[styles.intro, { color: c.fg3 }]}>
+          Casting from Android (the cast button on a video) reaches TVs with Google Cast: Chromecast, Google TV, and TVs with Chromecast built in. Apple TVs, Macs and other AirPlay-only TVs, and Fire TV, don’t accept Google Cast.
+        </Text>
+      ) : null}
+
       <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>YOUTUBE PLAYLISTS</Text>
       <PlaylistsCard />
 
@@ -81,6 +88,29 @@ export default function SettingsScreen(): React.JSX.Element {
           <Swatch key={t.id} id={t.id} name={t.name} bg={t.background} fg={t.foreground} accent={t.accent} />
         ))}
       </View>
+
+      {OS.OS === 'android' ? (
+        <>
+          <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>DOCK</Text>
+          <Group footer="The bar along the bottom with Live, Channels and Settings.">
+            {(
+              [
+                ['bar', 'Navigation bar', 'Android’s own, across the bottom of the screen'],
+                ['floating', 'Floating', 'A rounded dock floating over the screen, like the iPhone’s']
+              ] as const
+            ).map(([id, label, detail], i) => (
+              <GroupRow key={id} first={i === 0} label={label} detail={detail} onPress={() => {
+                  if ((app.settings.androidDock ?? 'bar') === id) return
+                  // The tabs are rebuilt for the other dock, which starts on Live: come back here.
+                  actions.updateSettings({ androidDock: id })
+                  setTimeout(() => router.navigate('/settings'), 50)
+                }}>
+                {(app.settings.androidDock ?? 'bar') === id ? <Icon name="checkmark" size={22} color={c.accent} /> : null}
+              </GroupRow>
+            ))}
+          </Group>
+        </>
+      ) : null}
 
       <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>WALLPAPER</Text>
       <WallpaperSettings />

@@ -5,22 +5,27 @@ import { Ionicons } from '@expo/vector-icons'
 import { Icon } from './Icon'
 import type { Channel, LiveInfo, Platform } from '@shared/types'
 import { PLATFORM_LABEL } from '@shared/types'
+import { FLOATING_DOCK_SPACE, useFloatingDock } from './FloatingDock'
 import { PLATFORM_COLOR, formatViewers, uptime, useColors } from './theme'
 
 /**
- * Room to leave under a dock tab's content: on iOS 26+ the Liquid Glass dock floats over it
- * (Android's navigation bar sits below the content instead).
+ * Room to leave under a dock tab's content: on iOS 26+ the Liquid Glass dock floats over it, as
+ * does Android's floating dock (Android's navigation bar sits below the content instead).
  */
-export const DOCK_SPACE = OS.OS === 'ios' ? 84 : 16
+export function useDockSpace(): number {
+  const floating = useFloatingDock()
+  return OS.OS === 'ios' ? 84 : floating ? FLOATING_DOCK_SPACE : 16
+}
 
 /** Avatar that falls back to the channel's initial, with a brand badge in the corner. */
 export const Avatar = memo(function Avatar({ channel, size = 40, live = false, platforms }: { channel: Channel; size?: number; live?: boolean; platforms?: Platform[] }) {
   const c = useColors()
   const [failed, setFailed] = useState(false)
-  const ring = live ? { borderWidth: 2, borderColor: '#eb0400', padding: 1 } : null
+  // The ring's exact radius: Android draws a border with a larger-than-the-box radius (999) square.
+  const ring = live ? { borderWidth: 2, borderColor: '#eb0400', padding: 1, borderRadius: (size + 6) / 2 } : null
   return (
     <View style={{ width: size + (live ? 6 : 0), height: size + (live ? 6 : 0) }}>
-      <View style={[{ borderRadius: 999 }, ring]}>
+      <View style={[{ borderRadius: size / 2 }, ring]}>
         {channel.avatarUrl && !failed ? (
           <Image source={channel.avatarUrl} style={{ width: size, height: size, borderRadius: size / 2 }} onError={() => setFailed(true)} recyclingKey={channel.key} transition={150} cachePolicy="memory-disk" />
         ) : (

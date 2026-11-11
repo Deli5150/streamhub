@@ -69,6 +69,8 @@ const config: ExpoConfig = {
     '@preeternal/react-native-cookie-manager',
     // Chromecast / Google TV on Android (iPhone uses AirPlay).
     './plugins/withAndroidCast',
+    // Full-screen video centered whichever way an Android phone is turned.
+    './plugins/withCutoutEdges',
     ...(iosUrlScheme ? [['@react-native-google-signin/google-signin', { iosUrlScheme }] as [string, unknown]] : [])
   ],
   experiments: { typedRoutes: true }

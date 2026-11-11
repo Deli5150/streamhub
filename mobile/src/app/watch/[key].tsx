@@ -156,8 +156,13 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
           <View style={[styles.floatingBack, { top: insets.top + 4 }, pipHidden]}>
             <FloatingButton icon="chevron-back" label="Back" onPress={() => router.back()} />
             <HomeButton />
-            {chatHidden ? <FloatingButton icon="chatbubble-outline" label="Show chat" onPress={() => setChatHidden(false)} /> : null}
           </View>
+          {/* On the right, where the chat opens. */}
+          {chatHidden ? (
+            <View style={[styles.floatingChat, { top: insets.top + 4 }, pipHidden]}>
+              <FloatingButton icon="chatbubble-outline" label="Show chat" onPress={() => setChatHidden(false)} />
+            </View>
+          ) : null}
         </View>
         {!chatHidden ? (
           <View style={[{ width: Math.min(360, width * 0.36), backgroundColor: c.bg, paddingTop: insets.top, paddingBottom: typing ? keyboard : 0 }, pipHidden]}>
@@ -198,6 +203,7 @@ const styles = StyleSheet.create({
   tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   row: { flex: 1, flexDirection: 'row' },
   floatingBack: { position: 'absolute', left: 10, flexDirection: 'row', gap: 8 },
+  floatingChat: { position: 'absolute', right: 10 },
   hidden: { display: 'none' },
   /**
    * 16:9 by width. Also the shape of Android's picture-in-picture window, whose height the app can't

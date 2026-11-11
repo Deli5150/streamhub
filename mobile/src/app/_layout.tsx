@@ -14,6 +14,7 @@ import { setupLiveAlerts } from '../lib/background'
 import { setForeground, show, start } from '../lib/hub'
 import { ReaderHost } from '../lib/reader'
 import { loadProgress } from '../lib/ui'
+import { loadQueue } from '../lib/queue'
 import { loadWallpapers } from '../lib/wallpapers'
 import { openChannel } from '../ui/channelMenu'
 import { LoginSheet } from '../ui/LoginSheet'
@@ -35,7 +36,7 @@ export default function RootLayout(): React.JSX.Element | null {
 
   useEffect(() => {
     void (async () => {
-      await Promise.all([loadStore(), loadProgress(), loadWallpapers().catch(() => undefined)])
+      await Promise.all([loadStore(), loadProgress(), loadWallpapers().catch(() => undefined), loadQueue()])
       show()
       setReady(true)
       setupLiveAlerts().catch((e) => console.error('[alerts]', e))
@@ -93,6 +94,7 @@ function Themed(): React.JSX.Element {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="watch/[key]" />
         <Stack.Screen name="playlist" />
+        <Stack.Screen name="playlist-info" />
         <Stack.Screen name="combine" options={{ presentation: 'modal' }} />
         <Stack.Screen name="import-playlists" options={{ presentation: 'modal' }} />
       </Stack>

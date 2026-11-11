@@ -1,14 +1,15 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Image } from 'expo-image'
-import { router } from 'expo-router'
+import { Stack, router } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { PLATFORM_LABEL, type Channel, type ChannelPageData, type LiveInfo, type MediaCategory, type MediaItem, type Platform } from '@shared/types'
 import { channelPageUrl } from '@shared/urls'
 import { groupOf } from '../../../src/renderer/src/lib/combined'
 import { onChannelPage } from '../lib/channelPages'
+import { addToQueue, useQueue } from '../lib/queue'
 import { actions, useApp } from '../lib/hub'
 import { progressFraction, progressKey, resumePosition, savedVideo, useVodProgress } from '../lib/ui'
 import { openChannel, openChannelMenu } from './channelMenu'
@@ -39,7 +40,7 @@ const CLIP_WINDOW_LABEL: Record<ClipWindow, string> = { all: 'All time', day: 'P
 export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveInfo }): React.JSX.Element {
   const c = useColors()
   const insets = useSafeAreaInsets()
-  const { width } = useLayoutWindow()
+  const { width, height } = useLayoutWindow()
   // Android picture-in-picture: only the player shows, filling the small window.
   const inPip = usePipActive()
   const list = useRef<FlashListRef<MediaItem>>(null)
@@ -57,6 +58,21 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
   const [clipNow, setClipNow] = useState(() => Date.now())
   const player = useRef<PlayerHandle>(null)
   useAutoPip(Boolean(playing))
+  // Turned sideways while a video plays, the video fills the screen (16:9 at the full width would be
+  // taller than the screen, cutting it off); the list is back in portrait.
+  const fill = Boolean(playing) && width > height && !inPip
+  const queue = useQueue((s) => s.items)
+  const queuedIds = useMemo(() => new Set(queue.map((i) => i.id)), [queue])
+  // Back while a video plays closes it, back to the channel, rather than leaving the channel.
+  const back = (): void => (playing ? setPlaying(null) : router.back())
+  useEffect(() => {
+    if (!playing) return
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setPlaying(null)
+      return true
+    })
+    return () => sub.remove()
+  }, [playing])
   const columns = width >= 900 ? 4 : width >= 600 ? 3 : 2
 
   useEffect(() => {
@@ -142,16 +158,27 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
   const play = useCallback((m: MediaItem) => setPlaying(m), [])
   const videoMenu = useCallback((m: MediaItem): void => {
     const { app: a, channel: ch } = latest.current
-    const saved = a.watchLater.some((i) => i.id === savedVideo(ch, m).id)
+    const item = savedVideo(ch, m)
+    const saved = a.watchLater.some((i) => i.id === item.id)
+    const queued = useQueue.getState().items.some((i) => i.id === item.id)
     showMenu(m.title, [
       { label: 'Play', icon: 'play-outline', onSelect: () => setPlaying(m) },
-      { label: saved ? 'Remove from Watch Later' : 'Watch Later', icon: saved ? 'bookmark' : 'bookmark-outline', onSelect: () => actions.saved.toggle(savedVideo(ch, m)) }
+      { label: saved ? 'Remove from Watch Later' : 'Watch Later', icon: saved ? 'bookmark' : 'bookmark-outline', onSelect: () => actions.saved.toggle(savedVideo(ch, m)) },
+      queued
+        ? { label: 'Remove from queue', icon: 'remove-circle-outline', onSelect: () => useQueue.getState().remove(item.id) }
+        : { label: 'Add to queue', icon: 'add-circle-outline', onSelect: () => addToQueue(item) }
     ])
   }, [])
 
   // The player stays at the top while it plays; the list scrolls under it.
   const playerArea = playing ? (
-    <View style={[{ paddingTop: inPip ? 0 : insets.top, backgroundColor: '#000' }, inPip && { flex: 1 }]}>
+    <View
+      style={[
+        { paddingTop: inPip ? 0 : insets.top, backgroundColor: '#000' },
+        inPip && { flex: 1 },
+        fill && { flex: 1, paddingTop: 0, paddingLeft: insets.left, paddingRight: insets.right }
+      ]}
+    >
       <Player
         ref={player}
         key={playing.id}
@@ -162,9 +189,9 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
         onProgress={(t, d) => saving(progressKey(channel.platform, playing.id), t, d)}
         castInfo={{ title: playing.title, subtitle: channel.displayName, thumbnail: playing.thumbnail }}
         // 16:9 by width, in picture-in-picture too (see styles.pipSafe on the Watch screen).
-        style={{ aspectRatio: 16 / 9, width: '100%' }}
+        style={fill ? { flex: 1 } : { aspectRatio: 16 / 9, width: '100%' }}
       />
-      <View style={[styles.playingBar, { backgroundColor: c.bg, borderBottomColor: c.separator }, inPip && styles.hidden]}>
+      <View style={[styles.playingBar, { backgroundColor: c.bg, borderBottomColor: c.separator }, (inPip || fill) && styles.hidden]}>
         <Text numberOfLines={2} style={{ color: c.fg, fontWeight: '600', flex: 1 }}>
           {playing.title}
         </Text>
@@ -174,6 +201,15 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
           icon={app.watchLater.some((i) => i.id === savedVideo(channel, playing).id) ? 'bookmark' : 'bookmark-outline'}
           label="Watch Later"
           onPress={() => actions.saved.toggle(savedVideo(channel, playing))}
+        />
+        <IconButton
+          icon={queuedIds.has(savedVideo(channel, playing).id) ? 'checkmark-circle' : 'add-circle-outline'}
+          label={queuedIds.has(savedVideo(channel, playing).id) ? 'In the queue' : 'Add to queue'}
+          onPress={() => {
+            const item = savedVideo(channel, playing)
+            if (queuedIds.has(item.id)) useQueue.getState().remove(item.id)
+            else addToQueue(item)
+          }}
         />
         <IconButton icon="close" label="Close player" onPress={() => setPlaying(null)} />
       </View>
@@ -258,8 +294,10 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
   const cols = portrait ? columns + 1 : columns
   return (
     <View style={{ flex: 1, backgroundColor: inPip ? '#000' : c.bg }}>
+      {/* iPhone's swipe-back would leave the channel too; while a video plays, back closes it instead. */}
+      <Stack.Screen options={{ gestureEnabled: !playing }} />
       {playerArea}
-      <View style={[{ flex: 1 }, inPip && styles.hidden]}>
+      <View style={[{ flex: 1 }, (inPip || fill) && styles.hidden]}>
         <FlashList
           ref={list}
           key={`${cols}${portrait}`}
@@ -290,7 +328,7 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
       </View>
       {/* Back and home stay in the corner however far the list scrolls (the dock is hidden here). */}
       <View style={[styles.cornerBar, { top: insets.top + 6 }, inPip && styles.hidden]} pointerEvents="box-none">
-        <FloatingButton icon="chevron-back" label="Back" onPress={() => router.back()} />
+        <FloatingButton icon="chevron-back" label="Back" onPress={back} />
         <HomeButton />
         <View style={{ flex: 1 }} pointerEvents="none" />
         {playing ? null : <FloatingButton icon="ellipsis-horizontal" label="Channel menu" onPress={() => openChannelMenu(channel)} />}

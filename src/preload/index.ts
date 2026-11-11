@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import type { LinuxPad } from '@shared/linuxPads'
 import type { Api, AppState, ChannelPageData, ShortcutAction } from '@shared/types'
 
 function subscribe<T>(channel: string, cb: (v: T) => void): () => void {
@@ -29,6 +30,7 @@ const api: Api = {
   playerClosed: () => ipcRenderer.invoke('player-closed'),
   launchBigPicture: () => ipcRenderer.invoke('launch-big-picture'),
   bigPictureOnly: () => ipcRenderer.invoke('big-picture-only'),
+  gameMode: () => ipcRenderer.invoke('game-mode'),
   quitApp: () => ipcRenderer.invoke('quit-app'),
   phoneSignIn: (target) => ipcRenderer.invoke('google-phone-signin', target),
   cancelPhoneSignIn: () => ipcRenderer.invoke('google-phone-cancel'),
@@ -52,6 +54,7 @@ const api: Api = {
   onOpenChannel: (cb) => subscribe<string>('open-channel', cb),
   onShortcut: (cb) => subscribe<ShortcutAction>('shortcut', cb),
   onPipState: (cb) => subscribe<string | null>('pip-state', cb),
+  onLinuxPads: (cb) => subscribe<LinuxPad[]>('linux-pad', cb),
   onChannelPage: (cb) => {
     const handler = (_: IpcRendererEvent, key: string, data: ChannelPageData): void => cb(key, data)
     ipcRenderer.on('channel-page', handler)
