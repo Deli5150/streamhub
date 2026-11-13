@@ -1,6 +1,6 @@
 {
   "name": "streamhub",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "All-in-one desktop viewer for Twitch, YouTube, Kick and Rumble",
   "main": "./out/main/index.js",
   "private": true,

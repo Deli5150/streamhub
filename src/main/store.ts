@@ -18,6 +18,8 @@ interface Data {
   watchLater: SavedItem[]
   /** Imported YouTube playlists (see ytPlaylists.ts). */
   ytPlaylists: ImportedPlaylist[]
+  /** YouTube emotes seen in chats (main/chat.ts): YouTube's own, and each channel's, as code → picture. */
+  ytEmotes: { youtube: Record<string, string>; channels: Record<string, Record<string, string>> }
   /** base64 of safeStorage-encrypted JSON values */
   secrets: Record<string, string>
   /** Sync with Google bookkeeping (see sync.ts). */
@@ -42,6 +44,7 @@ const defaults = (): Data => ({
   settings: {},
   watchLater: [],
   ytPlaylists: [],
+  ytEmotes: { youtube: {}, channels: {} },
   secrets: {},
   syncMeta: emptyMeta()
 })

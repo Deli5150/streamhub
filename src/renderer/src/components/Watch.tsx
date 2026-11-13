@@ -11,11 +11,10 @@ import {
   PictureInPicture2Icon,
   RadioIcon,
   RectangleHorizontalIcon,
-  SendHorizontalIcon,
   UsersIcon,
   XIcon
 } from 'lucide-react'
-import type { Channel, LiveInfo } from '@shared/types'
+import type { Channel, ChatTarget, LiveInfo } from '@shared/types'
 import { channelPageUrl, chatUrl, embedUrl } from '@shared/urls'
 import { formatViewers, uptime, useChannel, useTheaterEsc, useUi } from '../store'
 import { ChannelAvatar } from './ChannelAvatar'
@@ -28,7 +27,8 @@ import { ChannelPage } from './ChannelPage'
 import { savedLive } from '../lib/watchLater'
 import { SaveForLaterButton } from './SaveForLater'
 import { Button, EmptyState } from './ui'
-import { WebView } from './WebView'
+import { WebView, type PageHandle } from './WebView'
+import { CHAT_INPUT_HIDDEN_CSS, ChatBox } from './ChatBox'
 
 export function Watch({ channelKey, offline }: { channelKey: string; offline?: boolean }): React.JSX.Element {
   const { channel, live } = useChannel(channelKey)
@@ -192,8 +192,12 @@ function MemberSwitcher({
 
 export function ChatPanel({ channel, src, switcher }: { channel: Channel; src: string | null; switcher?: React.ReactNode }): React.JSX.Element {
   const meta = PLATFORM_META[channel.platform]
-  const youtube = channel.platform === 'youtube'
-  const streamId = useUi((s) => s.app?.live[channel.key]?.streamId)
+  const live = useUi((s) => s.app?.live[channel.key])
+  // StreamHub's chat box replaces the platform's own, unless you switch back to it.
+  const [ownBox, setOwnBox] = useState(false)
+  const page = useRef<PageHandle | null>(null)
+  useEffect(() => setOwnBox(false), [channel.key])
+  const target: ChatTarget = { platform: channel.platform, channelId: channel.id, streamId: live?.streamId, chatId: live?.chatId, channelName: channel.displayName }
   return (
     <div className="flex w-[340px] shrink-0 flex-col p-2">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel bg-well ring-1 ring-separator">
@@ -207,84 +211,20 @@ export function ChatPanel({ channel, src, switcher }: { channel: Channel; src: s
         </div>
         {src ? (
           <>
-            <WebView key={src} platform={channel.platform} src={src} css={youtube ? YOUTUBE_CHAT_CSS : undefined} className="flex-1" />
-            {youtube && streamId ? <YouTubeChatBox videoId={streamId} /> : null}
+            <WebView
+              key={`${src}${ownBox ? '#own' : ''}`}
+              platform={channel.platform}
+              src={src}
+              css={ownBox ? undefined : CHAT_INPUT_HIDDEN_CSS}
+              pageRef={page}
+              className="flex-1"
+            />
+            {!ownBox && <ChatBox target={target} page={page} onUseOwn={() => setOwnBox(true)} />}
           </>
         ) : (
           <EmptyState icon={<MessageSquareOffIcon className="size-7 text-tertiary" />} title="No chat" description="Chat isn't available for this stream." />
         )}
       </div>
-    </div>
-  )
-}
-
-/** YouTube's own message box, which only knows YouTube's website sign-in (YouTubeChatBox replaces it). */
-const YOUTUBE_CHAT_CSS = `#input-panel, yt-live-chat-message-input-renderer { display: none !important; }`
-
-/**
- * Chatting in a YouTube live chat as the account connected under Accounts, through the YouTube API
- * (main/youtubeChat.ts). Sent messages appear in the chat above within a few seconds.
- */
-function YouTubeChatBox({ videoId }: { videoId: string }): React.JSX.Element {
-  const connected = useUi((s) => s.app?.accounts.some((a) => a.platform === 'youtube' && a.connected) ?? false)
-  const [text, setText] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<{ text: string; reconnect?: boolean } | null>(null)
-  const connect = (): void => {
-    setError(null)
-    void window.api.login('youtube')
-  }
-  const send = async (): Promise<void> => {
-    if (!text.trim() || busy) return
-    setBusy(true)
-    const r = await window.api.sendYouTubeChat(videoId, text).catch((e: Error) => ({ ok: false as const, error: e.message }))
-    setBusy(false)
-    if (r.ok) {
-      setText('')
-      setError(null)
-    } else setError({ text: r.error, reconnect: 'reconnect' in r ? r.reconnect : undefined })
-  }
-  if (!connected) {
-    return (
-      <div className="flex shrink-0 flex-col items-center gap-1.5 border-t border-separator p-2.5">
-        <span className="text-small text-tertiary">Connect YouTube to chat</span>
-        <Button variant="accent" onClick={connect}>
-          Connect YouTube
-        </Button>
-      </div>
-    )
-  }
-  return (
-    <div className="shrink-0 border-t border-separator p-2">
-      {error && (
-        <div className="mb-1.5 flex items-center gap-2 text-small text-support-red">
-          <span className="min-w-0 flex-1">{error.text}</span>
-          {error.reconnect && (
-            <Button size="small" onClick={connect}>
-              Connect
-            </Button>
-          )}
-        </div>
-      )}
-      <form
-        className="flex items-center gap-1.5"
-        onSubmit={(e) => {
-          e.preventDefault()
-          void send()
-        }}
-      >
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Chat as your YouTube account…"
-          maxLength={200}
-          disabled={busy}
-          className="min-w-0 flex-1 rounded-lg bg-control-subtle px-3 py-1.5 text-regular text-primary outline-none ring-1 ring-separator placeholder:text-tertiary focus:ring-2 focus:ring-accent"
-        />
-        <Button type="submit" variant="accent" disabled={busy || !text.trim()} title="Send">
-          <SendHorizontalIcon className="size-3.5" />
-        </Button>
-      </form>
     </div>
   )
 }

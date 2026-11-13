@@ -105,7 +105,7 @@ The page readers live in `src/main/providers/pageScripts.ts` and `parsers.ts`. T
 
 Known limits:
 - YouTube shows one live stream per channel (the one its `/live` link leads to), even if a channel runs two at once.
-- YouTube chat is YouTube's own page, which can't use the app's Google sign-in, so its message box is replaced by StreamHub's: messages go through the YouTube Data API as your connected account. Each one uses some of the Cloud project's daily API quota (shared by everyone using that build).
+- Chat is each platform's own chat page, with its message box replaced by StreamHub's, the same on every platform, with an emote button for the channel's emotes, the platform's global ones and emoji. Messages are sent as your account: on Twitch through its chat server, on Kick and Rumble the way their chat pages send them, and on YouTube through the Data API (each YouTube message uses some of the Cloud project's daily API quota, shared by everyone using that build). If a platform turns a message down for a reason StreamHub doesn't know, **Use its box** brings back the platform's own message box.
 - Some Twitch channels show their login name instead of their styled display name.
 
 ## Scripts

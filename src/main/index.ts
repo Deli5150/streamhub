@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeImage, session, shell, systemPreferences } from 'electron'
 import path from 'node:path'
-import { PLATFORMS, type MediaCategory, type Platform, type Settings } from '@shared/types'
+import { PLATFORMS, type ChatTarget, type MediaCategory, type Platform, type Settings } from '@shared/types'
 import { setupAppMenu } from './appMenu'
 import { flushCookies, startSessionKeeper } from './sessionKeeper'
 import { captureLog, recentLog } from './log'
@@ -18,7 +18,7 @@ import { closePip, openPip, registerPipControls, setPipRenderer, setupAutoPip } 
 import { youtubeChapters } from './providers/youtube'
 import { syncNow, syncOnFocus, syncSignIn, syncSignOut } from './sync'
 import { installTwitchAdFilter } from './twitchAds'
-import { sendYouTubeChat } from './youtubeChat'
+import { chatEmotes, rememberYouTubeEmotes, sendChat } from './chat'
 import { TWITCH_PLAYER_PARTITION } from '@shared/urls'
 import { version } from '../../package.json'
 import { applyNativeTheme, getSettings, onSettingsChange, updateSettings, validateShortcuts } from './settings'
@@ -149,6 +149,11 @@ app.on('web-contents-created', (_, contents) => {
 })
 
 const isPlatform = (p: unknown): p is Platform => PLATFORMS.includes(p as Platform)
+const ID = /^[\w.-]{1,64}$/
+const isChatTarget = (t: unknown): t is ChatTarget => {
+  const c = t as ChatTarget | null
+  return Boolean(c) && isPlatform(c!.platform) && ID.test(String(c!.channelId)) && (c!.streamId === undefined || ID.test(c!.streamId)) && (c!.chatId === undefined || ID.test(c!.chatId)) && (c!.channelName === undefined || (typeof c!.channelName === 'string' && c!.channelName.length <= 100))
+}
 
 function registerIpc(): void {
   ipcMain.handle('state', () => state())
@@ -189,9 +194,18 @@ function registerIpc(): void {
   })
   ipcMain.handle('menubar-hide', () => hidePopup())
   ipcMain.handle('close-pip', () => void closePip())
-  ipcMain.handle('youtube-chat-send', (_, videoId: unknown, text: unknown) =>
-    typeof videoId === 'string' && /^[\w-]{6,20}$/.test(videoId) && typeof text === 'string' ? sendYouTubeChat(videoId, text) : { ok: false, error: 'Bad request' }
+  ipcMain.handle('chat-send', (_, t: unknown, text: unknown) =>
+    isChatTarget(t) && typeof text === 'string' ? sendChat(t, text) : { ok: false, error: 'Bad request' }
   )
+  ipcMain.handle('chat-emotes', (_, t: unknown) => (isChatTarget(t) ? chatEmotes(t).catch(() => []) : []))
+  ipcMain.on('chat-emotes-seen', (_, t: unknown, seen: unknown) => {
+    if (isChatTarget(t) && t.platform === 'youtube' && Array.isArray(seen)) {
+      rememberYouTubeEmotes(
+        t.channelId,
+        seen.slice(0, 200).filter((e): e is { code: string; url: string } => typeof e?.code === 'string' && typeof e?.url === 'string')
+      )
+    }
+  })
   ipcMain.handle('launch-big-picture', () => LAUNCH_BIG_PICTURE || BIG_PICTURE_ONLY)
   ipcMain.handle('big-picture-only', () => BIG_PICTURE_ONLY)
   ipcMain.handle('game-mode', () => GAME_MODE)

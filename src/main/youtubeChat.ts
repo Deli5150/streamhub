@@ -1,14 +1,12 @@
+import type { ChatSendResult } from '@shared/types'
 import { googleFetch, googleGet, googleSignedIn } from './googleAuth'
 
-// Sending messages in a YouTube live chat as the account connected under Accounts (issue #9). The
-// chat itself is YouTube's page in a <webview>, which only knows YouTube's website sign-in, so it
-// showed "Sign in to chat" however YouTube was connected. Its message box is hidden and StreamHub's
-// own (ChatPanel) sends through the Data API with the app's YouTube sign-in instead; the message then
-// shows up in the page's chat like any other.
+// Sending messages in a YouTube live chat as the account connected under Accounts (issue #9), for
+// StreamHub's chat box (chat.ts). The chat itself is YouTube's page in a <webview>, which only knows
+// YouTube's website sign-in, so it showed "Sign in to chat" however YouTube was connected; messages
+// go through the Data API with the app's YouTube sign-in instead, then show up in the page's chat.
 
 const API = 'https://www.googleapis.com/youtube/v3'
-
-export type ChatSendResult = { ok: true } | { ok: false; error: string; reconnect?: boolean }
 
 /** Live chat ids by video id (a stream keeps its chat). */
 const chatIds = new Map<string, string>()
@@ -31,7 +29,7 @@ export async function sendYouTubeChat(videoId: string, text: string): Promise<Ch
   try {
     const chatId = await liveChatId(videoId)
     if (!chatId) return { ok: false, error: "This stream's chat is off" }
-    const res = await googleFetch(`${API}/liveChatMessages?part=snippet`, {
+    const res = await googleFetch(`${API}/liveChat/messages?part=snippet`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ snippet: { liveChatId: chatId, type: 'textMessageEvent', textMessageDetails: { messageText: message } } })

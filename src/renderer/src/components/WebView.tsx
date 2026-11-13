@@ -11,6 +11,11 @@ interface WebviewElement extends HTMLElement {
   sendInputEvent(event: { type: 'mouseDown' | 'mouseUp'; x: number; y: number; button: 'left'; clickCount: number }): void
 }
 
+/** A loaded page, for running scripts in it. */
+export interface PageHandle {
+  run(code: string): Promise<unknown>
+}
+
 interface Props {
   platform: Platform
   src: string
@@ -30,6 +35,8 @@ interface Props {
   seek?: { to: number }
   /** Styles added to the page each time it loads (e.g. Big Picture hides chat's message box). */
   css?: string
+  /** Set once the page has loaded: runs a script in it (e.g. the chat box's channel-points button). */
+  pageRef?: React.MutableRefObject<PageHandle | null>
   className?: string
 }
 
@@ -37,7 +44,7 @@ const PAUSE_VIDEOS = `document.querySelectorAll('video').forEach((v) => v.pause(
 const PLAY_VIDEOS = `document.querySelectorAll('video').forEach((v) => v.play().catch(() => {}))`
 
 /** Embedded platform page, sharing the platform's signed-in session with the main process. */
-export function WebView({ platform, src, muted = false, volume, onVolumeChange, resumeAt, onProgress, onEnded, seek, css, className }: Props): React.JSX.Element {
+export function WebView({ platform, src, muted = false, volume, onVolumeChange, resumeAt, onProgress, onEnded, seek, css, pageRef, className }: Props): React.JSX.Element {
   const ref = useRef<WebviewElement>(null)
   const [ready, setReady] = useState(false)
   // While this stream plays in picture-in-picture, the in-app copy is grayed out and silent.
@@ -61,6 +68,15 @@ export function WebView({ platform, src, muted = false, volume, onVolumeChange, 
     el.addEventListener('dom-ready', onReady)
     return () => el.removeEventListener('dom-ready', onReady)
   }, [])
+
+  useEffect(() => {
+    if (!pageRef) return
+    const el = ref.current
+    pageRef.current = ready && el ? { run: (code) => el.executeJavaScript(code).catch(() => null) } : null
+    return () => {
+      pageRef.current = null
+    }
+  }, [ready, pageRef])
 
   useEffect(() => {
     const el = ref.current

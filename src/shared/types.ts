@@ -162,6 +162,36 @@ export interface AccountInfo {
   error?: string
 }
 
+/** Whose chat a message goes to: the channel (login, slug or id) and, for YouTube and Rumble, the stream's chat. */
+export interface ChatTarget {
+  platform: Platform
+  channelId: string
+  /** YouTube: the live video id. */
+  streamId?: string
+  /** Rumble: the stream's chat id. */
+  chatId?: string
+  /** The channel's name, for its emotes' heading in the picker. */
+  channelName?: string
+}
+
+export type ChatSendResult = { ok: true } | { ok: false; error: string; reconnect?: boolean }
+
+/** An emote in the chat box's picker. Without `url` it's an emoji, shown as its text. */
+export interface ChatEmote {
+  /** What goes in the message. */
+  code: string
+  /** The name shown on hover (and searched). */
+  name: string
+  url?: string
+  /** Subscribers only (you may not be able to use it). */
+  locked?: boolean
+}
+
+export interface ChatEmoteSet {
+  title: string
+  emotes: ChatEmote[]
+}
+
 /** One streamer's channels across platforms, shown as a single sidebar profile. */
 export interface CombinedGroup {
   id: string
@@ -309,8 +339,12 @@ export interface Api {
   cancelPhoneSignIn(): Promise<void>
   /** `live`: a live stream (no seeking controls). */
   openPip(target: { platform: Platform; url: string; hls?: boolean; startAt?: number; live?: boolean }): Promise<boolean>
-  /** Sends a message in a YouTube live chat as the connected YouTube account. `reconnect`: connect YouTube (again) first. */
-  sendYouTubeChat(videoId: string, text: string): Promise<{ ok: true } | { ok: false; error: string; reconnect?: boolean }>
+  /** Sends a message in a stream's chat as your account on its platform. `reconnect`: sign in (again) first. */
+  sendChat(target: ChatTarget, text: string): Promise<ChatSendResult>
+  /** The emotes you can pick for a stream's chat, in sets (yours, the channel's, global, emoji). */
+  chatEmotes(target: ChatTarget): Promise<ChatEmoteSet[]>
+  /** YouTube: emotes seen in a chat's messages, kept for its picker (YouTube doesn't list them). */
+  reportChatEmotes(target: ChatTarget, seen: Array<{ code: string; url: string }>): void
   /** Closes the PiP window (the in-app player resumes). */
   closePip(): Promise<void>
   /** Adds the item to Watch Later, or removes it if it's already there. */

@@ -2,6 +2,16 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.12]
+
+### New
+- **One chat box for every platform.** Twitch, Kick, Rumble and YouTube chats now share StreamHub's own message box, which sends as your account on that platform. Long messages wrap and the box grows upward as you type, so you can see everything you've written. If a platform turns a message down for a reason StreamHub doesn't know, **Use its box** brings back the platform's own message box.
+- **An emote picker.** The smiley button in the chat box opens the channel's emotes, then the platform's own and emoji, with search. Subscriber-only emotes are grayed out with a lock. On YouTube, the picker shows the channel's member emotes under the channel's name, YouTube's own emotes, and emoji. The member emotes always show a lock, because YouTube doesn't tell apps which ones you've unlocked, but members can still pick and send them.
+- **Twitch channel points.** A button floats above the chat box with your points for the channel. When a bonus is ready, it glows: press it to collect.
+
+### Fixed
+- **YouTube chat:** sending a message failed with *YouTube said no: HTTP 404*. ([#9](../../issues/9))
+
 ## [1.0.11]
 
 ### New

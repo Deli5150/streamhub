@@ -13,6 +13,7 @@ import { clockText } from '../Chapters'
 import { HlsVideo } from '../HlsVideo'
 import { PLATFORM_META } from '../platform'
 import { WebView } from '../WebView'
+import { CHAT_INPUT_HIDDEN_CSS } from '../ChatBox'
 import { useListItems } from './BpHome'
 import { BpButton, Hints, type Hint } from './parts'
 
@@ -21,17 +22,6 @@ import { BpButton, Hints, type Hint } from './parts'
 // combined channel can switch platforms. Watch Later and the queue move on when a video ends.
 
 const HIDE_AFTER_MS = 4000
-/**
- * Chat here is for reading: its message box and buttons are hidden (typing happens on a phone, from
- * the Chat on phone QR code). Twitch (scoped, to outrank its own display: block !important), Kick,
- * YouTube; then any form with a text box (Rumble).
- */
-const CHAT_READ_ONLY_CSS = `
-  .chat-room__content .chat-input, .chat-room__content [data-test-selector="chat-input-buttons-container"],
-  #chatroom-footer,
-  #input-panel, yt-live-chat-message-input-renderer,
-  form:has(textarea), form:has([contenteditable="true"]) { display: none !important; }
-`
 const SEEK_STEP = 10
 
 const VIDEO = `[...document.querySelectorAll('video')].sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0]`
@@ -375,7 +365,7 @@ export function BpPlayer({ route }: { route: Extract<BpRoute, { kind: 'live' | '
             })()}
             {playing.chat.channel.displayName} chat
           </div>
-          <WebView key={playing.chat.src} platform={playing.chat.channel.platform} src={playing.chat.src} css={CHAT_READ_ONLY_CSS} className="min-h-0 flex-1" />
+          <WebView key={playing.chat.src} platform={playing.chat.channel.platform} src={playing.chat.src} css={CHAT_INPUT_HIDDEN_CSS /* reading only: typing happens on a phone, from the Chat on phone QR code */} className="min-h-0 flex-1" />
         </div>
       )}
       {qrOpen && phoneUrl && playing.chat && (
