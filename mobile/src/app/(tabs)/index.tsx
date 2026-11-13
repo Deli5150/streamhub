@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native'
+import { FlatList, Platform as OS, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Icon } from '../../ui/Icon'
@@ -273,13 +273,21 @@ function PlaylistsStrip(): React.JSX.Element | null {
   )
 }
 
-/** A new version of StreamHub: Android updates from here; an iPhone opens the release page. */
+/** A new version of StreamHub: Android updates from here; an iPhone downloads it to save and sideload. */
 function UpdateBanner(): React.JSX.Element | null {
   const c = useColors()
   const u = useApp((s) => s.app?.update)
   if (!u?.version || !['available', 'downloading', 'ready'].includes(u.state)) return null
   const label =
-    u.state === 'downloading' ? `Downloading… ${Math.round((u.progress ?? 0) * 100)}%` : u.state === 'ready' ? 'Install' : u.inApp ? 'Update' : 'Get it'
+    u.state === 'downloading' ? `Downloading… ${Math.round((u.progress ?? 0) * 100)}%` : u.state === 'ready'
+        ? OS.OS === 'ios'
+          ? 'Save'
+          : 'Install'
+        : u.inApp
+          ? OS.OS === 'ios'
+            ? 'Download'
+            : 'Update'
+          : 'Get it'
   return (
     <View style={[styles.banner, { backgroundColor: c.bg2 }]}>
       <Icon name="arrow-up-circle" size={22} color={c.accent} />

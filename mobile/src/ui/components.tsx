@@ -17,6 +17,15 @@ export function useDockSpace(): number {
   return OS.OS === 'ios' ? 84 : floating ? FLOATING_DOCK_SPACE : 16
 }
 
+/**
+ * Side padding for a full-screen video in landscape: as wide as the larger side inset (the camera
+ * cutout's) on both sides, so the video stays clear of the cutout and centered on the screen whichever
+ * way the phone is turned (issue #6).
+ */
+export function centered(insets: { left: number; right: number }): { paddingHorizontal: number } {
+  return { paddingHorizontal: Math.max(insets.left, insets.right) }
+}
+
 /** Avatar that falls back to the channel's initial, with a brand badge in the corner. */
 export const Avatar = memo(function Avatar({ channel, size = 40, live = false, platforms }: { channel: Channel; size?: number; live?: boolean; platforms?: Platform[] }) {
   const c = useColors()

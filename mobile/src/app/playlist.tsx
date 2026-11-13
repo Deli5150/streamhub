@@ -9,7 +9,7 @@ import { embedUrl } from '@shared/urls'
 import { actions, useApp } from '../lib/hub'
 import { useQueue } from '../lib/queue'
 import { progressKey, resumePosition, savedTitle, useVodProgress } from '../lib/ui'
-import { IconButton, Thumbnail } from '../ui/components'
+import { centered, IconButton, Thumbnail } from '../ui/components'
 import { FloatingButton, HomeButton } from '../ui/HomeButton'
 import { CastButton } from '../ui/CastButton'
 import { showMenu } from '../ui/Menu'
@@ -100,7 +100,7 @@ export default function PlaylistScreen(): React.JSX.Element | null {
         style={[
           { paddingTop: inPip ? 0 : insets.top, backgroundColor: '#000' },
           inPip && { flex: 1 },
-          fill && { flex: 1, paddingTop: 0, paddingLeft: insets.left, paddingRight: insets.right }
+          fill && { flex: 1, paddingTop: 0, ...centered(insets) }
         ]}
       >
         <PlaylistPlayer key={active.id} item={active} playerRef={player} onEnded={playNext} fill={fill} />

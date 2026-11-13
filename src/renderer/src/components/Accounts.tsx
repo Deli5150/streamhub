@@ -7,7 +7,7 @@ import { Button, Field, FieldGroup } from './ui'
 
 const HOW: Record<Platform, string> = {
   twitch: 'Sign in to twitch.tv in a window. The channels you follow are read from your Following page — no developer keys required.',
-  youtube: 'Sign in with Google in your web browser (read-only access). Your subscriptions are read from YouTube, and you can return to StreamHub when the browser says you’re signed in.',
+  youtube: 'Sign in with Google in your web browser. Your subscriptions are read from YouTube, live chat messages are sent as you, and you can return to StreamHub when the browser says you’re signed in.',
   kick: 'Sign in on kick.com in a window. Your followed channels are read from that session.',
   rumble: 'Sign in on rumble.com in a window. The channels you follow are read from that session.'
 }

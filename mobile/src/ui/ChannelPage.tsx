@@ -13,7 +13,7 @@ import { addToQueue, useQueue } from '../lib/queue'
 import { actions, useApp } from '../lib/hub'
 import { progressFraction, progressKey, resumePosition, savedVideo, useVodProgress } from '../lib/ui'
 import { openChannel, openChannelMenu } from './channelMenu'
-import { Avatar, Button, Chip, EmptyState, IconButton, Thumbnail } from './components'
+import { Avatar, Button, centered, Chip, EmptyState, IconButton, Thumbnail } from './components'
 import { showMenu } from './Menu'
 import { useAutoPip, useLayoutWindow, usePipActive } from './pip'
 import { Player, type PlayerHandle } from './Player'
@@ -176,7 +176,7 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
       style={[
         { paddingTop: inPip ? 0 : insets.top, backgroundColor: '#000' },
         inPip && { flex: 1 },
-        fill && { flex: 1, paddingTop: 0, paddingLeft: insets.left, paddingRight: insets.right }
+        fill && { flex: 1, paddingTop: 0, ...centered(insets) }
       ]}
     >
       <Player

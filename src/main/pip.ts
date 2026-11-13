@@ -73,7 +73,9 @@ const startPlaying = (startAt: number): string => `(async () => {
   return true
 })()`
 
-const CURRENT_TIME = `document.querySelector('video[data-sh-pip]')?.currentTime ?? null`
+const ANY_PLAYING = `[...document.querySelectorAll('video')].some((v) => !v.paused)`
+
+const CURRENT_TIME =`document.querySelector('video[data-sh-pip]')?.currentTime ?? null`
 
 interface Pip {
   win: BrowserWindow
@@ -175,19 +177,36 @@ export async function openPip({
     }
   })
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  win.webContents.on('dom-ready', () => void win.webContents.insertCSS(VIDEO_ONLY_CSS).catch(() => {}))
+  // Styled down to its video once that plays (before then the page's own play overlay may need a
+  // click, below), and again if the page reloads.
+  let started = false
+  const videoOnly = (): void => void win.webContents.insertCSS(VIDEO_ONLY_CSS).catch(() => {})
+  win.webContents.on('dom-ready', () => {
+    if (started) videoOnly()
+  })
   if (hls && loadPipRenderer) await loadPipRenderer(win, { src: url }).catch(() => {})
   else await win.loadURL(url).catch(() => {})
 
   // Players take a few seconds to buffer; keep asking until the video has frames. As a user gesture,
-  // so it may start with sound.
+  // so it may start with sound. Some embeds (Rumble) only start from a click on their play overlay,
+  // so if nothing is playing after a few seconds, click the middle of the page (a real input event).
   const deadline = Date.now() + START_TIMEOUT_MS
+  let tries = 0
+  let clicks = 0
   while (Date.now() < deadline && current === entry && !win.isDestroyed()) {
-    const started = await win.webContents.executeJavaScript(startPlaying(Math.max(0, Math.floor(startAt))), true).catch(() => false)
+    started = await win.webContents.executeJavaScript(startPlaying(Math.max(0, Math.floor(startAt))), true).catch(() => false)
     if (started) {
+      videoOnly()
       win.showInactive()
       broadcast(url)
       return true
+    }
+    if (++tries % 6 === 0 && clicks < 2 && !hls && !(await win.webContents.executeJavaScript(ANY_PLAYING).catch(() => true))) {
+      clicks++
+      const [width, height] = win.getContentSize()
+      const at = { x: Math.round(width / 2), y: Math.round(height / 2) }
+      win.webContents.sendInputEvent({ type: 'mouseDown', ...at, button: 'left', clickCount: 1 })
+      win.webContents.sendInputEvent({ type: 'mouseUp', ...at, button: 'left', clickCount: 1 })
     }
     await new Promise((r) => setTimeout(r, 500))
   }

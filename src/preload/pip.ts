@@ -113,7 +113,9 @@ function mainVideo(): HTMLVideoElement | null {
 
 function mount(info: { live: boolean }): void {
   const host = document.createElement('div')
-  host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;visibility:visible;display:block'
+  // Lets clicks through to the page until its video plays: main/pip.ts may need to click the page's
+  // own play overlay (Rumble) to start it.
+  host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;visibility:visible;display:block;pointer-events:none'
   const shadow = host.attachShadow({ mode: 'closed' })
   const button = (cls: string, act: string, title: string, ...children: Array<Node | string>): HTMLElement => el('button', { class: cls, 'data-act': act, title }, ...children)
   const timeEl = (name: string): HTMLElement => el('span', { class: 'time', 'data-el': name }, '0:00')
@@ -279,6 +281,7 @@ function mount(info: { live: boolean }): void {
   const render = (): void => {
     const v = mainVideo()
     if (!v) return
+    host.style.pointerEvents = ''
     const live = isLive(v)
     // Icons swap only when the state changes (render runs four times a second).
     const playing = v.paused ? 'play' : 'pause'

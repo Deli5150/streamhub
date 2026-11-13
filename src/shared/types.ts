@@ -309,6 +309,8 @@ export interface Api {
   cancelPhoneSignIn(): Promise<void>
   /** `live`: a live stream (no seeking controls). */
   openPip(target: { platform: Platform; url: string; hls?: boolean; startAt?: number; live?: boolean }): Promise<boolean>
+  /** Sends a message in a YouTube live chat as the connected YouTube account. `reconnect`: connect YouTube (again) first. */
+  sendYouTubeChat(videoId: string, text: string): Promise<{ ok: true } | { ok: false; error: string; reconnect?: boolean }>
   /** Closes the PiP window (the in-app player resumes). */
   closePip(): Promise<void>
   /** Adds the item to Watch Later, or removes it if it's already there. */

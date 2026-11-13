@@ -2,6 +2,16 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.11]
+
+### New
+- **Chat on YouTube streams as your connected account.** YouTube's chat used to say *Sign in to chat* even with YouTube connected, and its sign-in link opened your browser instead. StreamHub now puts its own message box under the chat, which sends as the YouTube account connected under Accounts. If you connected YouTube before this version, connect it once more: StreamHub now also asks permission to send chat messages. ([#9](../../issues/9))
+- **Download iPhone updates from the app.** When a new version is out, the iPhone's update notice offers **Download**, then **Save**, which opens the share sheet so you can save the app file to Files (Downloads, say) and sideload it as before. ([#10](../../issues/10))
+
+### Fixed
+- **Picture in picture with Rumble streams.** It never opened: Rumble's player only starts after a click on its play button, so the floating window waited, then gave up. It now presses play itself. This also fixes picture in picture when the window is minimized while a Rumble stream plays. ([#8](../../issues/8))
+- **Android:** full-screen video in landscape is now really centered whichever way the phone is turned. On phones with the camera hole on one side, the video was still pushed over by the hole's width one way round. ([#6](../../issues/6))
+
 ## [1.0.10]
 
 ### New

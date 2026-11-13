@@ -18,6 +18,7 @@ import { closePip, openPip, registerPipControls, setPipRenderer, setupAutoPip } 
 import { youtubeChapters } from './providers/youtube'
 import { syncNow, syncOnFocus, syncSignIn, syncSignOut } from './sync'
 import { installTwitchAdFilter } from './twitchAds'
+import { sendYouTubeChat } from './youtubeChat'
 import { TWITCH_PLAYER_PARTITION } from '@shared/urls'
 import { version } from '../../package.json'
 import { applyNativeTheme, getSettings, onSettingsChange, updateSettings, validateShortcuts } from './settings'
@@ -188,6 +189,9 @@ function registerIpc(): void {
   })
   ipcMain.handle('menubar-hide', () => hidePopup())
   ipcMain.handle('close-pip', () => void closePip())
+  ipcMain.handle('youtube-chat-send', (_, videoId: unknown, text: unknown) =>
+    typeof videoId === 'string' && /^[\w-]{6,20}$/.test(videoId) && typeof text === 'string' ? sendYouTubeChat(videoId, text) : { ok: false, error: 'Bad request' }
+  )
   ipcMain.handle('launch-big-picture', () => LAUNCH_BIG_PICTURE || BIG_PICTURE_ONLY)
   ipcMain.handle('big-picture-only', () => BIG_PICTURE_ONLY)
   ipcMain.handle('game-mode', () => GAME_MODE)

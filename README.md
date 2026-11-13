@@ -45,12 +45,12 @@ The Mac app is universal: it runs natively on both Apple silicon and Intel. The 
 
 ## YouTube sign-in setup
 
-YouTube uses Google's official sign-in for desktop apps: StreamHub opens Google's page in your web browser, and Google gives the app read-only access to your YouTube account. Google requires that the app is registered in a Google Cloud project. It's free and takes about 5 minutes, and only needs to be done once by whoever builds the app.
+YouTube uses Google's official sign-in for desktop apps: StreamHub opens Google's page in your web browser, and Google gives the app access to your YouTube account (to read your subscriptions and playlists, and to send your live chat messages). Google requires that the app is registered in a Google Cloud project. It's free and takes about 5 minutes, and only needs to be done once by whoever builds the app.
 
 1. Go to https://console.cloud.google.com, sign in, and create a project (for example "StreamHub").
 2. **APIs & Services → Library**: search for **YouTube Data API v3** and click **Enable**.
 3. **Google Auth Platform** (OAuth consent screen): click **Get started**. App name `StreamHub`, your email as the support email, audience **External**, then finish.
-4. **Data access → Add or remove scopes**: add `https://www.googleapis.com/auth/youtube.readonly` and save.
+4. **Data access → Add or remove scopes**: add `https://www.googleapis.com/auth/youtube` and save (it covers reading your subscriptions and sending live chat messages).
 5. **Audience**: choose one.
    - **Publish app** (recommended for personal use): sign-in shows "Google hasn't verified this app". Click **Advanced → Go to StreamHub** to continue. You stay signed in.
    - **Testing**: add your Google account under **Test users**. No warning, but Google signs you out every 7 days.
@@ -97,7 +97,7 @@ Each platform has its own persistent browser session (`persist:<platform>`). The
 | Platform | Sign-in | Follows | Live status |
 |---|---|---|---|
 | Twitch | twitch.tv/login | Your *Following → Channels* page, read in a hidden window | Your *Following → Live* page (every 2 min) |
-| YouTube | Google sign-in in your web browser (read-only access) | YouTube Data API (`subscriptions`) | Each channel's `/live` link, checked with the Data API (every 2 min) |
+| YouTube | Google sign-in in your web browser | YouTube Data API (`subscriptions`) | Each channel's `/live` link, checked with the Data API (every 2 min) |
 | Kick | kick.com | `kick.com/api/v2/channels/followed` with your session | Same response (every 1 min) |
 | Rumble | rumble.com | The "Following" section of Rumble's navigation menu | Same menu (every 2 min) |
 
@@ -105,7 +105,7 @@ The page readers live in `src/main/providers/pageScripts.ts` and `parsers.ts`. T
 
 Known limits:
 - YouTube shows one live stream per channel (the one its `/live` link leads to), even if a channel runs two at once.
-- In-app YouTube chat is read-only: you sign in through your browser, so the app's player isn't signed in to Google.
+- YouTube chat is YouTube's own page, which can't use the app's Google sign-in, so its message box is replaced by StreamHub's: messages go through the YouTube Data API as your connected account. Each one uses some of the Cloud project's daily API quota (shared by everyone using that build).
 - Some Twitch channels show their login name instead of their styled display name.
 
 ## Scripts

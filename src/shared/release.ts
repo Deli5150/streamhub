@@ -26,7 +26,7 @@ export interface ReleaseInfo {
 }
 
 /** Which file each kind of install updates from. */
-export type InstallKind = 'mac-app' | 'win-nsis' | 'appimage' | 'steam' | 'android' | 'none'
+export type InstallKind = 'mac-app' | 'win-nsis' | 'appimage' | 'steam' | 'android' | 'ios' | 'none'
 
 const ASSET_PATTERNS: Record<InstallKind, RegExp | null> = {
   'mac-app': /^StreamHub-[\d.]+-mac\.zip$/,
@@ -34,6 +34,8 @@ const ASSET_PATTERNS: Record<InstallKind, RegExp | null> = {
   appimage: /^StreamHub-[\d.]+-x86_64\.AppImage$/,
   steam: /^StreamHub-[\d.]+-x86_64\.AppImage$/,
   android: /^StreamHub-[\d.]+\.apk$/,
+  // Downloaded to keep (Files), for sideloading again: an iPhone can't install it itself.
+  ios: /^StreamHub-[\d.]+\.ipa$/,
   none: null
 }
 

@@ -11,7 +11,8 @@ const release = (tag: string, extra: Partial<GitHubRelease> = {}): GitHubRelease
     { name: `StreamHub-Setup-${tag.slice(1)}.exe`, browser_download_url: 'https://x/exe', size: 3 },
     { name: `StreamHub-${tag.slice(1)}-x86_64.AppImage`, browser_download_url: 'https://x/appimage', size: 4 },
     { name: `StreamHub-${tag.slice(1)}-Steam-Installer.sh`, browser_download_url: 'https://x/sh', size: 5 },
-    { name: `StreamHub-${tag.slice(1)}.apk`, browser_download_url: 'https://x/apk', size: 6 }
+    { name: `StreamHub-${tag.slice(1)}.apk`, browser_download_url: 'https://x/apk', size: 6 },
+    { name: `StreamHub-${tag.slice(1)}.ipa`, browser_download_url: 'https://x/ipa', size: 7 }
   ],
   ...extra
 })
@@ -37,6 +38,7 @@ describe('newerRelease', () => {
     expect(newerRelease(release('v1.0.8'), '1.0.7', 'appimage')?.asset?.name).toBe('StreamHub-1.0.8-x86_64.AppImage')
     expect(newerRelease(release('v1.0.8'), '1.0.7', 'steam')?.asset?.name).toBe('StreamHub-1.0.8-x86_64.AppImage')
     expect(newerRelease(release('v1.0.8'), '1.0.7', 'android')?.asset?.name).toBe('StreamHub-1.0.8.apk')
+    expect(newerRelease(release('v1.0.8'), '1.0.7', 'ios')?.asset?.name).toBe('StreamHub-1.0.8.ipa')
   })
 
   it('has no file for installs that update from the release page', () => {

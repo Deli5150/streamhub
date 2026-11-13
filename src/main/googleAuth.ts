@@ -8,7 +8,7 @@ import { store } from './store'
 // user's own browser (Google blocks sign-in inside embedded app windows), Google redirects back to
 // a one-off listener on 127.0.0.1, and the code it carries is exchanged (with PKCE) for tokens.
 // Only the refresh token is kept, encrypted by the OS (see store.setSecret).
-// Two independent sign-ins use it: YouTube (read your subscriptions) and Sync (StreamHub's own file
+// Two independent sign-ins use it: YouTube (your subscriptions and playlists, and live chat) and Sync (StreamHub's own file
 // in your Drive's hidden app folder; see sync.ts), so either can be signed out without the other.
 // The OAuth client comes from a Google Cloud project; see README → "YouTube sign-in setup".
 //
@@ -250,12 +250,16 @@ export function googleAccount({ scope, secretKey, label, errorPrefix }: AccountO
   }
 }
 
-/** YouTube: read-only access to your subscriptions. */
-const youtubeAccount = googleAccount({ scope: 'https://www.googleapis.com/auth/youtube.readonly', secretKey: 'google-oauth', label: 'YouTube', errorPrefix: 'youtube' })
+/**
+ * YouTube: your subscriptions and playlists, and sending messages in live chats (youtubeChat.ts). Sign-ins
+ * from before 1.0.11 have read-only access; sending asks them to connect again.
+ */
+const youtubeAccount = googleAccount({ scope: 'https://www.googleapis.com/auth/youtube', secretKey: 'google-oauth', label: 'YouTube', errorPrefix: 'youtube' })
 export const googleSignedIn = youtubeAccount.signedIn
 export const googleSignIn = youtubeAccount.signIn
 export const googleSignOut = youtubeAccount.signOut
 export const googleGet = youtubeAccount.get
+export const googleFetch = youtubeAccount.fetch
 
 async function tokenRequest(
   params: Record<string, string>,

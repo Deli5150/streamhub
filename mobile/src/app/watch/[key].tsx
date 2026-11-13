@@ -12,7 +12,7 @@ import { ChannelPage } from '../../ui/ChannelPage'
 import { Chat } from '../../ui/Chat'
 import { useKeyboardCover } from '../../ui/keyboard'
 import { openChannelMenu } from '../../ui/channelMenu'
-import { Avatar, EmptyState, IconButton } from '../../ui/components'
+import { Avatar, centered, EmptyState, IconButton } from '../../ui/components'
 import { FloatingButton, HomeButton } from '../../ui/HomeButton'
 import { CastButton } from '../../ui/CastButton'
 import { useAutoPip, useLayoutWindow, usePipActive } from '../../ui/pip'
@@ -150,7 +150,7 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
 
   if (landscape) {
     return (
-      <View style={[styles.row, { backgroundColor: '#000' }, !inPip && { paddingLeft: insets.left, paddingRight: insets.right }]}>
+      <View style={[styles.row, { backgroundColor: '#000' }, !inPip && (chatHidden ? centered(insets) : { paddingLeft: insets.left, paddingRight: insets.right })]}>
         <View style={{ flex: 1 }}>
           {playerView}
           <View style={[styles.floatingBack, { top: insets.top + 4 }, pipHidden]}>

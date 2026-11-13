@@ -25,6 +25,7 @@ const api: Api = {
   updateSettings: (patch) => ipcRenderer.invoke('update-settings', patch),
   setShortcuts: (bindings) => ipcRenderer.invoke('set-shortcuts', bindings),
   openPip: (target) => ipcRenderer.invoke('open-pip', target),
+  sendYouTubeChat: (videoId, text) => ipcRenderer.invoke('youtube-chat-send', videoId, text),
   closePip: () => ipcRenderer.invoke('close-pip'),
   setFullScreen: (on) => ipcRenderer.invoke('set-fullscreen', on),
   playerClosed: () => ipcRenderer.invoke('player-closed'),

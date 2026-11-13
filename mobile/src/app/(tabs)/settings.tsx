@@ -280,7 +280,9 @@ function UpdatesCard({ update: u, checkUpdates }: { update: UpdateStatus; checkU
           : u.state === 'downloading'
             ? `Downloading StreamHub ${u.version}… ${Math.round((u.progress ?? 0) * 100)}%`
             : u.state === 'ready'
-              ? `StreamHub ${u.version} is downloaded. Install opens Android’s installer.`
+              ? OS.OS === 'ios'
+                ? `StreamHub ${u.version} is downloaded. Save it to Files, then install it the way you installed this one.`
+                : `StreamHub ${u.version} is downloaded. Install opens Android’s installer.`
               : u.state === 'error'
                 ? (u.error ?? 'Something went wrong.')
                 : `You have StreamHub ${u.current}.`
@@ -291,9 +293,9 @@ function UpdatesCard({ update: u, checkUpdates }: { update: UpdateStatus; checkU
       </GroupRow>
       <GroupRow label="StreamHub updates" detail={detail}>
         {u.state === 'available' ? (
-          <Button title={u.inApp ? 'Update' : 'Get it'} variant="accent" onPress={() => void downloadUpdate()} />
+          <Button title={u.inApp ? (OS.OS === 'ios' ? 'Download' : 'Update') : 'Get it'} variant="accent" onPress={() => void downloadUpdate()} />
         ) : u.state === 'ready' ? (
-          <Button title="Install" variant="accent" onPress={installUpdate} />
+          <Button title={OS.OS === 'ios' ? 'Save' : 'Install'} variant="accent" onPress={installUpdate} />
         ) : (
           <Button
             title="Check"

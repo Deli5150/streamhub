@@ -24,12 +24,15 @@ const files = [
   `StreamHub-Setup-${version}.exe`,
   `StreamHub-${version}-x86_64.AppImage`,
   `StreamHub-${version}-Steam-Installer.sh`,
-  `StreamHub-${version}.apk`
+  `StreamHub-${version}.apk`,
+  `StreamHub-${version}.ipa`
 ]
-// The iPhone .ipa isn't released: it's signed for the owner's own iPhone (free Apple ID) and goes
-// to ~/Downloads instead.
+// The iPhone .ipa is signed for the owner's own iPhone, so it only installs there (sideloaded); it's
+// attached so that iPhone's update notice can download it (issue #10). It's built into ~/Downloads.
 const find = (name) => {
-  const places = from ? [from] : [path.join(root, 'dist'), path.join(root, 'mobile/android/app/build/outputs/apk/release')]
+  const places = from
+    ? [from]
+    : [path.join(root, 'dist'), path.join(root, 'mobile/android/app/build/outputs/apk/release'), ...(name.endsWith('.ipa') ? [path.join(os.homedir(), 'Downloads')] : [])]
   for (const dir of places) {
     const file = path.join(dir, name)
     if (fs.existsSync(file)) return file
