@@ -106,20 +106,38 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
     </View>
   )
 
-  const switcher = (label: string, activeKey: string, pick: (k: string) => void): React.JSX.Element | null =>
-    members.length >= 2 ? (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.noGrow} contentContainerStyle={styles.switcher}>
-        <Text style={{ color: c.fg3, fontSize: 12, alignSelf: 'center' }}>{label}</Text>
-        {members.map((m) => {
-          const active = m.key === activeKey
-          return (
-            <Pressable key={m.key} onPress={() => pick(m.key)} style={[styles.pill, { backgroundColor: active ? PLATFORM_COLOR[m.platform] : c.bg2 }]}>
-              <Text style={{ color: active ? (m.platform === 'kick' ? '#000' : '#fff') : c.fg2, fontWeight: '600', fontSize: 12 }}>{PLATFORM_LABEL[m.platform]}</Text>
-            </Pressable>
-          )
-        })}
+  const pills = (label: string, activeKey: string, pick: (k: string) => void): React.JSX.Element[] => [
+    <Text key="label" style={{ color: c.fg3, fontSize: 12, alignSelf: 'center' }}>
+      {label}
+    </Text>,
+    ...members.map((m) => {
+      const active = m.key === activeKey
+      return (
+        <Pressable key={m.key} onPress={() => pick(m.key)} style={[styles.pill, { backgroundColor: active ? PLATFORM_COLOR[m.platform] : c.bg2 }]}>
+          <Text style={{ color: active ? (m.platform === 'kick' ? '#000' : '#fff') : c.fg2, fontWeight: '600', fontSize: 12 }}>{PLATFORM_LABEL[m.platform]}</Text>
+        </Pressable>
+      )
+    })
+  ]
+  const combined = members.length >= 2
+  // Landscape: the chat's own switcher above it (the stream's info is hidden there).
+  const chatSwitcher = combined ? (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.noGrow} contentContainerStyle={styles.switcher}>
+      {pills('Chat', chatChannel.key, setChatKey)}
+    </ScrollView>
+  ) : null
+  // Portrait: one row, the stream's switcher on the left and the chat's on the right, so the chat
+  // keeps the row its own switcher took (issue #12).
+  const switchers = combined ? (
+    <View style={styles.switchers}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.switcher}>
+        {pills('Stream', videoChannel.key, setVideoKey)}
       </ScrollView>
-    ) : null
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.switcher, styles.toRight]}>
+        {pills('Chat', chatChannel.key, setChatKey)}
+      </ScrollView>
+    </View>
+  ) : null
 
   const tabs = (
     <View style={[styles.tabs, { borderBottomColor: c.separator }, typing && !landscape && styles.hidden]}>
@@ -139,7 +157,7 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
       {tabs}
       {panel === 'chat' ? (
         <>
-          {switcher('Chat', chatChannel.key, setChatKey)}
+          {landscape ? chatSwitcher : null}
           <Chat channel={chatChannel} live={app.live[chatChannel.key]} />
         </>
       ) : (
@@ -185,7 +203,7 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
       <View style={[{ flex: 1 }, pipHidden]}>
         <View style={typing ? styles.hidden : null}>
           {info}
-          {switcher('Stream', videoChannel.key, setVideoKey)}
+          {switchers}
           <TogetherRow list={together} />
         </View>
         <View style={{ flex: 1, paddingBottom: typing ? keyboard : insets.bottom }}>{side}</View>
@@ -198,6 +216,8 @@ const styles = StyleSheet.create({
   unavailable: { width: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' },
   info: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 12, paddingRight: 2, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth },
   switcher: { gap: 6, paddingHorizontal: 12, paddingVertical: 6 },
+  switchers: { flexDirection: 'row' },
+  toRight: { flexGrow: 1, justifyContent: 'flex-end' },
   pill: { paddingHorizontal: 12, height: 28, borderRadius: 14, justifyContent: 'center' },
   tabs: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderBottomWidth: 2, borderBottomColor: 'transparent' },

@@ -8,7 +8,7 @@ interface WebviewElement extends HTMLElement {
   setAudioMuted(muted: boolean): void
   executeJavaScript(code: string): Promise<unknown>
   insertCSS(css: string): Promise<string>
-  sendInputEvent(event: { type: 'mouseDown' | 'mouseUp'; x: number; y: number; button: 'left'; clickCount: number }): void
+  sendInputEvent(event: { type: 'mouseDown' | 'mouseUp' | 'mouseLeave'; x: number; y: number; button?: 'left'; clickCount?: number }): void
 }
 
 /** A loaded page, for running scripts in it. */
@@ -156,12 +156,16 @@ export function WebView({ platform, src, muted = false, volume, onVolumeChange, 
         return
       }
       if (r === 'idle') {
-        if (ticks >= 3 && clicks < 2 && el) {
+        // Only to get it going: later on, an ad between parts of a YouTube video also looks idle, and a
+        // click there paused or skipped the video and left the player thinking the mouse sat over it.
+        if (!started && ticks >= 3 && clicks < 2 && el) {
           clicks++
           const { width, height } = el.getBoundingClientRect()
           const at = { x: Math.round(width / 2), y: Math.round(height / 2) }
           el.sendInputEvent({ type: 'mouseDown', ...at, button: 'left', clickCount: 1 })
           el.sendInputEvent({ type: 'mouseUp', ...at, button: 'left', clickCount: 1 })
+          // Moves the pretend mouse off the player so its controls can hide again.
+          el.sendInputEvent({ type: 'mouseLeave', x: -1, y: -1 })
         }
         return
       }

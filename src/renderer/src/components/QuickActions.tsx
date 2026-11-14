@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { CheckIcon, CircleArrowUpIcon, Gamepad2Icon, ImageIcon, KeyboardIcon, ListVideoIcon, MonitorIcon, PaletteIcon, PlusIcon, RotateCcwIcon, ShieldCheckIcon, Trash2Icon, UploadIcon, XIcon } from 'lucide-react'
+import { CheckIcon, Gamepad2Icon, ImageIcon, KeyboardIcon, ListVideoIcon, PaletteIcon, PlusIcon, RotateCcwIcon, SettingsIcon, ShieldCheckIcon, Trash2Icon, UploadIcon, XIcon } from 'lucide-react'
 import { MENUBAR_THEMES, type MenubarTheme, type ShortcutAction } from '@shared/types'
 import { DARK_THEME_ID, LIGHT_THEME_ID, THEMES, type Colorway } from '@shared/themes'
 import { fileToDataUrl, MAX_WALLPAPERS, useBackground, type BackgroundFit } from '../lib/background'
@@ -14,17 +14,8 @@ import { PlaylistsSection } from './YouTubePlaylists'
 export function QuickActions(): React.JSX.Element {
   return (
     <div className="no-drag flex items-center gap-0.5">
-      <QuickPopover label="Themes" icon={<PaletteIcon className="size-4" strokeWidth={2.25} />}>
-        <ThemeSection />
-      </QuickPopover>
-      <QuickPopover label="Background" icon={<ImageIcon className="size-4" strokeWidth={2.25} />}>
-        <BackgroundSection />
-      </QuickPopover>
-      <QuickPopover label={`${TRAY.title} app`} icon={<MonitorIcon className="size-4" strokeWidth={2.25} />}>
-        <MenubarSection />
-      </QuickPopover>
-      <QuickPopover label="Keyboard shortcuts" icon={<KeyboardIcon className="size-4" strokeWidth={2.25} />}>
-        <KeyboardSection />
+      <QuickPopover label="Customization" icon={<PaletteIcon className="size-4" strokeWidth={2.25} />}>
+        <CustomizationSection />
       </QuickPopover>
       <QuickPopover label="Playback" icon={<ShieldCheckIcon className="size-4" strokeWidth={2.25} />}>
         <PlaybackSection />
@@ -32,8 +23,8 @@ export function QuickActions(): React.JSX.Element {
       <QuickPopover label="YouTube playlists" icon={<ListVideoIcon className="size-4" strokeWidth={2.25} />}>
         <PlaylistsSection />
       </QuickPopover>
-      <QuickPopover label="Updates" icon={<CircleArrowUpIcon className="size-4" strokeWidth={2.25} />}>
-        <UpdatesSection />
+      <QuickPopover label="Settings" icon={<SettingsIcon className="size-4" strokeWidth={2.25} />}>
+        <SettingsSection />
       </QuickPopover>
       <button
         type="button"
@@ -55,6 +46,55 @@ function SectionHeader({ title, description, action }: { title: string; descript
         {action}
       </div>
       <p className="mt-1 text-small text-tertiary">{description}</p>
+    </div>
+  )
+}
+
+// ---------- Customization ----------
+
+type CustomizationTab = 'theme' | 'wallpaper'
+
+/** The color theme and the home screen's wallpapers, in one popover (they were two header buttons). */
+function CustomizationSection(): React.JSX.Element {
+  const [tab, setTab] = useState<CustomizationTab>('theme')
+  return (
+    <div>
+      <div className="mx-4 mb-4 flex justify-center">
+        <SegmentedControl<CustomizationTab>
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'theme', label: 'Theme' },
+            { value: 'wallpaper', label: 'Wallpaper' }
+          ]}
+        />
+      </div>
+      {tab === 'theme' ? <ThemeSection /> : <BackgroundSection />}
+    </div>
+  )
+}
+
+// ---------- Settings ----------
+
+type SettingsTab = 'tray' | 'keyboard' | 'updates'
+
+/** The less-used settings in one popover: the menu bar / tray app, keyboard shortcuts and updates. */
+function SettingsSection(): React.JSX.Element {
+  const [tab, setTab] = useState<SettingsTab>('tray')
+  return (
+    <div>
+      <div className="mx-4 mb-4 flex justify-center">
+        <SegmentedControl<SettingsTab>
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'tray', label: TRAY.title, title: `The ${TRAY.name} app` },
+            { value: 'keyboard', label: 'Shortcuts', title: 'Keyboard shortcuts' },
+            { value: 'updates', label: 'Updates' }
+          ]}
+        />
+      </div>
+      {tab === 'tray' ? <MenubarSection /> : tab === 'keyboard' ? <KeyboardSection /> : <UpdatesSection />}
     </div>
   )
 }

@@ -50,7 +50,6 @@ export function ChatBox({
   const meta = PLATFORM_META[target.platform]
   const connected = useUi((s) => s.app?.accounts.some((a) => a.platform === target.platform && a.connected) ?? false)
   const [text, setText] = useState('')
-  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<{ text: string; reconnect?: boolean } | null>(null)
   const [picker, setPicker] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -74,16 +73,36 @@ export function ChatBox({
     setError(null)
     void window.api.login(target.platform)
   }
-  const send = async (): Promise<void> => {
-    if (!text.trim() || busy) return
-    setBusy(true)
-    const r = await window.api.sendChat(target, text).catch((e: Error) => ({ ok: false as const, error: e.message }))
-    setBusy(false)
-    if (r.ok) {
-      setText('')
-      setError(null)
-    } else setError({ text: r.error, reconnect: 'reconnect' in r ? r.reconnect : undefined })
+  // Connected before the first message, so it goes out the moment you send it; renewed while the
+  // box is open, as Twitch's connection closes after a while unused.
+  useEffect(() => {
+    if (!connected) return
+    window.api.prepareChat(target)
+    const timer = setInterval(() => window.api.prepareChat(target), 5 * 60_000)
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- targetKey stands for target
+  }, [targetKey, connected])
+  const sentTo = useRef(targetKey)
+  sentTo.current = targetKey
+  /**
+   * The box clears at once and you can type the next message while this one goes out. If the
+   * platform turns it down, it comes back in the box (unless you've started another) with the reason.
+   */
+  const send = (): void => {
+    const message = text.trim()
+    if (!message) return
+    const to = targetKey
+    setText('')
+    setError(null)
     inputRef.current?.focus()
+    void window.api
+      .sendChat(target, message)
+      .catch((e: Error) => ({ ok: false as const, error: e.message }))
+      .then((r) => {
+        if (r.ok || sentTo.current !== to) return
+        setError({ text: r.error, reconnect: 'reconnect' in r ? r.reconnect : undefined })
+        setText((now) => (now.trim() ? now : message))
+      })
   }
   /** Puts an emote at the cursor, with spaces around it so the platform reads it as one. */
   const insert = (e: ChatEmote): void => {
@@ -139,7 +158,7 @@ export function ChatBox({
         className="flex items-end gap-1.5"
         onSubmit={(e) => {
           e.preventDefault()
-          void send()
+          send()
         }}
       >
         <div className="flex min-w-0 flex-1 items-end rounded-lg bg-control-subtle pr-1 ring-1 ring-separator focus-within:ring-2 focus-within:ring-accent">
@@ -154,12 +173,11 @@ export function ChatBox({
               if (e.key === 'Escape' && picker) setPicker(false)
               if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                 e.preventDefault()
-                void send()
+                send()
               }
             }}
             placeholder={`Chat on ${meta.label}…`}
             maxLength={500}
-            disabled={busy}
             className="max-h-32 min-w-0 flex-1 resize-none bg-transparent px-3 py-1.5 text-regular leading-snug text-primary outline-none placeholder:text-tertiary"
           />
           <button
@@ -172,7 +190,7 @@ export function ChatBox({
             <SmileIcon className="size-4" />
           </button>
         </div>
-        <Button type="submit" variant="accent" disabled={busy || !text.trim()} title="Send">
+        <Button type="submit" variant="accent" disabled={!text.trim()} title="Send">
           <SendHorizontalIcon className="size-3.5" />
         </Button>
       </form>

@@ -22,6 +22,11 @@ async function liveChatId(videoId: string): Promise<string | null> {
   return id
 }
 
+/** Looks up a stream's chat ahead of the first message, so sending is a single request. */
+export async function prepareYouTubeChat(videoId: string): Promise<void> {
+  if (await googleSignedIn()) await liveChatId(videoId).catch(() => null)
+}
+
 export async function sendYouTubeChat(videoId: string, text: string): Promise<ChatSendResult> {
   const message = text.trim().slice(0, 200)
   if (!message) return { ok: false, error: 'Type a message first' }

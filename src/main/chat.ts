@@ -6,7 +6,7 @@ import { getJson, getText, sessionFor } from './net'
 import { store } from './store'
 import { YOUTUBE_EMOTES, YOUTUBE_EMOTES_OWNER, youtubeEmoteUrl } from '@shared/youtubeEmotes'
 import { googleFetch, googleSignedIn } from './googleAuth'
-import { sendYouTubeChat } from './youtubeChat'
+import { prepareYouTubeChat, sendYouTubeChat } from './youtubeChat'
 
 // StreamHub's own chat box (renderer ChatPanel): the platform's chat page stays in its <webview> for
 // reading, its own message box is hidden, and messages are sent from here as your account on that
@@ -40,6 +40,26 @@ export async function sendChat(t: ChatTarget, text: string): Promise<ChatSendRes
     }
   } catch (e) {
     return { ok: false, error: (e as Error).message }
+  }
+}
+
+/**
+ * Gets a chat ready to send as soon as its box shows: connects to Twitch's chat server and joins the
+ * channel, looks up Kick's chatroom and emotes and YouTube's chat id. Otherwise the first message
+ * waited on all of that before it went out.
+ */
+export async function prepareChat(t: ChatTarget): Promise<void> {
+  switch (t.platform) {
+    case 'youtube':
+      if (t.streamId) await prepareYouTubeChat(t.streamId)
+      return
+    case 'twitch':
+      return twitchChat.prepare(t.channelId.toLowerCase())
+    case 'kick':
+      await Promise.all([kickRoom(t.channelId), kickEmoteIds.has(t.channelId) ? null : kickEmotes(t.channelId)]).catch(() => undefined)
+      return
+    case 'rumble':
+      return
   }
 }
 
@@ -247,6 +267,20 @@ class TwitchChat {
   private listeners = new Set<(l: IrcLine) => void>()
   private idle: ReturnType<typeof setTimeout> | null = null
 
+  /** Connects and joins ahead of the first message (quietly: sending reports any problem). */
+  async prepare(login: string): Promise<void> {
+    const token = await twitchCookie('auth-token')
+    const nick = await twitchCookie('login')
+    if (!token || !nick) return
+    try {
+      await this.connect(token, nick)
+      await this.join(login)
+      this.keepAlive()
+    } catch {
+      this.close()
+    }
+  }
+
   async send(login: string, text: string): Promise<ChatSendResult> {
     const token = await twitchCookie('auth-token')
     const nick = await twitchCookie('login')
@@ -393,12 +427,26 @@ async function kickEmotes(slug: string): Promise<ChatEmoteSet[]> {
   return out
 }
 
+/** Kick chatroom ids by channel (a channel keeps its chatroom). */
+const kickRooms = new Map<string, number>()
+
+async function kickRoom(slug: string): Promise<number | undefined> {
+  const known = kickRooms.get(slug)
+  if (known) return known
+  const token = await kickCookie('session_token')
+  const channel = await getJson<{ chatroom?: { id?: number } }>('kick', `https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`, {
+    headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+  })
+  const room = channel.chatroom?.id
+  if (room) kickRooms.set(slug, room)
+  return room
+}
+
 async function sendKick(slug: string, text: string): Promise<ChatSendResult> {
   const token = await kickCookie('session_token')
   if (!token) return { ok: false, error: 'Sign in to Kick to chat', reconnect: true }
   const headers = { Accept: 'application/json', Authorization: `Bearer ${token}` }
-  const channel = await getJson<{ chatroom?: { id?: number } }>('kick', `https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`, { headers })
-  const room = channel.chatroom?.id
+  const room = await kickRoom(slug)
   if (!room) return { ok: false, error: "This channel's chat isn't available" }
   if (!kickEmoteIds.has(slug)) await kickEmotes(slug).catch(() => undefined)
   const xsrf = await kickCookie('XSRF-TOKEN')

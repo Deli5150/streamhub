@@ -140,9 +140,12 @@ export async function openPip({
   startAt?: number
   live?: boolean
 }): Promise<boolean> {
+  // Replacing one (a combined channel switched its stream): the new one takes the old one's place.
+  const was = current && !current.win.isDestroyed() ? current : null
+  const keep = was ? { ...was.win.getBounds(), ...(was.stashedFrom ?? {}) } : null
   await closePip()
   const win = new BrowserWindow({
-    ...startBounds(),
+    ...(keep ?? startBounds()),
     show: false,
     frame: false,
     resizable: true,
@@ -240,6 +243,11 @@ export function registerPipControls(): void {
   ipcMain.handle('pip-info', (e) => {
     const pip = fromPip(e)
     return pip ? { live: pip.live } : null
+  })
+  // Muting the window's audio, not the video: players (Twitch) reapply their own sound setting to
+  // the video whenever their stream switches, which unmuted it again a few seconds later.
+  ipcMain.on('pip-mute', (e, muted: unknown) => {
+    fromPip(e)?.win.webContents.setAudioMuted(muted === true)
   })
   ipcMain.on('pip-close', (e) => {
     if (fromPip(e)) void closePip()

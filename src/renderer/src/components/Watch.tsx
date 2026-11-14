@@ -69,6 +69,22 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
   const chatChannel = members.find((c) => c.key === chatKey) ?? channel
   const videoLive = app?.live[videoChannel.key] ?? live
   const player = embedUrl(videoChannel, videoLive)
+  // Switching the stream while it's in picture in picture moves picture in picture to the new
+  // source, instead of leaving the old one floating and starting the new one here. Until it's
+  // playing there, the in-app player waits (it would play out loud meanwhile).
+  const [pipMoving, setPipMoving] = useState(false)
+  const pickStream = (key: string): void => {
+    const next = members.find((c) => c.key === key)
+    const nextLive = next && app?.live[next.key]
+    const nextUrl = next && nextLive && embedUrl(next, nextLive)
+    setVideoKey(key)
+    if (!nextUrl || nextUrl === player || !player || useUi.getState().pip !== player) return
+    setPipMoving(true)
+    void window.api
+      .openPip({ platform: next.platform, url: nextUrl, live: true })
+      .catch(() => false)
+      .finally(() => setPipMoving(false))
+  }
   const [aboutOpen, setAboutOpen] = useState(false)
   useEffect(() => setAboutOpen(false), [videoChannel.key])
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -115,7 +131,12 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
                   </Button>
                 </div>
               )}
-              {player ? (
+              {pipMoving ? (
+                <div className="flex size-full flex-col items-center justify-center gap-3 text-center">
+                  <PictureInPicture2Icon className="size-10 text-white/80" strokeWidth={1.5} />
+                  <p className="text-strong text-white">Switching Picture-in-Picture to {PLATFORM_META[videoChannel.platform].label}…</p>
+                </div>
+              ) : player ? (
                 <WebView key={player} platform={videoChannel.platform} src={player} className={mini ? 'aspect-video w-full' : 'size-full'} />
               ) : (
                 <div className="grid size-full place-items-center text-tertiary">Stream player unavailable</div>
@@ -136,7 +157,7 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
             theater={theater}
             toggleTheater={() => setTheater(!theater)}
             sourceSwitcher={
-              members.length >= 2 ? <MemberSwitcher members={members} activeKey={videoChannel.key} onPick={setVideoKey} label="Stream" /> : undefined
+              members.length >= 2 ? <MemberSwitcher members={members} activeKey={videoChannel.key} onPick={pickStream} label="Stream" /> : undefined
             }
           />
           <StreamTogether channel={videoChannel} title={videoLive.title} />

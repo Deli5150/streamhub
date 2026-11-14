@@ -167,6 +167,7 @@ function mount(info: { live: boolean }): void {
   let hideTimer: ReturnType<typeof setTimeout> | undefined
   let hovering = false
   let scrubbing = false
+  let windowMuted = false
   const show = (): void => {
     controls.classList.remove('hidden')
     clearTimeout(hideTimer)
@@ -209,8 +210,13 @@ function mount(info: { live: boolean }): void {
       v.currentTime = Math.min(v.duration - 0.5, v.currentTime + 15)
     },
     sound: (v) => {
-      v.muted = !v.muted
-      if (!v.muted && v.volume === 0) v.volume = 1
+      // The window's audio is what's muted (main/pip.ts); unmuting also unmutes a video muted by its page.
+      windowMuted = !(windowMuted || v.muted || v.volume === 0)
+      ipcRenderer.send('pip-mute', windowMuted)
+      if (!windowMuted) {
+        v.muted = false
+        if (v.volume === 0) v.volume = 1
+      }
     },
     speed: (v) => {
       v.playbackRate = SPEEDS[(SPEEDS.indexOf(v.playbackRate) + 1) % SPEEDS.length] ?? 1
@@ -290,7 +296,7 @@ function mount(info: { live: boolean }): void {
       playBtn.replaceChildren(ICONS[playing]())
       playBtn.title = v.paused ? 'Play' : 'Pause'
     }
-    const sound = v.muted || v.volume === 0 ? 'muted' : 'sound'
+    const sound = windowMuted || v.muted || v.volume === 0 ? 'muted' : 'sound'
     if (soundBtn.dataset.icon !== sound) {
       soundBtn.dataset.icon = sound
       soundBtn.replaceChildren(ICONS[sound]())

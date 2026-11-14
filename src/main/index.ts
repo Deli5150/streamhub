@@ -18,7 +18,7 @@ import { closePip, openPip, registerPipControls, setPipRenderer, setupAutoPip } 
 import { youtubeChapters } from './providers/youtube'
 import { syncNow, syncOnFocus, syncSignIn, syncSignOut } from './sync'
 import { installTwitchAdFilter } from './twitchAds'
-import { chatEmotes, rememberYouTubeEmotes, sendChat } from './chat'
+import { chatEmotes, prepareChat, rememberYouTubeEmotes, sendChat } from './chat'
 import { TWITCH_PLAYER_PARTITION } from '@shared/urls'
 import { version } from '../../package.json'
 import { applyNativeTheme, getSettings, onSettingsChange, updateSettings, validateShortcuts } from './settings'
@@ -197,6 +197,9 @@ function registerIpc(): void {
   ipcMain.handle('chat-send', (_, t: unknown, text: unknown) =>
     isChatTarget(t) && typeof text === 'string' ? sendChat(t, text) : { ok: false, error: 'Bad request' }
   )
+  ipcMain.on('chat-prepare', (_, t: unknown) => {
+    if (isChatTarget(t)) void prepareChat(t).catch(() => undefined)
+  })
   ipcMain.handle('chat-emotes', (_, t: unknown) => (isChatTarget(t) ? chatEmotes(t).catch(() => []) : []))
   ipcMain.on('chat-emotes-seen', (_, t: unknown, seen: unknown) => {
     if (isChatTarget(t) && t.platform === 'youtube' && Array.isArray(seen)) {

@@ -341,6 +341,8 @@ export interface Api {
   openPip(target: { platform: Platform; url: string; hls?: boolean; startAt?: number; live?: boolean }): Promise<boolean>
   /** Sends a message in a stream's chat as your account on its platform. `reconnect`: sign in (again) first. */
   sendChat(target: ChatTarget, text: string): Promise<ChatSendResult>
+  /** Gets a stream's chat ready to send (connects and looks things up), so messages go out at once. */
+  prepareChat(target: ChatTarget): void
   /** The emotes you can pick for a stream's chat, in sets (yours, the channel's, global, emoji). */
   chatEmotes(target: ChatTarget): Promise<ChatEmoteSet[]>
   /** YouTube: emotes seen in a chat's messages, kept for its picker (YouTube doesn't list them). */

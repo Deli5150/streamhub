@@ -9,11 +9,13 @@ import { loginWindow } from './providerTypes'
 // which keeps the sign-in and refreshes access itself, gives read-only access to your subscriptions
 // (YouTube) and to StreamHub's own file in your Drive (Sync with Google). The phone has one Google
 // sign-in for both, each feature adding its permission, so turning one off leaves the other signed in.
-// It doesn't sign in web pages, so YouTube's chat is signed in separately on youtube.com in the app
-// (signInToYouTubeWeb), the way the other platforms sign in. The OAuth clients come from your
-// Google Cloud project (see mobile/README.md → YouTube sign-in).
+// It doesn't sign in web pages, so on iPhone YouTube's chat page stays signed out and messages go
+// through the Data API instead (StreamHub's chat box, ui/Chat.tsx, with the desktop's youtubeChat.ts).
+// Android's YouTube signs in on youtube.com (lib/youtubeWeb.ts, signInToYouTubeWeb), chat included.
+// The OAuth clients come from your Google Cloud project (see mobile/README.md → YouTube sign-in).
 
-const SCOPE = 'https://www.googleapis.com/auth/youtube.readonly'
+/** YouTube: reading subscriptions, and sending chat messages (as the desktop asks). */
+const SCOPE = 'https://www.googleapis.com/auth/youtube'
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata'
 const IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? ''
 
@@ -109,10 +111,17 @@ export async function googleSignIn(): Promise<void> {
   }
   try {
     await signInWith(SCOPE, 'YouTube')
-    // Then chat: skipping it still connects YouTube, with chat read-only until signed in from there.
-    if (!(await youTubeWebSignedIn().catch(() => false))) await signInToYouTubeWeb().catch(() => undefined)
   } catch (e) {
     throw signInError(e, 'YouTube')
+  }
+}
+
+/** Asks Google for chat access, for YouTube connected before it could chat (read-only access). */
+export async function allowYouTubeChat(): Promise<void> {
+  try {
+    await signInWith(SCOPE, 'YouTube chat')
+  } catch (e) {
+    throw signInError(e, 'YouTube chat')
   }
 }
 

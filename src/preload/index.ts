@@ -26,6 +26,7 @@ const api: Api = {
   setShortcuts: (bindings) => ipcRenderer.invoke('set-shortcuts', bindings),
   openPip: (target) => ipcRenderer.invoke('open-pip', target),
   sendChat: (target, text) => ipcRenderer.invoke('chat-send', target, text),
+  prepareChat: (target) => ipcRenderer.send('chat-prepare', target),
   chatEmotes: (target) => ipcRenderer.invoke('chat-emotes', target),
   reportChatEmotes: (target, seen) => ipcRenderer.send('chat-emotes-seen', target, seen),
   closePip: () => ipcRenderer.invoke('close-pip'),

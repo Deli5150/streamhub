@@ -2,6 +2,19 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.13]
+
+### New
+- **Chat messages send the moment you press Enter.** The chat box clears right away and you can type the next message while this one goes out. StreamHub now connects to the chat when it opens rather than on your first message, so nothing waits on that either. If a platform turns a message down (slow mode, followers-only, signed out), the reason shows and your message comes back in the box.
+- **Fewer buttons at the top right.** **Customization** (the palette) holds the color themes and the home screen wallpapers, with a switch between them. **Settings** (the gear) holds the menu bar (or system tray) app, keyboard shortcuts and updates.
+- **Phones: the stream and chat switchers share one row.** On a combined channel, the stream's switcher is on the left and the chat's on the right, which gives the chat a little more room. ([#12](../../issues/12))
+- **Combined channels in picture in picture.** Switching the stream to another platform while it plays in picture in picture now moves the floating window to the new source, in the same place on screen. Before, the old source kept playing in the window and the new one started in the app.
+
+### Fixed
+- **iPhone: chatting on YouTube streams.** YouTube's chat said *Sign in to chat* with no message box. StreamHub now puts its own message box under the chat, which sends as the YouTube account connected under Accounts. If you connected YouTube before this version, the first message asks Google once for permission to chat. ([#11](../../issues/11))
+- **Mute in picture in picture now stays on.** Muting a Twitch stream in the floating window unmuted it again a few seconds later. ([#14](../../issues/14))
+- **Videos skipping and the player's controls staying on screen** (seen on Windows in full screen). StreamHub clicks a player to start it when it won't start by itself, and it could also do that later on, during an ad in the middle of a YouTube video. That paused or skipped the video, and left the player thinking the mouse was over it, so its controls never hid. It now only does it before the video starts. ([#13](../../issues/13))
+
 ## [1.0.12]
 
 ### New
