@@ -86,6 +86,28 @@ const platformChip = (p: Platform): React.JSX.Element => {
   )
 }
 
+/** A chip per platform; past two, one pill striped with their colors and the count (issue #16). */
+function PlatformChips({ platforms, className }: { platforms: Platform[]; className: string }): React.JSX.Element {
+  if (platforms.length <= 2)
+    return (
+      <span className={`flex -space-x-2 ${className}`}>
+        {platforms.map((p) => (
+          <span key={p}>{platformChip(p)}</span>
+        ))}
+      </span>
+    )
+  return (
+    <span className={`flex h-7 min-w-11 items-center justify-center overflow-hidden rounded-full px-2 ring-2 ring-black/40 ${className}`} aria-label={`${platforms.length} platforms`}>
+      <span className="absolute inset-0 flex">
+        {platforms.map((p) => (
+          <span key={p} className={`flex-1 ${PLATFORM_META[p].activeBg}`} />
+        ))}
+      </span>
+      <span className="relative text-[14px] font-extrabold text-white [text-shadow:0_0_3px_#000a]">{platforms.length}</span>
+    </span>
+  )
+}
+
 /** A 16:9 card: a live stream or a video, with its title and channel underneath. */
 export function VideoCard({
   id,
@@ -151,7 +173,7 @@ export function VideoCard({
           </span>
         )}
         {badge && <span className="absolute right-3 bottom-3 rounded-md bg-black/75 px-2 py-0.5 text-[14px] font-semibold text-white tabular-nums">{badge}</span>}
-        {platforms && platforms.length > 0 && <span className="absolute top-3 right-3 flex -space-x-1.5">{platforms.map((p) => <span key={p}>{platformChip(p)}</span>)}</span>}
+        {platforms && platforms.length > 0 && <PlatformChips platforms={platforms} className="absolute top-3 right-3" />}
         {progress != null && progress > 0 && (
           <span className="absolute inset-x-0 bottom-0 h-1.5 bg-white/25">
             <span className="block h-full bg-[#e5242c]" style={{ width: `${Math.round(progress * 100)}%` }} />
@@ -181,11 +203,7 @@ export function ChannelTile({ id, channel, platforms, live, onPress }: { id: str
     >
       <span className={`relative rounded-full p-1 ${live ? 'ring-4 ring-[#e5242c]' : ''}`}>
         <ChannelAvatar src={channel.avatarUrl} name={channel.displayName} className="size-28 rounded-full bg-white/10 object-cover" fallbackTextClassName="text-[36px] font-semibold text-white/70" />
-        <span className="absolute -right-1 -bottom-1 flex -space-x-2">
-          {platforms.map((p) => (
-            <span key={p}>{platformChip(p)}</span>
-          ))}
-        </span>
+        <PlatformChips platforms={platforms} className="absolute -right-1 -bottom-1" />
       </span>
       <span className="w-full truncate text-center text-[17px] font-semibold text-white">{channel.displayName}</span>
       {live ? <span className="-mt-2 text-[13px] font-bold tracking-wide text-[#ff5a5f]">LIVE</span> : <span className="-mt-2 text-[13px] text-transparent">·</span>}

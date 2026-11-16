@@ -2,6 +2,15 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.14]
+
+### New
+- **Phones: a new update screen.** When a new version is out, a sheet slides up with what changed and **Update**, **Later** and **Skip this version**. A skipped version doesn't come back, unless you check for updates in Settings. On Android, **Update** downloads the new version and opens the installer. On an iPhone, it asks how you'd like to install it: in **AltStore**, **SideStore** or **Feather** (they fetch and install the new version themselves), in **FlareStore** (StreamHub downloads it and hands it over), or as a plain **.ipa download** to install your own way. A sideloading app that isn't on your phone says so and links to where to get it.
+
+### Fixed
+- **Reconnect did nothing after a sign-in expired.** Two things went wrong. The *Session expired* message and its **Reconnect** button vanished a moment after showing up, because a live-status check that works without signing in (Twitch's) cleared them. And the expired sign-in was still saved, so StreamHub thought you were signed in and closed the sign-in screen before you could use it (on Android, YouTube skipped the screen entirely). Now the message stays until you reconnect, Reconnect clears the expired sign-in first so the platform's sign-in page shows, and StreamHub stops rereading your follows every 15 seconds while the sign-in is expired. ([#15](../../issues/15))
+- **Combined channels' platform dots no longer run under the name.** With more than two channels combined, the dots under the picture are now one short badge in their colors with the number of channels. This applies on phones, on the desktop, in the menu bar app and in Big Picture. ([#16](../../issues/16))
+
 ## [1.0.13]
 
 ### New

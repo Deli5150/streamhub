@@ -7,13 +7,13 @@ import { twitch } from '../../../src/main/providers/twitch'
 import type { Provider } from '../../../src/main/providers/types'
 import { getSaved, savedOps, syncSaved } from '../../../src/main/watchLater'
 import { getPlaylists, importPlaylists, listPlaylists, PLAYLIST_REFRESH_MS, refreshPlaylists, removePlaylist } from '../../../src/main/ytPlaylists'
-import { AuthError } from '../desktop/net'
+import { AuthError, sessionFor } from '../desktop/net'
 import { flushStore, store } from '../desktop/store'
 import { getChannelPage as cachedChannelPage, setPreloadPaused, startPreloading, type LoadPage } from './channelPages'
 import { getSettings, updateSettings, type SettingsPatch } from './settings'
 import { startSync, syncOnForeground, syncStatus } from './sync'
 import { autoCheck, startUpdater, updateStatus } from './updater'
-import { youtubeProvider } from './youtubeWeb'
+import { youtubeProvider, youtubeWeb } from './youtubeWeb'
 
 // Mobile version of the desktop's src/main/hub.ts: follows sync, live polling, go-live alerts and the
 // actions the screens call. The providers are the desktop's own. State is published to the screens
@@ -63,19 +63,28 @@ export function state(): AppState {
       platform: p,
       connected: providers[p].isConnected(),
       username: providers[p].username(),
-      error: errors[p]
+      error: expired.has(p) ? EXPIRED : errors[p]
     }))
   }
 }
 
 export const emit = (): void => useApp.setState({ app: state() })
 
-async function guarded(p: Platform, fn: () => Promise<void>): Promise<void> {
+const EXPIRED = 'Session expired — reconnect this account'
+/**
+ * Platforms whose sign-in expired. Kept until a follows sync or a sign-in works: a live check that
+ * passes without the sign-in (Twitch's is public) doesn't prove it's back (issue #15).
+ */
+const expired = new Set<Platform>()
+
+async function guarded(p: Platform, fn: () => Promise<void>, provesSignIn = false): Promise<void> {
   try {
     await fn()
     delete errors[p]
+    if (provesSignIn) expired.delete(p)
   } catch (e) {
-    errors[p] = e instanceof AuthError ? 'Session expired — reconnect this account' : (e as Error).message
+    if (e instanceof AuthError) expired.add(p)
+    else errors[p] = (e as Error).message
     console.error(`[${p}]`, e)
   }
 }
@@ -181,7 +190,7 @@ export async function syncFollows(p: Platform): Promise<void> {
     const follows = await providers[p].getFollows()
     store.set('follows', { ...store.get('follows'), [p]: follows })
     store.set('followsSyncedAt', { ...store.get('followsSyncedAt'), [p]: Date.now() })
-  })
+  }, true)
   syncing.delete(p)
   await pollLive(p, true)
 }
@@ -236,7 +245,8 @@ export function start(): void {
 function tick(): void {
   for (const p of PLATFORMS) {
     if (!providers[p].isConnected()) continue
-    if (followsStale(p)) syncFollows(p)
+    // While its sign-in is expired the follows page can't be read: only Sync or Reconnect try again.
+    if (followsStale(p) && !expired.has(p)) syncFollows(p)
     else pollLive(p)
   }
   void pollSignedOutMembers()
@@ -268,8 +278,13 @@ const findChannel = (key: string): Channel | undefined => channels().find((c) =>
 
 export const actions = {
   async login(p: Platform) {
+    // Reconnect: drop the expired web sign-in first, or its stale cookies pass the sign-in check and
+    // the sign-in screen closes (or never opens) before the user can sign in again.
+    const cookieLogin = p !== 'youtube' || providers.youtube === youtubeWeb
+    if (expired.has(p) && cookieLogin) await sessionFor(p).clearStorageData().catch(() => undefined)
     await providers[p].login()
     delete errors[p]
+    expired.delete(p)
     notifyReady.delete(p)
     await syncFollows(p)
   },
@@ -280,6 +295,7 @@ export const actions = {
     const { [p]: _, ...synced } = store.get('followsSyncedAt')
     store.set('followsSyncedAt', synced)
     delete errors[p]
+    expired.delete(p)
     for (const k of Object.keys(live)) if (k.startsWith(`${p}:`)) delete live[k]
     live = { ...live }
     emit()

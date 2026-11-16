@@ -1,4 +1,6 @@
-import { Platform as OS, Share } from 'react-native'
+import { Linking as RNLinking, Platform as OS, Share } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { create } from 'zustand'
 import Constants from 'expo-constants'
 import * as Linking from 'expo-linking'
 import { cacheDirectory, createDownloadResumable, deleteAsync, makeDirectoryAsync } from 'expo-file-system/legacy'
@@ -23,6 +25,18 @@ let release: ReleaseInfo | null = null
 let downloaded: string | null = null
 let notify: () => void = () => {}
 let lastAuto = 0
+let skipped: string | null = null
+const offered = new Set<string>()
+const SKIPPED_KEY = 'streamhub:skipped-update'
+
+/**
+ * The update sheet (ui/UpdateSheet.tsx): `offer` is "Update available", `notes` its release notes,
+ * `install` the iPhone's choice of sideloading app (AltStore, SideStore, Feather, FlareStore) or a
+ * plain .ipa download.
+ */
+export type UpdatePage = 'offer' | 'notes' | 'install'
+export const useUpdateSheet = create<{ page: UpdatePage | null }>(() => ({ page: null }))
+export const showUpdateSheet = (page: UpdatePage | null): void => useUpdateSheet.setState({ page })
 
 export const updateStatus = (): UpdateStatus => status
 
@@ -41,6 +55,11 @@ export async function checkForUpdates(quiet = false): Promise<void> {
     release = newerRelease((await res.json()) as GitHubRelease, status.current, KIND)
     if (!release) return set({ state: 'latest', version: undefined, lastCheck: Date.now() })
     set({ state: 'available', version: release.version, notes: release.notes, page: release.page, inApp: Boolean(release.asset), lastCheck: Date.now() })
+    // Automatic checks offer a version once per launch and never a skipped one; Settings → Check always does.
+    if (!quiet || (!offered.has(release.version) && release.version !== skipped)) {
+      offered.add(release.version)
+      showUpdateSheet('offer')
+    }
   } catch (e) {
     if (quiet) set({ state: release ? 'available' : 'idle' })
     else set({ state: 'error', error: `Couldn't check for updates: ${(e as Error).message}` })
@@ -100,6 +119,37 @@ async function saveIpa(uri: string): Promise<void> {
   }
 }
 
+/** "Skip this version": no more sheet for it until a newer one comes out. */
+export function skipVersion(version: string): void {
+  skipped = version
+  void AsyncStorage.setItem(SKIPPED_KEY, version).catch(() => undefined)
+}
+
+/** Android: downloads the APK if it isn't yet, then opens the installer on it. */
+export async function updateNow(): Promise<void> {
+  if (status.state !== 'ready') await downloadUpdate()
+  if (status.state === 'ready') installUpdate()
+}
+
+/** iPhone: the .ipa's download link, for a sideloading app to fetch itself. */
+export const ipaUrl = (): string | undefined => (KIND === 'ios' ? release?.asset?.url : undefined)
+
+/** iPhone: downloads the .ipa if it isn't yet, then the share sheet on it (Save to Files, or another app). */
+export async function shareIpa(): Promise<void> {
+  if (status.state !== 'ready') await downloadUpdate()
+  if (downloaded && status.state === 'ready') await saveIpa(downloaded)
+}
+
+/** Hands the .ipa's link to an installed sideloading app, false when it can't be opened. */
+export async function openInstaller(url: string): Promise<boolean> {
+  try {
+    await RNLinking.openURL(url)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Checks when the app starts and comes back to the foreground, at most every few hours. */
 export function autoCheck(): void {
   if (!getSettings().checkUpdates || Date.now() - lastAuto < CHECK_EVERY_MS) return
@@ -109,5 +159,10 @@ export function autoCheck(): void {
 
 export function startUpdater(onChange: () => void): void {
   notify = onChange
-  autoCheck()
+  void AsyncStorage.getItem(SKIPPED_KEY)
+    .catch(() => null)
+    .then((v) => {
+      skipped = v
+      autoCheck()
+    })
 }

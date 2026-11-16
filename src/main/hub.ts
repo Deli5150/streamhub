@@ -3,7 +3,7 @@ import { PLATFORMS, type AppState, type Channel, type ChannelAbout, type Channel
 import { channelPageUrl } from '@shared/urls'
 import { setTrayLiveCount } from './menubar'
 import { getSettings, SHORTCUT_DEFAULTS } from './settings'
-import { AuthError } from './net'
+import { AuthError, sessionFor } from './net'
 import { recoverSession } from './sessionKeeper'
 import { store } from './store'
 import { startSync, syncStatus } from './sync'
@@ -68,7 +68,7 @@ export function state(): AppState {
       platform: p,
       connected: providers[p].isConnected(),
       username: providers[p].username(),
-      error: errors[p]
+      error: expired.has(p) ? EXPIRED : errors[p]
     }))
   }
 }
@@ -87,18 +87,28 @@ export const showMainWindow = (): void => {
   win.focus()
 }
 
+const EXPIRED = 'Session expired — reconnect this account'
+/**
+ * Platforms whose sign-in expired. Kept until a follows sync or a sign-in works: a live check that
+ * passes without the sign-in (Twitch's is public) doesn't prove it's back (issue #15).
+ */
+const expired = new Set<Platform>()
+
 /**
  * Runs `fn`, keeping the platform's error for the UI. True when it worked. A signed-out answer first
  * gets one recovery attempt (see sessionKeeper.ts) and a second try before it counts as expired.
+ * `provesSignIn`: `fn` needs the sign-in, so its working clears an expired one.
  */
-async function guarded(p: Platform, fn: () => Promise<void>, retried = false): Promise<boolean> {
+async function guarded(p: Platform, fn: () => Promise<void>, provesSignIn = false, retried = false): Promise<boolean> {
   try {
     await fn()
     delete errors[p]
+    if (provesSignIn) expired.delete(p)
     return true
   } catch (e) {
-    if (e instanceof AuthError && !retried && providers[p].isConnected() && (await recoverSession(p))) return guarded(p, fn, true)
-    errors[p] = e instanceof AuthError ? 'Session expired — reconnect this account' : (e as Error).message
+    if (e instanceof AuthError && !retried && providers[p].isConnected() && (await recoverSession(p))) return guarded(p, fn, provesSignIn, true)
+    if (e instanceof AuthError) expired.add(p)
+    else errors[p] = (e as Error).message
     console.error(`[${p}]`, e)
     return false
   }
@@ -207,7 +217,7 @@ export async function syncFollows(p: Platform): Promise<void> {
     store.set('follows', { ...store.get('follows'), [p]: follows })
     store.set('followsSyncedAt', { ...store.get('followsSyncedAt'), [p]: Date.now() })
     console.log(`[${p}] synced ${follows.length} follows in ${((Date.now() - started) / 1000).toFixed(1)}s`)
-  })
+  }, true)
   if (ok) delete syncFailures[p]
   else syncFailures[p] = { count: (syncFailures[p]?.count ?? 0) + 1, at: Date.now() }
   syncing.delete(p)
@@ -264,8 +274,12 @@ export function start(window: BrowserWindow): void {
 
 export const actions = {
   async login(p: Platform) {
+    // Reconnect: drop the expired web sign-in first, or its stale cookies pass the sign-in check and
+    // the sign-in window closes before the user can sign in again. (YouTube signs in with Google OAuth.)
+    if (expired.has(p) && p !== 'youtube') await sessionFor(p).clearStorageData().catch(() => undefined)
     await providers[p].login()
     delete errors[p]
+    expired.delete(p)
     delete syncFailures[p]
     notifyReady.delete(p)
     await syncFollows(p)
@@ -277,6 +291,7 @@ export const actions = {
     const { [p]: _, ...synced } = store.get('followsSyncedAt')
     store.set('followsSyncedAt', synced)
     delete errors[p]
+    expired.delete(p)
     for (const k of Object.keys(live)) if (k.startsWith(`${p}:`)) delete live[k]
     emit()
   },

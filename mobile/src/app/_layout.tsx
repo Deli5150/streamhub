@@ -19,6 +19,7 @@ import { loadWallpapers } from '../lib/wallpapers'
 import { openChannel } from '../ui/channelMenu'
 import { LoginSheet } from '../ui/LoginSheet'
 import { MenuSheet } from '../ui/Menu'
+import { UpdateSheet } from '../ui/UpdateSheet'
 import { useColors } from '../ui/theme'
 import { BootIntro, LAUNCH_BACKGROUND } from '../ui/BootIntro'
 
@@ -100,6 +101,7 @@ function Themed(): React.JSX.Element {
       </Stack>
       <LoginSheet />
       <MenuSheet />
+      <UpdateSheet />
     </ThemeProvider>
   )
 }

@@ -9,7 +9,7 @@ import { DEFAULT_THEME_ID, THEMES } from '@shared/themes'
 import { feedbackUrl, feedbackWhere, type FeedbackKind } from '@shared/feedback'
 import { actions, useApp } from '../../lib/hub'
 import { syncNow, syncSignIn, syncSignOut } from '../../lib/sync'
-import { checkForUpdates, downloadUpdate, installUpdate } from '../../lib/updater'
+import { checkForUpdates, installUpdate, showUpdateSheet } from '../../lib/updater'
 import { Button, useDockSpace, Group, GroupRow, IconButton } from '../../ui/components'
 import { WallpaperSettings } from '../../ui/WallpaperSettings'
 import { PLATFORM_COLOR, displayFont, errorMessage, useColors } from '../../ui/theme'
@@ -281,7 +281,7 @@ function UpdatesCard({ update: u, checkUpdates }: { update: UpdateStatus; checkU
             ? `Downloading StreamHub ${u.version}… ${Math.round((u.progress ?? 0) * 100)}%`
             : u.state === 'ready'
               ? OS.OS === 'ios'
-                ? `StreamHub ${u.version} is downloaded. Save it to Files, then install it the way you installed this one.`
+                ? `StreamHub ${u.version} is downloaded. Install opens the ways to install it.`
                 : `StreamHub ${u.version} is downloaded. Install opens Android’s installer.`
               : u.state === 'error'
                 ? (u.error ?? 'Something went wrong.')
@@ -293,9 +293,9 @@ function UpdatesCard({ update: u, checkUpdates }: { update: UpdateStatus; checkU
       </GroupRow>
       <GroupRow label="StreamHub updates" detail={detail}>
         {u.state === 'available' ? (
-          <Button title={u.inApp ? (OS.OS === 'ios' ? 'Download' : 'Update') : 'Get it'} variant="accent" onPress={() => void downloadUpdate()} />
+          <Button title={u.inApp ? 'Update' : 'Get it'} variant="accent" onPress={() => showUpdateSheet('offer')} />
         ) : u.state === 'ready' ? (
-          <Button title={OS.OS === 'ios' ? 'Save' : 'Install'} variant="accent" onPress={installUpdate} />
+          <Button title="Install" variant="accent" onPress={() => (OS.OS === 'ios' ? showUpdateSheet('install') : installUpdate())} />
         ) : (
           <Button
             title="Check"

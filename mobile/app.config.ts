@@ -31,7 +31,9 @@ const config: ExpoConfig = {
     infoPlist: {
       // Live-status checks while the app is in the background (see src/lib/background.ts).
       UIBackgroundModes: ['audio', 'fetch', 'processing'],
-      ITSAppUsesNonExemptEncryption: false
+      ITSAppUsesNonExemptEncryption: false,
+      // The sideloading apps the update sheet offers to install with (src/ui/UpdateSheet.tsx).
+      LSApplicationQueriesSchemes: ['altstore', 'sidestore', 'feather', 'flarestore']
     }
   },
   android: {

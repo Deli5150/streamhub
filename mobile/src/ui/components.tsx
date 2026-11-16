@@ -44,13 +44,31 @@ export const Avatar = memo(function Avatar({ channel, size = 40, live = false, p
         )}
       </View>
       <View style={[styles.badgeRow, { borderColor: c.bg }]}>
-        {(platforms ?? [channel.platform]).map((p, i) => (
-          <PlatformDot key={`${p}${i}`} platform={p} size={Math.max(10, size * 0.32)} />
-        ))}
+        <PlatformBadges platforms={platforms ?? [channel.platform]} size={Math.max(10, size * 0.32)} />
       </View>
     </View>
   )
 })
+
+/**
+ * A combined channel's platforms: a dot each for up to two, then one pill striped with their colors
+ * and the count, so the row stays short under the avatar (issue #16).
+ */
+function PlatformBadges({ platforms, size }: { platforms: Platform[]; size: number }): React.JSX.Element {
+  if (platforms.length <= 2) return <>{platforms.map((p, i) => <PlatformDot key={`${p}${i}`} platform={p} size={size} />)}</>
+  const colors = [...new Set(platforms)].map((p) => PLATFORM_COLOR[p])
+  return (
+    <View
+      accessibilityLabel={`${platforms.length} combined channels`}
+      style={{ height: size, minWidth: size * 1.6, borderRadius: size / 2, overflow: 'hidden', borderWidth: 1.5, borderColor: '#0006', alignItems: 'center', justifyContent: 'center' }}
+    >
+      <View style={[StyleSheet.absoluteFill, { flexDirection: 'row' }]}>
+        {colors.map((color) => <View key={color} style={{ flex: 1, backgroundColor: color }} />)}
+      </View>
+      {size >= 12 ? <Text style={{ color: '#fff', fontSize: size * 0.62, lineHeight: size - 3, fontWeight: '800', paddingHorizontal: 2, textShadowColor: '#000a', textShadowRadius: 2 }}>{platforms.length}</Text> : null}
+    </View>
+  )
+}
 
 export function PlatformDot({ platform, size = 10 }: { platform: Platform; size?: number }): React.JSX.Element {
   return <View accessibilityLabel={PLATFORM_LABEL[platform]} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: PLATFORM_COLOR[platform], borderWidth: 1.5, borderColor: '#0006' }} />

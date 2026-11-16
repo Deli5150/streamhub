@@ -8,7 +8,7 @@ import { buildLiveRows, type DisplayRow } from '../../../../src/renderer/src/lib
 import { actions, useApp } from '../../lib/hub'
 import { useQueue } from '../../lib/queue'
 import { savedTitle, useUi } from '../../lib/ui'
-import { downloadUpdate, installUpdate } from '../../lib/updater'
+import { installUpdate, showUpdateSheet } from '../../lib/updater'
 import { openChannel, openChannelMenu } from '../../ui/channelMenu'
 import { Button, Chip, useDockSpace, EmptyState, LiveCard, PlatformChip, SectionHeader, Thumbnail } from '../../ui/components'
 import { displayFont, useColors } from '../../ui/theme'
@@ -273,21 +273,12 @@ function PlaylistsStrip(): React.JSX.Element | null {
   )
 }
 
-/** A new version of StreamHub: Android updates from here; an iPhone downloads it to save and sideload. */
+/** A new version of StreamHub: Update opens the update sheet (ui/UpdateSheet.tsx). */
 function UpdateBanner(): React.JSX.Element | null {
   const c = useColors()
   const u = useApp((s) => s.app?.update)
   if (!u?.version || !['available', 'downloading', 'ready'].includes(u.state)) return null
-  const label =
-    u.state === 'downloading' ? `Downloading… ${Math.round((u.progress ?? 0) * 100)}%` : u.state === 'ready'
-        ? OS.OS === 'ios'
-          ? 'Save'
-          : 'Install'
-        : u.inApp
-          ? OS.OS === 'ios'
-            ? 'Download'
-            : 'Update'
-          : 'Get it'
+  const label = u.state === 'downloading' ? `Downloading… ${Math.round((u.progress ?? 0) * 100)}%` : u.state === 'ready' ? 'Install' : u.inApp ? 'Update' : 'Get it'
   return (
     <View style={[styles.banner, { backgroundColor: c.bg2 }]}>
       <Icon name="arrow-up-circle" size={22} color={c.accent} />
@@ -296,7 +287,7 @@ function UpdateBanner(): React.JSX.Element | null {
         title={label}
         variant="accent"
         disabled={u.state === 'downloading'}
-        onPress={() => (u.state === 'ready' ? installUpdate() : void downloadUpdate())}
+        onPress={() => (u.state === 'ready' ? (OS.OS === 'ios' ? showUpdateSheet('install') : installUpdate()) : showUpdateSheet('offer'))}
       />
     </View>
   )

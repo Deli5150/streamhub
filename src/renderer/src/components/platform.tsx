@@ -75,8 +75,27 @@ export function PlatformOverlayBadge({ platform, size = 'md' }: { platform: Plat
   )
 }
 
-/** One brand-colored dot per platform, overlaid on a combined channel's avatar. */
+/**
+ * A brand-colored dot per platform, overlaid on a combined channel's avatar; past two, one pill striped
+ * with their colors and the count, so it never runs under the channel's name (issue #16).
+ */
 export function CombinedPlatformDots({ platforms, className = 'absolute -bottom-1 -left-0.5' }: { platforms: Platform[]; className?: string }): React.JSX.Element {
+  if (platforms.length > 2) {
+    const kinds = [...new Set(platforms)]
+    return (
+      <span
+        className={`flex h-3 min-w-4 items-center justify-center overflow-hidden rounded-full px-0.5 shadow-sm ring-2 ring-background ${className}`}
+        aria-label={`${platforms.length} combined channels`}
+      >
+        <span className="absolute inset-0 flex">
+          {kinds.map((p) => (
+            <span key={p} className={`flex-1 ${PLATFORM_META[p].activeBg}`} />
+          ))}
+        </span>
+        <span className="relative text-[8px] font-extrabold leading-none text-white [text-shadow:0_0_2px_#000a]">{platforms.length}</span>
+      </span>
+    )
+  }
   return (
     <span className={`flex items-center gap-0.5 ${className}`} aria-label="Combined channel platforms">
       {platforms.map((p, i) => (
