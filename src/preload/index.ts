@@ -30,6 +30,7 @@ const api: Api = {
   chatEmotes: (target) => ipcRenderer.invoke('chat-emotes', target),
   reportChatEmotes: (target, seen) => ipcRenderer.send('chat-emotes-seen', target, seen),
   closePip: () => ipcRenderer.invoke('close-pip'),
+  twitchStalled: (login, reason) => ipcRenderer.invoke('twitch-stalled', login, reason),
   setFullScreen: (on) => ipcRenderer.invoke('set-fullscreen', on),
   playerClosed: () => ipcRenderer.invoke('player-closed'),
   launchBigPicture: () => ipcRenderer.invoke('launch-big-picture'),

@@ -349,6 +349,8 @@ export interface Api {
   reportChatEmotes(target: ChatTarget, seen: Array<{ code: string; url: string }>): void
   /** Closes the PiP window (the in-app player resumes). */
   closePip(): Promise<void>
+  /** A live Twitch player froze or showed an error; resolves true when it should be reloaded. */
+  twitchStalled(login: string, reason: string): Promise<boolean>
   /** Adds the item to Watch Later, or removes it if it's already there. */
   toggleSaved(item: Omit<SavedItem, 'savedAt'>): Promise<void>
   removeSaved(id: string): Promise<void>

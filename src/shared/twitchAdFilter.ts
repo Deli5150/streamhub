@@ -14,9 +14,10 @@ export interface BackupType {
 }
 /**
  * Access-token kinds to try for an ad-free copy, in order of preference. Measured over 354 checks
- * during real ad breaks (Oct 2026): embed and picture-by-picture on web were ad-free ~58% of the
- * time at full quality; autoplay on android was ad-free every time but only offers up to 360p, so
- * it's the last resort (a tile drops to 360p for the length of the break).
+ * during real ad breaks (Oct 2026): embed on web was ad-free ~58% of the time at full quality;
+ * autoplay on android was ad-free every time but only offers up to 360p, so it's the last resort (a
+ * tile drops to 360p for the length of the break). Since Nov 2026 picture-by-picture on web also
+ * tops out at 360p.
  */
 export const BACKUP_TYPES: BackupType[] = [
   { playerType: 'embed', platform: 'web' },
@@ -160,6 +161,14 @@ export interface Variant {
   resolution: string
   frameRate: number
   bandwidth: number
+  /** video codec family ("avc1", "hvc1", "av01"), or "" when the playlist doesn't say */
+  codec: string
+}
+
+/** "avc1.64002A" → "avc1"; HEVC's two tags count as one family. */
+export const codecFamily = (codecs: string): string => {
+  const f = codecs.split('.')[0].trim().toLowerCase()
+  return f === 'hev1' ? 'hvc1' : f.startsWith('mp4a') ? '' : f
 }
 
 /** Variant streams of a master (usher) playlist. */
@@ -170,14 +179,20 @@ export function parseMaster(master: string): Variant[] {
     if (!lines[i].startsWith('#EXT-X-STREAM-INF:')) continue
     const attr = (name: string): string => lines[i].match(new RegExp(`[:,]${name}=("?)([^",]*)\\1`))?.[2] ?? ''
     const url = lines.slice(i + 1).find((l) => l && !l.startsWith('#'))
-    if (url) out.push({ url, resolution: attr('RESOLUTION'), frameRate: Number(attr('FRAME-RATE')) || 0, bandwidth: Number(attr('BANDWIDTH')) || 0 })
+    if (url) out.push({ url, resolution: attr('RESOLUTION'), frameRate: Number(attr('FRAME-RATE')) || 0, bandwidth: Number(attr('BANDWIDTH')) || 0, codec: codecFamily(lines[i].match(/[:,]CODECS="?([^",]*)/)?.[1] ?? '') })
   }
   return out
 }
 
-/** The variant closest to `want` (same resolution and frame rate if offered, else nearest height). */
-export function pickVariant(variants: Variant[], want: Pick<Variant, 'resolution' | 'frameRate'>): Variant | undefined {
+/**
+ * The variant closest to `want` (same resolution and frame rate if offered, else nearest height).
+ * Only variants in the same video codec count: the player decodes one playlist with one decoder, so
+ * switching a 1440p HEVC/AV1 stream to an H.264 copy mid-playlist fails with "The browser
+ * encountered an error while loading video" (#18).
+ */
+export function pickVariant(variants: Variant[], want: Pick<Variant, 'resolution' | 'frameRate'> & { codec?: string }): Variant | undefined {
   const height = (v: { resolution: string }): number => Number(v.resolution.split('x')[1]) || 0
+  if (want.codec) variants = variants.filter((v) => !v.codec || v.codec === want.codec)
   return (
     variants.find((v) => v.resolution === want.resolution && Math.round(v.frameRate) === Math.round(want.frameRate)) ??
     variants.find((v) => v.resolution === want.resolution) ??
@@ -212,6 +227,8 @@ export interface TwitchAdFilter {
   onMediaPlaylist(url: string, playlist: string): Promise<string>
   /** Master playlist URL for the same stream under another token kind, or null if there's none. */
   backupMasterUrl(usherUrl: string, type: BackupType): Promise<string | null>
+  /** Whether `login`'s player is being held through an ad break right now (a stall that's on purpose). */
+  holding(login: string): boolean
 }
 
 /**
@@ -226,7 +243,7 @@ export function createTwitchAdFilter(fetch: FilterFetch, log: (message: string) 
   /** login → the player's usher (master playlist) URL */
   const usherUrls = new Map<string, string>()
   /** media playlist URL → its channel and quality */
-  const mediaInfo = new Map<string, { login: string; resolution: string; frameRate: number }>()
+  const mediaInfo = new Map<string, { login: string; resolution: string; frameRate: number; codec: string }>()
   /** One backup token kind's copy of a stream: its variants (their URLs carry its access token). */
   interface BackupCopy {
     type: BackupType
@@ -243,6 +260,8 @@ export function createTwitchAdFilter(fetch: FilterFetch, log: (message: string) 
   const stitches = new Map<string, Stitch>()
   /** login → when its player was last given a playlist with segments (it has started playing) */
   const lastPlayedAt = new Map<string, number>()
+  /** login → when its player was last held (given no new segments) through an ad break */
+  const heldAt = new Map<string, number>()
 
   const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T | null> => Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))])
 
@@ -369,7 +388,8 @@ export function createTwitchAdFilter(fetch: FilterFetch, log: (message: string) 
         const text = await check
         if (text) {
           const type = typeName(copies[checks.indexOf(check)].type)
-          log(`${info.login} ${info.resolution || 'audio'}: ad break — playing the ad-free stream (${type})`)
+          // Logged when the copy changes, not on every playlist refresh (every ~2 s) of the break.
+          if (stitches.get(url)?.source !== type) log(`${info.login} ${info.resolution || 'audio'}: ad break — playing the ad-free stream (${type})`)
           return serve(url, text, type)
         }
       }
@@ -385,12 +405,14 @@ export function createTwitchAdFilter(fetch: FilterFetch, log: (message: string) 
     }
     const previous = lastServed.get(url)
     if (previous) {
+      if (info) heldAt.set(info.login, Date.now())
       log(`${who}: no ad-free stream (${why}) — holding the stream through the ad break`)
       return previous
     }
     // Mid-stream at a quality not played yet (the player switched during the break): nothing of
     // this quality to hold, but the ads still mustn't play.
     if (info && Date.now() - (lastPlayedAt.get(info.login) ?? 0) < PLAYING_WINDOW_MS) {
+      heldAt.set(info.login, Date.now())
       log(`${who}: no ad-free stream (${why}) — cut the ad break`)
       return text
     }
@@ -422,7 +444,7 @@ export function createTwitchAdFilter(fetch: FilterFetch, log: (message: string) 
       const login = isUsher(url)?.[1].toLowerCase()
       if (!login) return
       usherUrls.set(login, url)
-      for (const v of parseMaster(master)) mediaInfo.set(v.url, { login, resolution: v.resolution, frameRate: v.frameRate })
+      for (const v of parseMaster(master)) mediaInfo.set(v.url, { login, resolution: v.resolution, frameRate: v.frameRate, codec: v.codec })
       // Get the backup copies ready now, so a pre-roll (which comes with the very first playlist)
       // can be skipped at once instead of waiting on them while the player has nothing to show.
       backupCopies(login).catch(() => {})
@@ -430,6 +452,10 @@ export function createTwitchAdFilter(fetch: FilterFetch, log: (message: string) 
     async onMediaPlaylist(url, playlist) {
       return hasAds(playlist) ? adFreePlaylist(url, playlist) : serve(url, playlist, 'twitch')
     },
-    backupMasterUrl
+    backupMasterUrl,
+    holding(login) {
+      // Playlists refresh every ~2 s, so a hold older than this has ended.
+      return Date.now() - (heldAt.get(login.toLowerCase()) ?? 0) < 10_000
+    }
   }
 }

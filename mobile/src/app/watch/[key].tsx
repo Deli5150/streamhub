@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
-import { PLATFORM_LABEL, type Channel, type LiveInfo } from '@shared/types'
+import type { Channel, LiveInfo } from '@shared/types'
 import { embedUrl } from '@shared/urls'
 import { groupOf } from '../../../../src/renderer/src/lib/combined'
 import { actions, useApp } from '../../lib/hub'
@@ -17,7 +17,8 @@ import { FloatingButton, HomeButton } from '../../ui/HomeButton'
 import { CastButton } from '../../ui/CastButton'
 import { useAutoPip, useLayoutWindow, usePipActive } from '../../ui/pip'
 import { Player, type PlayerHandle } from '../../ui/Player'
-import { PLATFORM_COLOR, formatViewers, uptime, useColors } from '../../ui/theme'
+import { SourcePicker } from '../../ui/SourcePicker'
+import { formatViewers, uptime, useColors } from '../../ui/theme'
 
 /** A live stream with chat, or the channel's page when it's offline (or `offline` is set). */
 export default function WatchScreen(): React.JSX.Element {
@@ -106,36 +107,19 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
     </View>
   )
 
-  const pills = (label: string, activeKey: string, pick: (k: string) => void): React.JSX.Element[] => [
-    <Text key="label" style={{ color: c.fg3, fontSize: 12, alignSelf: 'center' }}>
-      {label}
-    </Text>,
-    ...members.map((m) => {
-      const active = m.key === activeKey
-      return (
-        <Pressable key={m.key} onPress={() => pick(m.key)} style={[styles.pill, { backgroundColor: active ? PLATFORM_COLOR[m.platform] : c.bg2 }]}>
-          <Text style={{ color: active ? (m.platform === 'kick' ? '#000' : '#fff') : c.fg2, fontWeight: '600', fontSize: 12 }}>{PLATFORM_LABEL[m.platform]}</Text>
-        </Pressable>
-      )
-    })
-  ]
   const combined = members.length >= 2
-  // Landscape: the chat's own switcher above it (the stream's info is hidden there).
+  // Landscape: the chat's own picker above it (the stream's info is hidden there).
   const chatSwitcher = combined ? (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.noGrow} contentContainerStyle={styles.switcher}>
-      {pills('Chat', chatChannel.key, setChatKey)}
-    </ScrollView>
+    <View style={styles.switcher}>
+      <SourcePicker label="Chat" members={members} activeKey={chatChannel.key} onPick={setChatKey} />
+    </View>
   ) : null
-  // Portrait: one row, the stream's switcher on the left and the chat's on the right, so the chat
-  // keeps the row its own switcher took (issue #12).
+  // Portrait: one row, the stream's picker on the left and the chat's on the right, so the chat
+  // keeps the row its own picker took (issue #12).
   const switchers = combined ? (
-    <View style={styles.switchers}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.switcher}>
-        {pills('Stream', videoChannel.key, setVideoKey)}
-      </ScrollView>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.switcher, styles.toRight]}>
-        {pills('Chat', chatChannel.key, setChatKey)}
-      </ScrollView>
+    <View style={[styles.switcher, styles.switchers]}>
+      <SourcePicker label="Stream" members={members} activeKey={videoChannel.key} onPick={setVideoKey} fill />
+      <SourcePicker label="Chat" members={members} activeKey={chatChannel.key} onPick={setChatKey} align="right" fill />
     </View>
   ) : null
 
@@ -215,10 +199,8 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
 const styles = StyleSheet.create({
   unavailable: { width: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' },
   info: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 12, paddingRight: 2, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth },
-  switcher: { gap: 6, paddingHorizontal: 12, paddingVertical: 6 },
-  switchers: { flexDirection: 'row' },
-  toRight: { flexGrow: 1, justifyContent: 'flex-end' },
-  pill: { paddingHorizontal: 12, height: 28, borderRadius: 14, justifyContent: 'center' },
+  switcher: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 6 },
+  switchers: { gap: 8 },
   tabs: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   row: { flex: 1, flexDirection: 'row' },
@@ -231,7 +213,5 @@ const styles = StyleSheet.create({
    * screen's), so filling either would push the video out of view.
    */
   pipSafe: { width: '100%', aspectRatio: 16 / 9 },
-  typingPlayer: { width: '55%', aspectRatio: 16 / 9, alignSelf: 'center' },
-  // A ScrollView otherwise takes a share of the screen's free space, squeezing the chat.
-  noGrow: { flexGrow: 0 }
+  typingPlayer: { width: '55%', aspectRatio: 16 / 9, alignSelf: 'center' }
 })

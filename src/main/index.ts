@@ -17,7 +17,7 @@ import { guardFullScreen, playerClosed, setAppFullScreen, windowOf } from './ful
 import { closePip, openPip, registerPipControls, setPipRenderer, setupAutoPip } from './pip'
 import { youtubeChapters } from './providers/youtube'
 import { syncNow, syncOnFocus, syncSignIn, syncSignOut } from './sync'
-import { installTwitchAdFilter } from './twitchAds'
+import { installTwitchAdFilter, twitchPlayerStalled } from './twitchAds'
 import { chatEmotes, prepareChat, rememberYouTubeEmotes, sendChat } from './chat'
 import { TWITCH_PLAYER_PARTITION } from '@shared/urls'
 import { version } from '../../package.json'
@@ -194,6 +194,7 @@ function registerIpc(): void {
   })
   ipcMain.handle('menubar-hide', () => hidePopup())
   ipcMain.handle('close-pip', () => void closePip())
+  ipcMain.handle('twitch-stalled', (_, login: unknown, reason: unknown) => typeof login === 'string' && twitchPlayerStalled(login, String(reason)))
   ipcMain.handle('chat-send', (_, t: unknown, text: unknown) =>
     isChatTarget(t) && typeof text === 'string' ? sendChat(t, text) : { ok: false, error: 'Bad request' }
   )

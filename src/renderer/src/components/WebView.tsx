@@ -8,6 +8,7 @@ interface WebviewElement extends HTMLElement {
   setAudioMuted(muted: boolean): void
   executeJavaScript(code: string): Promise<unknown>
   insertCSS(css: string): Promise<string>
+  reload(): void
   sendInputEvent(event: { type: 'mouseDown' | 'mouseUp' | 'mouseLeave'; x: number; y: number; button?: 'left'; clickCount?: number }): void
 }
 
@@ -107,6 +108,37 @@ export function WebView({ platform, src, muted = false, volume, onVolumeChange, 
       el?.executeJavaScript(PLAY_VIDEOS).catch(() => {})
     }
   }, [ready, inPip])
+
+  // Live Twitch: the player sometimes freezes for good or stops at an error screen ("The browser
+  // encountered an error while loading video") and only a reload brings it back (#17, #18). Checked
+  // every 5 seconds: an error screen, or a playing video whose time hasn't moved for 20 seconds,
+  // reloads the page — unless the ad filter is holding it through an ad break, or it's paused.
+  const twitchLive = platform === 'twitch' && src.match(/^https:\/\/player\.twitch\.tv\/\?channel=([^&]+)/)?.[1]
+  useEffect(() => {
+    if (!ready || !twitchLive || inPip) return
+    const el = ref.current
+    let lastReload = 0
+    const timer = setInterval(async () => {
+      const r = (await el
+        ?.executeJavaScript(
+          `(() => {
+            const gate = document.querySelector('[data-a-target="player-overlay-content-gate"], .content-overlay-gate')
+            if (gate && /error/i.test(gate.textContent || '')) return 'showed an error'
+            const v = document.querySelector('video')
+            if (!v || v.paused || v.ended) { window.__shStall = null; return null }
+            const s = window.__shStall
+            if (!s || s.t !== v.currentTime) { window.__shStall = { t: v.currentTime, at: Date.now() }; return null }
+            return Date.now() - s.at > 20000 ? 'froze' : null
+          })()`
+        )
+        .catch(() => null)) as string | null
+      if (!r || Date.now() - lastReload < 30_000) return
+      if (!(await window.api.twitchStalled(twitchLive, r))) return
+      lastReload = Date.now()
+      ref.current?.reload()
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [ready, twitchLive, inPip])
 
   // VOD playback: once the main video has metadata, seek to the resume point and make sure it's
   // playing (leaving mute to the player: unmuting Twitch's VOD/clip player from a script stalls it); after that, report progress every 5 seconds. Some embeds (Rumble) only start

@@ -40,7 +40,7 @@ const config: ExpoConfig = {
     package: 'app.streamhub',
     versionCode,
     adaptiveIcon: {
-      backgroundColor: '#0d1117',
+      backgroundColor: '#131a20',
       foregroundImage: './assets/android-icon-foreground.png',
       monochromeImage: './assets/android-icon-monochrome.png'
     },

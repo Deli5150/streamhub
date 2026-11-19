@@ -2,6 +2,16 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.15]
+
+### New
+- **Phones: stream and chat sources are now dropdowns.** On a combined channel, the row under the stream is split between two buttons, **Stream** and **Chat**, each showing the platform in use. Tap one to pick another platform from a list. The pills no longer scroll sideways.
+
+### Fixed
+- **Twitch streams stopping with "The browser encountered an error while loading video".** During an ad break StreamHub plays an ad-free copy of the stream. When that copy got ads too, it switched to another backup copy, and Twitch now caps that one at 360p in a different video format. A high-quality stream (1440p) switched to it partway through broke the player. StreamHub now only switches to copies the player can keep playing, and holds the stream through the rest of the break otherwise. ([#18](../../issues/18))
+- **Twitch streams freezing until you reload them.** If a Twitch player shows an error or its picture stops for 20 seconds while it should be playing, StreamHub now reloads it by itself. This doesn't happen while the stream is paused, or while StreamHub is waiting out an ad break on purpose. ([#17](../../issues/17))
+- **Android: the app icon now matches the iPhone and desktop icons.** The launcher showed the speech bubble zoomed in and cut off at the edges. Themed (monochrome) icons now show the StreamHub bubble too, not a placeholder. ([#19](../../issues/19))
+
 ## [1.0.14]
 
 ### New

@@ -77,6 +77,14 @@ describe('backup stream helpers', () => {
     expect(pickVariant(v.slice(1), { resolution: '1920x1080', frameRate: 60 })?.url).toMatch(/720/)
   })
 
+  it('never switches a stream to another video codec', () => {
+    const v = parseMaster(master)
+    expect(v[0].codec).toBe('avc1')
+    // A 1440p HEVC player and a copy that only has H.264 (picture-by-picture tops out at 360p).
+    expect(pickVariant(v, { resolution: '2560x1440', frameRate: 60, codec: 'hvc1' })).toBeUndefined()
+    expect(pickVariant(v, { resolution: '2560x1440', frameRate: 60, codec: 'avc1' })?.resolution).toBe('1920x1080')
+  })
+
   it('builds a live access-token request for any player type and platform', () => {
     const body = JSON.parse(accessTokenBody('somechannel', { playerType: 'autoplay', platform: 'android' }))
     expect(body.variables).toEqual({ login: 'somechannel', playerType: 'autoplay', platform: 'android' })

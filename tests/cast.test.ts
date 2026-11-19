@@ -21,11 +21,12 @@ describe('castTarget', () => {
 })
 
 describe('castVariant', () => {
-  const v = (resolution: string, frameRate = 30, bandwidth = 1): { url: string; resolution: string; frameRate: number; bandwidth: number } => ({
+  const v = (resolution: string, frameRate = 30, bandwidth = 1): { url: string; resolution: string; frameRate: number; bandwidth: number; codec: string } => ({
     url: resolution,
     resolution,
     frameRate,
-    bandwidth
+    bandwidth,
+    codec: 'avc1'
   })
   it('picks the best quality up to 1080p', () => {
     expect(castVariant([v('1280x720', 60), v('2560x1440'), v('1920x1080', 60), v('')])?.url).toBe('1920x1080')
