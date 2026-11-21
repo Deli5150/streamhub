@@ -1,12 +1,13 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, BackHandler, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Image } from 'expo-image'
 import { Stack, router } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
-import { PLATFORM_LABEL, type Channel, type ChannelPageData, type LiveInfo, type MediaCategory, type MediaItem, type Platform } from '@shared/types'
+import { PLATFORM_LABEL, type Channel, type ChannelPageData, type ChannelPlaylist, type LiveInfo, type MediaCategory, type MediaItem, type Platform } from '@shared/types'
 import { channelPageUrl } from '@shared/urls'
+import { useChannelBrowse } from '../../../src/renderer/src/lib/channelBrowse'
 import { groupOf } from '../../../src/renderer/src/lib/combined'
 import { onChannelPage } from '../lib/channelPages'
 import { addToQueue, useQueue } from '../lib/queue'
@@ -14,6 +15,7 @@ import { actions, useApp } from '../lib/hub'
 import { progressFraction, progressKey, resumePosition, savedVideo, useVodProgress } from '../lib/ui'
 import { openChannel, openChannelMenu } from './channelMenu'
 import { Avatar, Button, centered, Chip, EmptyState, IconButton, Thumbnail } from './components'
+import { Icon } from './Icon'
 import { showMenu } from './Menu'
 import { useAutoPip, useLayoutWindow, usePipActive } from './pip'
 import { Player, type PlayerHandle } from './Player'
@@ -43,7 +45,7 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
   const { width, height } = useLayoutWindow()
   // Android picture-in-picture: only the player shows, filling the small window.
   const inPip = usePipActive()
-  const list = useRef<FlashListRef<MediaItem>>(null)
+  const list = useRef<FlashListRef<MediaItem | ChannelPlaylist>>(null)
   const app = useApp((s) => s.app)!
   const [page, setPage] = useState<ChannelPageData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +58,10 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
   const [clipWindow, setClipWindow] = useState<ClipWindow>('all')
   // Clip windows count back from when one was picked.
   const [clipNow, setClipNow] = useState(() => Date.now())
+  // YouTube's Videos tab can search the channel or show its playlists instead of its uploads.
+  const browse = useChannelBrowse(channel, actions, errorMessage)
+  const [query, setQuery] = useState('')
+  const browsing = tab === 'videos' && browse.view !== null
   const player = useRef<PlayerHandle>(null)
   useAutoPip(Boolean(playing))
   // Turned sideways while a video plays, the video fills the screen (16:9 at the full width would be
@@ -65,6 +71,10 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
   const queuedIds = useMemo(() => new Set(queue.map((i) => i.id)), [queue])
   // Back while a video plays closes it, back to the channel, rather than leaving the channel.
   const back = (): void => (playing ? setPlaying(null) : router.back())
+  const closeBrowse = (): void => {
+    setQuery('')
+    browse.close()
+  }
   useEffect(() => {
     if (!playing) return
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -73,6 +83,20 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
     })
     return () => sub.remove()
   }, [playing])
+  // Back from a playlist goes to the playlists, and from search or playlists to the channel's videos.
+  const browseView = browse.view
+  useEffect(() => {
+    if (playing || !browseView) return
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (browseView.kind === 'playlist') browse.openPlaylists()
+      else {
+        setQuery('')
+        browse.close()
+      }
+      return true
+    })
+    return () => sub.remove()
+  }, [playing, browseView, browse])
   const columns = width >= 900 ? 4 : width >= 600 ? 3 : 2
 
   useEffect(() => {
@@ -146,8 +170,15 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
     ...(hasVideos ? [{ id: 'videos' as const, label: 'Videos' }] : []),
     ...(clipsLabel ? [{ id: 'clips' as const, label: clipsLabel }] : [])
   ]
-  const items = tab === 'clips' ? clips : (page?.[tab] ?? [])
-  const portrait = tab === 'clips' && clipsLabel === 'Shorts'
+  const items: (MediaItem | ChannelPlaylist)[] = browsing
+    ? browse.view?.kind === 'playlists'
+      ? browse.playlists.items
+      : browse.videos.items
+    : tab === 'clips'
+      ? clips
+      : (page?.[tab] ?? [])
+  const listing = browse.view?.kind === 'playlists' ? browse.playlists : browse.videos
+  const portrait = !browsing && tab === 'clips' && clipsLabel === 'Shorts'
   const saving = useVodProgress((s) => s.save)
 
   // Stable across renders, so cards don't redraw when more videos load in.
@@ -287,6 +318,52 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
             ))}
           </ScrollView>
         ) : null}
+        {tab === 'videos' && browse.available ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 4 }}>
+            <View style={[styles.search, { backgroundColor: c.bg2 }]}>
+              <Icon name="search" size={16} color={c.fg3} />
+              <TextInput
+                value={query}
+                onChangeText={(v) => {
+                  setQuery(v)
+                  if (!v && browse.view?.kind === 'search') browse.close()
+                }}
+                onSubmitEditing={() => query.trim() && browse.search(query)}
+                placeholder="Search this channel"
+                placeholderTextColor={c.fg3}
+                returnKeyType="search"
+                autoCorrect={false}
+                style={{ flex: 1, color: c.fg, fontSize: 15, paddingVertical: 8 }}
+              />
+              {query ? <IconButton icon="close-circle" size={18} label="Clear search" color={c.fg3} onPress={closeBrowse} /> : null}
+            </View>
+            <Chip
+              label="Playlists"
+              active={browse.view?.kind === 'playlists' || browse.view?.kind === 'playlist'}
+              onPress={() => {
+                setQuery('')
+                if (browse.view?.kind === 'playlists') browse.close()
+                else browse.openPlaylists()
+              }}
+            />
+          </View>
+        ) : null}
+        {browsing && browse.view ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingBottom: 4 }}>
+            <IconButton
+              icon="chevron-back"
+              label={browse.view.kind === 'playlist' ? 'Back to playlists' : 'Back to videos'}
+              onPress={() => (browse.view?.kind === 'playlist' ? browse.openPlaylists() : closeBrowse())}
+            />
+            <Text numberOfLines={1} style={{ color: c.fg2, fontWeight: '600', flex: 1 }}>
+              {browse.view.kind === 'search'
+                ? `Results for “${browse.view.query}”`
+                : browse.view.kind === 'playlists'
+                  ? 'Playlists'
+                  : [browse.view.playlist.title, browse.view.playlist.videoCountText].filter(Boolean).join(' · ')}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </View>
   )
@@ -303,16 +380,35 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
           key={`${cols}${portrait}`}
           data={items}
           numColumns={cols}
-          keyExtractor={(m) => `${m.kind}:${m.id}`}
           ListHeaderComponent={header}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-          renderItem={({ item }) => <MediaCard item={item} platform={channel.platform} portrait={portrait} onPlay={play} onMenu={videoMenu} />}
+          keyExtractor={(m) => ('kind' in m ? `${m.kind}:${m.id}` : `playlist:${m.id}`)}
+          renderItem={({ item }) =>
+            'kind' in item ? (
+              <MediaCard item={item} platform={channel.platform} portrait={portrait} onPlay={play} onMenu={videoMenu} />
+            ) : (
+              <PlaylistCard playlist={item} onOpen={browse.openPlaylist} />
+            )
+          }
           // Next batch is asked for well before the end, so it's usually there when you arrive.
           onEndReachedThreshold={1.5}
-          onEndReached={() => void loadMore()}
-          ListFooterComponent={loadingMore ? <ActivityIndicator style={{ margin: 16 }} color={c.fg3} /> : null}
+          onEndReached={() => (browsing ? browse.more() : void loadMore())}
+          ListFooterComponent={(browsing ? listing.loading && listing.items.length > 0 : loadingMore) ? <ActivityIndicator style={{ margin: 16 }} color={c.fg3} /> : null}
           ListEmptyComponent={
-            !page && !error ? (
+            browsing && browse.view ? (
+              listing.loading ? (
+                <ActivityIndicator style={{ margin: 32 }} color={c.fg3} />
+              ) : (
+                <Text style={{ color: c.fg3, textAlign: 'center', margin: 32 }}>
+                  {listing.error ??
+                    (browse.view.kind === 'search'
+                      ? `No videos on this channel match “${browse.view.query}”.`
+                      : browse.view.kind === 'playlists'
+                        ? 'This channel has no public playlists.'
+                        : 'This playlist has no videos you can watch.')}
+                </Text>
+              )
+            ) : !page && !error ? (
               <ActivityIndicator style={{ margin: 32 }} color={c.fg3} />
             ) : error && !page ? (
               <EmptyState icon="cloud-offline-outline" title="Couldn’t load this channel" text={error} />
@@ -336,6 +432,25 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
     </View>
   )
 }
+
+const PlaylistCard = memo(function PlaylistCard({ playlist, onOpen }: { playlist: ChannelPlaylist; onOpen(p: ChannelPlaylist): void }): React.JSX.Element {
+  const c = useColors()
+  return (
+    <Pressable onPress={() => onOpen(playlist)} style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} accessibilityRole="button">
+      <Thumbnail uri={playlist.thumbnail}>
+        {playlist.videoCountText ? (
+          <View style={[styles.duration, { flexDirection: 'row', alignItems: 'center', gap: 3 }]}>
+            <Icon name="list" size={11} color="#fff" />
+            <Text style={styles.durationText}>{playlist.videoCountText}</Text>
+          </View>
+        ) : null}
+      </Thumbnail>
+      <Text numberOfLines={2} style={{ color: c.fg, fontSize: 13, fontWeight: '600', marginTop: 6 }}>
+        {playlist.title}
+      </Text>
+    </Pressable>
+  )
+})
 
 const MediaCard = memo(function MediaCard({
   item,
@@ -397,6 +512,7 @@ function mergeLoaded(prev: ChannelPageData, next: ChannelPageData): Partial<Chan
 
 const styles = StyleSheet.create({
   banner: { height: 170, justifyContent: 'flex-end' },
+  search: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 10, paddingLeft: 10, paddingRight: 2, minHeight: 38 },
   cornerBar: { position: 'absolute', left: 10, right: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   card: { paddingHorizontal: 6, marginHorizontal: 4, marginBottom: 16 },
   cardPressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },

@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron'
-import type { Channel, ChannelAbout, ChannelPageData, TogetherChannel, LiveInfo, MediaCategory, MediaItem, Platform, SavedItem, YouTubePlaylistSummary } from '@shared/types'
+import type { Channel, ChannelAbout, ChannelPageData, ChannelPlaylist, MediaPage, TogetherChannel, LiveInfo, MediaCategory, MediaItem, Platform, SavedItem, YouTubePlaylistSummary } from '@shared/types'
 import { partition } from '../net'
 
 export interface Provider {
@@ -33,6 +33,12 @@ export interface Provider {
   getPlaylists?(): Promise<YouTubePlaylistSummary[]>
   /** YouTube: a playlist's playable videos, in order, as Watch Later-style entries. */
   getPlaylistVideos?(id: string): Promise<Array<Omit<SavedItem, 'savedAt'>>>
+  /** YouTube: the channel's videos matching a search; `cursor` continues one. */
+  searchChannel?(ch: Channel, query: string, cursor?: string): Promise<MediaPage>
+  /** YouTube: the channel's public playlists; `cursor` continues the list. */
+  getChannelPlaylists?(ch: Channel, cursor?: string): Promise<{ playlists: ChannelPlaylist[]; cursor: string | null }>
+  /** YouTube: a public playlist's videos (no sign-in); `cursor` continues the list. */
+  getPlaylistPage?(id: string, cursor?: string): Promise<MediaPage>
 }
 
 /**

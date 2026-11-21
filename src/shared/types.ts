@@ -143,6 +143,21 @@ export interface YouTubePlaylistSummary {
   count?: number
 }
 
+/** One of a YouTube channel's public playlists, as listed on its channel page. */
+export interface ChannelPlaylist {
+  id: string
+  title: string
+  thumbnail?: string
+  /** "12 videos", as YouTube shows it. */
+  videoCountText?: string
+}
+
+/** A page of videos, with the cursor for the next one (null at the end). */
+export interface MediaPage {
+  items: MediaItem[]
+  cursor: string | null
+}
+
 /** A YouTube playlist imported in Settings: shown on Home and played like Watch Later (read-only). */
 export interface ImportedPlaylist {
   id: string
@@ -303,6 +318,12 @@ export interface Api {
   loadMore(key: string, category: MediaCategory, cursor: string): Promise<{ items: MediaItem[]; cursor: string | null }>
   /** The live channel's About section or stream description (see ChannelAbout). */
   getAbout(key: string): Promise<ChannelAbout>
+  /** YouTube: the channel's videos matching `query` (YouTube's channel search), a page at a time. */
+  searchChannel(key: string, query: string, cursor?: string): Promise<MediaPage>
+  /** YouTube: the channel's public playlists, a page at a time. */
+  getChannelPlaylists(key: string, cursor?: string): Promise<{ playlists: ChannelPlaylist[]; cursor: string | null }>
+  /** YouTube: a public playlist's videos, in order, a page at a time. */
+  getPlaylistPage(id: string, cursor?: string): Promise<MediaPage>
   /** Channels the live channel is streaming with, or mentions in its title (Twitch). */
   getTogether(key: string): Promise<TogetherChannel[]>
   toggleMute(key: string): Promise<void>

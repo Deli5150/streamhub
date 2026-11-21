@@ -165,6 +165,11 @@ function registerIpc(): void {
     ['streams', 'videos', 'clips'].includes(category) ? actions.loadMore(String(key), category, String(cursor)) : { items: [], cursor: null }
   )
   ipcMain.handle('channel-about', (_, key: string) => actions.getAbout(String(key)))
+  ipcMain.handle('channel-search', (_, key: string, query: string, cursor?: string) =>
+    actions.searchChannel(String(key), String(query), cursor ? String(cursor) : undefined)
+  )
+  ipcMain.handle('channel-playlists', (_, key: string, cursor?: string) => actions.getChannelPlaylists(String(key), cursor ? String(cursor) : undefined))
+  ipcMain.handle('playlist-page', (_, id: string, cursor?: string) => actions.getPlaylistPage(String(id), cursor ? String(cursor) : undefined))
   ipcMain.handle('channel-together', (_, key: string) => actions.getTogether(String(key)))
   ipcMain.handle('toggle-mute', (_, key: string) => actions.toggleMute(String(key)))
   ipcMain.handle('accent-color', () =>

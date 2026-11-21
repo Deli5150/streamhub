@@ -4,12 +4,13 @@ import { router } from 'expo-router'
 import { Icon } from '../ui/Icon'
 import type { YouTubePlaylistSummary } from '@shared/types'
 import { actions, useApp } from '../lib/hub'
-import { Button, Thumbnail } from '../ui/components'
+import { Button, Thumbnail, useModalTop } from '../ui/components'
 import { errorMessage, useColors } from '../ui/theme'
 
 /** Pick YouTube playlists to import (the desktop's ImportPlaylistsDialog), then confirm. */
 export default function ImportPlaylistsScreen(): React.JSX.Element {
   const c = useColors()
+  const modalTop = useModalTop()
   const imported = useApp((s) => s.app?.ytPlaylists ?? [])
   const [list, setList] = useState<YouTubePlaylistSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -35,7 +36,7 @@ export default function ImportPlaylistsScreen(): React.JSX.Element {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <View style={[styles.bar, { borderBottomColor: c.separator }]}>
+      <View style={[styles.bar, { borderBottomColor: c.separator }, modalTop]}>
         <Button title="Cancel" variant="plain" disabled={importing} onPress={() => router.back()} />
         <Text style={{ color: c.fg, fontWeight: '700', fontSize: 17, flex: 1, textAlign: 'center' }}>YouTube playlists</Text>
         <Button

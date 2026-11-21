@@ -1,0 +1,225 @@
+{
+ "contents": {
+  "twoColumnBrowseResultsRenderer": {
+   "tabs": [
+    {
+     "tabRenderer": {
+      "selected": true,
+      "endpoint": {
+       "clickTrackingParams": "CCgQ8JMBGAwiEwjMw4e07JeYAxWNyT8EHeOJFoDKAQQvjWgL",
+       "commandMetadata": {
+        "webCommandMetadata": {
+         "url": "/@LinusTechTips/playlists",
+         "webPageType": "WEB_PAGE_TYPE_CHANNEL",
+         "rootVe": 3611,
+         "apiUrl": "/youtubei/v1/browse"
+        }
+       },
+       "browseEndpoint": {
+        "browseId": "UCXuqSBlHAE6Xw-yeJA0Tunw",
+        "params": "EglwbGF5bGlzdHPyBgoKCEIGCgIQaCIA",
+        "canonicalBaseUrl": "/@LinusTechTips"
+       }
+      },
+      "content": {
+       "items": [
+        {
+         "lockupViewModel": {
+          "contentId": "PLXm3b2ZSqTsc",
+          "contentType": "LOCKUP_CONTENT_TYPE_PLAYLIST",
+          "contentImage": {
+           "collectionThumbnailViewModel": {
+            "primaryThumbnail": {
+             "thumbnailViewModel": {
+              "image": {
+               "sources": [
+                {
+                 "url": "https://i.ytimg.com/vi/skdOVaiRq1c/hqdefault.jpg?sqp=-oaymwEXCOADEI4CSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLD7odfCefib_H5TOgZvBrxCaHJ-Sw",
+                 "width": 480,
+                 "height": 270
+                }
+               ]
+              },
+              "overlays": [
+               {
+                "thumbnailOverlayBadgeViewModel": {
+                 "thumbnailBadges": [
+                  {
+                   "thumbnailBadgeViewModel": {
+                    "icon": {
+                     "sources": [
+                      {
+                       "clientResource": {
+                        "imageName": "PLAYLISTS"
+                       }
+                      }
+                     ]
+                    },
+                    "text": "1 video",
+                    "badgeStyle": "THUMBNAIL_OVERLAY_BADGE_STYLE_DEFAULT",
+                    "backgroundColor": {
+                     "lightTheme": 861734,
+                     "darkTheme": 861734
+                    }
+                   }
+                  }
+                 ],
+                 "position": "THUMBNAIL_OVERLAY_BADGE_POSITION_BOTTOM_END"
+                }
+               }
+              ]
+             }
+            }
+           }
+          },
+          "metadata": {
+           "lockupMetadataViewModel": {
+            "title": {
+             "content": "Home Security"
+            }
+           }
+          }
+         }
+        },
+        {
+         "lockupViewModel": {
+          "contentId": "PLPXG0FHDlqWU",
+          "contentType": "LOCKUP_CONTENT_TYPE_PLAYLIST",
+          "contentImage": {
+           "collectionThumbnailViewModel": {
+            "primaryThumbnail": {
+             "thumbnailViewModel": {
+              "image": {
+               "sources": [
+                {
+                 "url": "https://i.ytimg.com/vi/DZSYaQmxBLM/hqdefault.jpg?sqp=-oaymwEXCOADEI4CSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLBLKZ0RlZVrZ03Pi8oQE8fAq6jQOQ",
+                 "width": 480,
+                 "height": 270
+                }
+               ]
+              },
+              "overlays": [
+               {
+                "thumbnailOverlayBadgeViewModel": {
+                 "thumbnailBadges": [
+                  {
+                   "thumbnailBadgeViewModel": {
+                    "icon": {
+                     "sources": [
+                      {
+                       "clientResource": {
+                        "imageName": "PLAYLISTS"
+                       }
+                      }
+                     ]
+                    },
+                    "text": "2 videos",
+                    "badgeStyle": "THUMBNAIL_OVERLAY_BADGE_STYLE_DEFAULT",
+                    "backgroundColor": {
+                     "lightTheme": 2369843,
+                     "darkTheme": 2369843
+                    }
+                   }
+                  }
+                 ],
+                 "position": "THUMBNAIL_OVERLAY_BADGE_POSITION_BOTTOM_END"
+                }
+               }
+              ]
+             }
+            }
+           }
+          },
+          "metadata": {
+           "lockupMetadataViewModel": {
+            "title": {
+             "content": "Vibe Coding"
+            }
+           }
+          }
+         }
+        },
+        {
+         "lockupViewModel": {
+          "contentId": "PLT4ClbJt7VFM",
+          "contentType": "LOCKUP_CONTENT_TYPE_PLAYLIST",
+          "contentImage": {
+           "collectionThumbnailViewModel": {
+            "primaryThumbnail": {
+             "thumbnailViewModel": {
+              "image": {
+               "sources": [
+                {
+                 "url": "https://i.ytimg.com/vi/u5UTIofKDGc/hqdefault.jpg?sqp=-oaymwEXCOADEI4CSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLC9fgKgrwoeQcNuI6_MQGiwvaTNMg",
+                 "width": 480,
+                 "height": 270
+                }
+               ]
+              },
+              "overlays": [
+               {
+                "thumbnailOverlayBadgeViewModel": {
+                 "thumbnailBadges": [
+                  {
+                   "thumbnailBadgeViewModel": {
+                    "icon": {
+                     "sources": [
+                      {
+                       "clientResource": {
+                        "imageName": "PLAYLISTS"
+                       }
+                      }
+                     ]
+                    },
+                    "text": "4 videos",
+                    "badgeStyle": "THUMBNAIL_OVERLAY_BADGE_STYLE_DEFAULT",
+                    "backgroundColor": {
+                     "lightTheme": 3348495,
+                     "darkTheme": 3348495
+                    }
+                   }
+                  }
+                 ],
+                 "position": "THUMBNAIL_OVERLAY_BADGE_POSITION_BOTTOM_END"
+                }
+               }
+              ]
+             }
+            }
+           }
+          },
+          "metadata": {
+           "lockupMetadataViewModel": {
+            "title": {
+             "content": "Datacenter Tours"
+            }
+           }
+          }
+         }
+        },
+        {
+         "continuationItemRenderer": {
+          "trigger": "CONTINUATION_TRIGGER_ON_ITEM_SHOWN",
+          "continuationEndpoint": {
+           "clickTrackingParams": "CC4Q6IsCGAAiEwjMw4e07JeYAxWNyT8EHeOJFoDKAQQvjWgL",
+           "commandMetadata": {
+            "webCommandMetadata": {
+             "sendPost": true,
+             "apiUrl": "/youtubei/v1/browse"
+            }
+           },
+           "continuationCommand": {
+            "token": "4qmFsgJ4EhhVQ1h1cVNCbEhBRTZYdy15ZUpBMFR1bncaKkVnbHdiR0Y1YkdsemRITVlBeUFBTUFFNEFlb0RCME5uVGtSUmFsRSUzRJoCL2Jyb3dzZS1mZWVkVUNYdXFTQmxIQUU2WHcteWVKQTBUdW53cGxheWxpc3RzMTA0",
+            "request": "CONTINUATION_REQUEST_TYPE_BROWSE"
+           }
+          }
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

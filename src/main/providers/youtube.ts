@@ -1,4 +1,4 @@
-import type { Channel, ChannelAbout, ChannelPageData, LiveInfo, MediaCategory, MediaItem, SavedItem, VideoChapter, YouTubePlaylistSummary } from '@shared/types'
+import type { Channel, ChannelAbout, ChannelPageData, ChannelPlaylist, LiveInfo, MediaCategory, MediaItem, SavedItem, VideoChapter, YouTubePlaylistSummary } from '@shared/types'
 import { readPage } from '../hidden'
 import { googleGet, googleSignedIn, googleSignIn, googleSignOut } from '../googleAuth'
 import { getJson, getText, mapLimit } from '../net'
@@ -10,10 +10,12 @@ import {
   parseYouTubePlaylistItems,
   parseYouTubePlaylists,
   parseYouTubeBanner,
+  parseYouTubeChannelPlaylists,
   parseYouTubeDescription,
   parseYouTubeResolve,
   parseYouTubeSubscriptions,
   parseYouTubeVideoStatuses,
+  youTubeContinuations,
   youTubeSelectedTabUrl,
   type YouTubePlaylistItemsResponse,
   type YouTubePlaylistsResponse,
@@ -66,6 +68,8 @@ async function liveFromPlayer(c: Channel, id: string): Promise<LiveInfo | null> 
 const RESOLVE_CONCURRENCY = 24
 /** Imported playlists read up to this many pages of 50 videos. */
 const PLAYLIST_PAGES = 20
+/** A public playlist page shorter than this is its last (YouTube sends 100, less any live or upcoming). */
+const PLAYLIST_PAGE_MIN = 90
 /** Client the URL resolver is called as (any recent web client version is accepted). */
 const RESOLVER_CLIENT = { clientName: 'WEB', clientVersion: '2.20251001.00.00', hl: 'en' }
 
@@ -228,6 +232,29 @@ export const youtube: Provider = {
     return { items, cursor: items.length && result.more ? String(loaded + items.length) : null }
   },
 
+  async searchChannel(ch, query, cursor) {
+    const url = `https://www.youtube.com/channel/${ch.id}/search?query=${encodeURIComponent(query)}&hl=en`
+    const page = await browsePage(url, cursor, (data) => collectYouTubeTab(data, 'videos').items)
+    return { items: page.items.map((m) => toMedia(m, 'videos')), cursor: page.cursor }
+  },
+
+  async getChannelPlaylists(ch, cursor) {
+    const url = `https://www.youtube.com/channel/${ch.id}/playlists?hl=en`
+    // A channel without a Playlists tab gets its Home tab instead, whose shelves aren't its playlists.
+    const page = await browsePage<ChannelPlaylist>(url, cursor, (data, first) => {
+      const served = first ? youTubeSelectedTabUrl(data) : undefined
+      return served && !served.split('?')[0].endsWith('/playlists') ? [] : parseYouTubeChannelPlaylists(data)
+    })
+    return { playlists: page.items, cursor: page.cursor }
+  },
+
+  async getPlaylistPage(id, cursor) {
+    const url = `https://www.youtube.com/playlist?list=${encodeURIComponent(id)}&hl=en`
+    const page = await browsePage(url, cursor, (data) => collectYouTubeTab(data, 'videos').items)
+    // Playlists come 100 videos at a time, so a shorter page is the last one.
+    return { items: page.items.map((m) => toMedia(m, 'videos')), cursor: page.items.length >= PLAYLIST_PAGE_MIN ? page.cursor : null }
+  },
+
   async getAbout(_ch, live): Promise<ChannelAbout> {
     if (!live?.streamId) return { kind: 'description', links: [], panels: [] }
     const html = await getText('youtube', `https://www.youtube.com/watch?v=${live.streamId}&hl=en`, {
@@ -268,6 +295,35 @@ async function fetchTab(ch: Channel, tab: Tab): Promise<{ items: MediaItem[]; cu
   } catch {
     return { items: [], cursor: null }
   }
+}
+
+/**
+ * A public YouTube list a page at a time: the first page from its HTML, the next ones from YouTube's
+ * own browse API with a "load more" token. A page carries a few tokens and only one of them leads to
+ * the list's next items, so the cursor keeps them all and they're tried in turn.
+ */
+async function browsePage<T>(url: string, cursor: string | undefined, read: (data: unknown, first: boolean) => T[]): Promise<{ items: T[]; cursor: string | null }> {
+  const next = (data: unknown, items: T[]): { items: T[]; cursor: string | null } => {
+    const tokens = youTubeContinuations(data)
+    return { items, cursor: items.length && tokens.length ? JSON.stringify(tokens) : null }
+  }
+  if (!cursor) {
+    const html = await getText('youtube', url, { headers: { 'Accept-Language': 'en-US,en;q=0.9' } })
+    const data = extractYtInitialData(html)
+    return next(data, read(data, true))
+  }
+  let tokens: string[] = []
+  try {
+    tokens = JSON.parse(cursor)
+  } catch {
+    return { items: [], cursor: null }
+  }
+  for (const token of tokens) {
+    const data = await youtubei<unknown>('browse', { continuation: token }).catch(() => null)
+    const items = data ? read(data, false) : []
+    if (items.length) return next(data, items)
+  }
+  return { items: [], cursor: null }
 }
 
 const chapterCache = new Map<string, Promise<VideoChapter[]>>()

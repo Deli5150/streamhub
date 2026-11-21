@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BookmarkIcon, DeleteIcon, KeyboardIcon, ListVideoIcon, MoonIcon, SearchIcon, UsersIcon, XIcon } from 'lucide-react'
+import { BookmarkIcon, KeyboardIcon, ListVideoIcon, MoonIcon, SearchIcon, UsersIcon, XIcon } from 'lucide-react'
 import { PLATFORMS, type AppState, type Channel, type Platform, type SavedItem } from '@shared/types'
 import { buildLiveRows, groupOf, nameMatches, type DisplayRow } from '../../lib/combined'
 import { focusEl, focusId, useBp, useBpInput, type BpTab } from '../../lib/bigPicture'
@@ -9,7 +9,7 @@ import { progressFraction, progressKey, useVodProgress } from '../../lib/vodProg
 import { formatViewers, uptime, useUi } from '../../store'
 import { PLATFORM_META } from '../platform'
 import { Thumbnail } from '../Thumbnail'
-import { BpButton, ChannelTile, FOCUS, Hints, Row, VideoCard, type Hint } from './parts'
+import { BpButton, ChannelTile, FOCUS, OnScreenKeyboard, Row, VideoCard, type Hint } from './parts'
 
 // Big Picture's home: the tab named by useBp().tab.
 
@@ -191,8 +191,6 @@ function TileGrid({ tiles }: { tiles: Tile[] }): React.JSX.Element {
 /** Kept while Big Picture is open, so coming back from a result shows the same search. */
 let lastQuery = ''
 
-const OSK_ROWS = ['1234567890', 'qwertyuiop', "asdfghjkl'", 'zxcvbnm-_.']
-
 /**
  * Search followed channels (by name, across platforms) and live streams (by title or game). Type
  * with a keyboard straight into the box, or open the on-screen keyboard with the button next to it
@@ -290,47 +288,15 @@ function SearchTab(): React.JSX.Element {
       </div>
 
       {osk && (
-        <div data-bp-top="" data-bp-osk="" className="mt-6 flex w-fit flex-col gap-2.5 rounded-3xl bg-white/6 p-5 ml-16">
-          {OSK_ROWS.map((row) => (
-            <div key={row} className="flex gap-2.5">
-              {[...row].map((k) => (
-                <OskKey key={k} id={`osk:${k}`} onPress={() => type(k)}>
-                  {k.toUpperCase()}
-                </OskKey>
-              ))}
-            </div>
-          ))}
-          <div className="flex gap-2.5">
-            <OskKey id="osk:space" wide onPress={() => type(' ')}>
-              Space
-            </OskKey>
-            <OskKey id="osk:delete" onPress={backspace} wide>
-              <DeleteIcon className="size-6" />
-            </OskKey>
-            <OskKey id="osk:clear" onPress={() => setQuery('')} wide>
-              Clear
-            </OskKey>
-            <OskKey
-              id="osk:done"
-              onPress={() => {
-                setOsk(false)
-                requestAnimationFrame(() => (document.querySelector('[data-bp-results] [data-bp]') ? firstResult() : focusEl(inputRef.current)))
-              }}
-              wide
-            >
-              Done
-            </OskKey>
-          </div>
-          <div className="mt-1 flex justify-center">
-            <Hints
-              hints={[
-                ['X', 'Delete'],
-                ['Y', 'Space'],
-                ['B', 'Close keyboard']
-              ]}
-            />
-          </div>
-        </div>
+        <OnScreenKeyboard
+          onType={type}
+          onBackspace={backspace}
+          onClear={() => setQuery('')}
+          onDone={() => {
+            setOsk(false)
+            requestAnimationFrame(() => (document.querySelector('[data-bp-results] [data-bp]') ? firstResult() : focusEl(inputRef.current)))
+          }}
+        />
       )}
 
       <div data-bp-results="" className="mt-10">
@@ -374,20 +340,6 @@ function SearchTab(): React.JSX.Element {
         )}
       </div>
     </div>
-  )
-}
-
-function OskKey({ id, wide, onPress, children }: { id: string; wide?: boolean; onPress(): void; children: React.ReactNode }): React.JSX.Element {
-  return (
-    <button
-      type="button"
-      data-bp=""
-      data-bp-id={id}
-      onClick={onPress}
-      className={`${FOCUS} flex h-14 items-center justify-center rounded-xl bg-white/12 text-[22px] font-semibold text-white focus:bg-white focus:text-black ${wide ? 'w-[148px]' : 'w-14'}`}
-    >
-      {children}
-    </button>
   )
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { DeleteIcon } from 'lucide-react'
 import type { Channel, MediaItem, Platform } from '@shared/types'
 import { dispatch, useBp, type PadStyle } from '../../lib/bigPicture'
 import type { NewSavedItem } from '../../lib/watchLater'
@@ -247,5 +248,76 @@ export function Hints({ hints }: { hints: Hint[] }): React.JSX.Element {
           </span>
         ))}
     </div>
+  )
+}
+
+const OSK_ROWS = ['1234567890', 'qwertyuiop', "asdfghjkl'", 'zxcvbnm-_.']
+
+/**
+ * Keys to type with the controller (Big Picture's search boxes). The screen using it handles X
+ * (delete), Y (space) and B (close) itself, since what B does depends on the screen.
+ */
+export function OnScreenKeyboard({
+  onType,
+  onBackspace,
+  onClear,
+  onDone,
+  doneLabel = 'Done'
+}: {
+  onType(text: string): void
+  onBackspace(): void
+  onClear(): void
+  onDone(): void
+  doneLabel?: string
+}): React.JSX.Element {
+  return (
+    <div data-bp-top="" data-bp-osk="" className="mt-6 ml-16 flex w-fit flex-col gap-2.5 rounded-3xl bg-white/6 p-5">
+      {OSK_ROWS.map((row) => (
+        <div key={row} className="flex gap-2.5">
+          {[...row].map((k) => (
+            <OskKey key={k} id={`osk:${k}`} onPress={() => onType(k)}>
+              {k.toUpperCase()}
+            </OskKey>
+          ))}
+        </div>
+      ))}
+      <div className="flex gap-2.5">
+        <OskKey id="osk:space" wide onPress={() => onType(' ')}>
+          Space
+        </OskKey>
+        <OskKey id="osk:delete" onPress={onBackspace} wide>
+          <DeleteIcon className="size-6" />
+        </OskKey>
+        <OskKey id="osk:clear" onPress={onClear} wide>
+          Clear
+        </OskKey>
+        <OskKey id="osk:done" onPress={onDone} wide>
+          {doneLabel}
+        </OskKey>
+      </div>
+      <div className="mt-1 flex justify-center">
+        <Hints
+          hints={[
+            ['X', 'Delete'],
+            ['Y', 'Space'],
+            ['B', 'Close keyboard']
+          ]}
+        />
+      </div>
+    </div>
+  )
+}
+
+function OskKey({ id, wide, onPress, children }: { id: string; wide?: boolean; onPress(): void; children: ReactNode }): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      data-bp=""
+      data-bp-id={id}
+      onClick={onPress}
+      className={`${FOCUS} flex h-14 items-center justify-center rounded-xl bg-white/12 text-[22px] font-semibold text-white focus:bg-white focus:text-black ${wide ? 'w-[148px]' : 'w-14'}`}
+    >
+      {children}
+    </button>
   )
 }

@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications'
 import { create } from 'zustand'
-import { PLATFORMS, type AppState, type Channel, type ChannelAbout, type ChannelPageData, type LiveInfo, type MediaCategory, type MediaItem, type Platform, type SavedItem, type TogetherChannel } from '@shared/types'
+import { PLATFORMS, type AppState, type Channel, type ChannelAbout, type ChannelPageData, type LiveInfo, type MediaCategory, type MediaItem, type Platform, type SavedItem, type TogetherChannel, type ChannelPlaylist, type MediaPage } from '@shared/types'
 import { kick } from '../../../src/main/providers/kick'
 import { rumble } from '../../../src/main/providers/rumble'
 import { twitch } from '../../../src/main/providers/twitch'
@@ -314,6 +314,20 @@ export const actions = {
   async loadMore(key: string, category: MediaCategory, cursor: string): Promise<{ items: MediaItem[]; cursor: string | null }> {
     const ch = findChannel(key)
     return ch ? providers[ch.platform].loadMore(ch, category, cursor) : { items: [], cursor: null }
+  },
+
+  async searchChannel(key: string, query: string, cursor?: string): Promise<MediaPage> {
+    const ch = findChannel(key)
+    return ch && providers[ch.platform].searchChannel && query.trim() ? providers[ch.platform].searchChannel!(ch, query.trim(), cursor) : { items: [], cursor: null }
+  },
+
+  async getChannelPlaylists(key: string, cursor?: string): Promise<{ playlists: ChannelPlaylist[]; cursor: string | null }> {
+    const ch = findChannel(key)
+    return ch && providers[ch.platform].getChannelPlaylists ? providers[ch.platform].getChannelPlaylists!(ch, cursor) : { playlists: [], cursor: null }
+  },
+
+  getPlaylistPage(id: string, cursor?: string): Promise<MediaPage> {
+    return providers.youtube.getPlaylistPage?.(id, cursor) ?? Promise.resolve({ items: [], cursor: null })
   },
 
   async getAbout(key: string): Promise<ChannelAbout> {

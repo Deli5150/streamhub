@@ -1,5 +1,5 @@
 import { BrowserWindow, Notification, shell } from 'electron'
-import { PLATFORMS, type AppState, type Channel, type ChannelAbout, type ChannelPageData, type TogetherChannel, type LiveInfo, type MediaCategory, type MediaItem, type PhoneSignIn, type Platform } from '@shared/types'
+import { PLATFORMS, type AppState, type Channel, type ChannelAbout, type ChannelPageData, type TogetherChannel, type LiveInfo, type MediaCategory, type MediaItem, type PhoneSignIn, type Platform, type ChannelPlaylist, type MediaPage } from '@shared/types'
 import { channelPageUrl } from '@shared/urls'
 import { setTrayLiveCount } from './menubar'
 import { getSettings, SHORTCUT_DEFAULTS } from './settings'
@@ -310,6 +310,20 @@ export const actions = {
   async loadMore(key: string, category: MediaCategory, cursor: string): Promise<{ items: MediaItem[]; cursor: string | null }> {
     const ch = channels().find((c) => c.key === key)
     return ch ? providers[ch.platform].loadMore(ch, category, cursor) : { items: [], cursor: null }
+  },
+
+  async searchChannel(key: string, query: string, cursor?: string): Promise<MediaPage> {
+    const ch = channels().find((c) => c.key === key)
+    return ch && providers[ch.platform].searchChannel && query.trim() ? providers[ch.platform].searchChannel!(ch, query.trim(), cursor) : { items: [], cursor: null }
+  },
+
+  async getChannelPlaylists(key: string, cursor?: string): Promise<{ playlists: ChannelPlaylist[]; cursor: string | null }> {
+    const ch = channels().find((c) => c.key === key)
+    return ch && providers[ch.platform].getChannelPlaylists ? providers[ch.platform].getChannelPlaylists!(ch, cursor) : { playlists: [], cursor: null }
+  },
+
+  getPlaylistPage(id: string, cursor?: string): Promise<MediaPage> {
+    return providers.youtube.getPlaylistPage?.(id, cursor) ?? Promise.resolve({ items: [], cursor: null })
   },
 
   async getAbout(key: string): Promise<ChannelAbout> {

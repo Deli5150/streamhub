@@ -2,6 +2,17 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.16]
+
+### New
+- **Search a YouTube channel's videos.** On a YouTube channel's **Videos** tab there's now a search box. It uses YouTube's own channel search, so it finds older videos too, not just the ones already loaded. Clear the box, press Esc or press the back arrow to return to the channel's uploads. ([#20](../../issues/20))
+- **A YouTube channel's playlists.** Next to the search box, **Playlists** lists the channel's public playlists with how many videos each has. Open one to see its videos in order, play them or add them to Watch Later or the queue. Long playlists load 100 more at a time. ([#20](../../issues/20))
+- **Search and playlists in Big Picture too.** A YouTube channel's page has **Search** and **Playlists** buttons. Type with a keyboard, or press A on the search box for the on-screen keyboard. A playlist's videos open in a row under the playlists, and B steps back. Coming back from a video, the search or playlist is where you left it.
+- **Phones: feedback is written in the app.** **Report a bug** and **Suggest a feature** in Settings now open a feedback screen like the desktop's, with a title, a description and (for bugs) the option to include the recent app log. **Continue** opens the GitHub form with everything filled in, in the in-app browser, so the GitHub app can't drop the description.
+
+### Fixed
+- **Android: Cancel and Combine couldn't be tapped on the Combine channels screen.** The screen's top bar sat under the phone's status bar, which takes those taps. The same went for **Import YouTube playlists**. Both bars now start below the status bar.
+
 ## [1.0.15]
 
 ### New

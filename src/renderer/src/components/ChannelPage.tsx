@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUpDownIcon, BookmarkCheckIcon, BookmarkIcon, CheckIcon, ExternalLinkIcon, ListPlusIcon, ListXIcon, Loader2Icon, PictureInPicture2Icon, PlayIcon, RadioIcon, UsersIcon, XIcon } from 'lucide-react'
-import type { Channel, ChannelPageData, LiveInfo, MediaCategory, MediaItem } from '@shared/types'
+import { ArrowUpDownIcon, BookmarkCheckIcon, BookmarkIcon, CheckIcon, ChevronLeftIcon, ExternalLinkIcon, ListPlusIcon, ListVideoIcon, ListXIcon, Loader2Icon, PictureInPicture2Icon, PlayIcon, RadioIcon, UsersIcon, XIcon } from 'lucide-react'
+import type { Channel, ChannelPageData, ChannelPlaylist, LiveInfo, MediaCategory, MediaItem } from '@shared/types'
 import { channelPageUrl } from '@shared/urls'
+import { useChannelBrowse, type ChannelBrowse } from '../lib/channelBrowse'
 import { groupOf } from '../lib/combined'
 import { progressFraction, progressKey, resumePosition, useVodProgress, withStartTime } from '../lib/vodProgress'
 import { ChaptersButton, useChapters } from './Chapters'
@@ -14,7 +15,7 @@ import { HlsVideo } from './HlsVideo'
 import { PLATFORM_META, PlatformOverlayBadge } from './platform'
 import { Thumbnail } from './Thumbnail'
 import { SaveForLaterButton } from './SaveForLater'
-import { Button, EmptyState, useContextMenu } from './ui'
+import { Button, EmptyState, SearchInput, useContextMenu } from './ui'
 import { WebView } from './WebView'
 
 type ClipWindow = 'all' | '24h' | '7d' | '30d'
@@ -45,6 +46,9 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
   const [loadingMore, setLoadingMore] = useState<MediaCategory | null>(null)
   const [clipSort, setClipSort] = useState<'newest' | 'oldest'>('newest')
   const [clipWindow, setClipWindow] = useState<ClipWindow>('all')
+  // YouTube's Videos tab can search the channel or show its playlists instead of its uploads.
+  const browse = useChannelBrowse(channel, window.api, errorMessage)
+  const [query, setQuery] = useState('')
 
   // Load (and refresh every few minutes); switching channels resets everything.
   useEffect(() => {
@@ -54,6 +58,7 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
     setTab('streams')
     pickedTab.current = false
     setPlaying(null)
+    setQuery('')
     const load = (): void => {
       window.api.getChannelPage(channel.key).then(
         (p) => !cancelled && setPage((prev) => (prev ? { ...p, ...mergeLoaded(prev, p) } : p)),
@@ -115,6 +120,34 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
       return clipSort === 'newest' ? tb - ta : ta - tb
     })
   }, [page, clipSort, clipWindow])
+
+  const openVideoMenu = (e: React.MouseEvent, m: MediaItem): void => {
+          const item = savedVideo(channel, m)
+          const saved = app?.watchLater?.some((i) => i.id === item.id)
+          const queued = useQueue.getState().items.some((i) => i.id === item.id)
+          videoMenu.open(e, [
+            { label: 'Play', icon: <PlayIcon className="size-3.5" />, onSelect: () => setPlaying(m) },
+            queued
+              ? { label: 'Remove from queue', icon: <ListXIcon className="size-3.5" />, onSelect: () => useQueue.getState().remove(item.id) }
+              : {
+                  label: 'Add to queue',
+                  icon: <ListPlusIcon className="size-3.5" />,
+                  disabled: !m.playUrl && !m.hlsUrl,
+                  onSelect: () => {
+                    const count = addToQueue(item)
+                    useUi.getState().showToast({
+                      text: `Added to queue · ${count} ${count === 1 ? 'video' : 'videos'}`,
+                      action: { label: 'Play queue', run: () => go({ kind: 'queue' }) }
+                    })
+                  }
+                },
+            {
+              label: saved ? 'Remove from Watch Later' : 'Save to Watch Later',
+              icon: saved ? <BookmarkCheckIcon className="size-3.5" /> : <BookmarkIcon className="size-3.5" />,
+              onSelect: () => void window.api.toggleSaved(savedVideo(channel, m))
+            }
+          ])
+  }
 
   const { hasVideos, clipsLabel } = page ?? PLATFORM_TABS[channel.platform]
   const tabs: Array<{ id: MediaCategory; label: string }> = [
@@ -256,12 +289,58 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
           {tab === 'clips' && (
             <ClipFilter sort={clipSort} onSort={setClipSort} window={clipWindow} onWindow={setClipWindow} />
           )}
+          {tab === 'videos' && browse.available && (
+            <div className="flex items-center gap-2">
+              <form
+                className="w-56"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  if (query.trim()) browse.search(query)
+                }}
+              >
+                <SearchInput
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value)
+                    if (!e.target.value && browse.view?.kind === 'search') browse.close()
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape' && query) {
+                      e.stopPropagation()
+                      setQuery('')
+                      if (browse.view?.kind === 'search') browse.close()
+                    }
+                  }}
+                  placeholder="Search this channel"
+                  aria-label="Search this channel's videos"
+                />
+              </form>
+              <button
+                type="button"
+                aria-pressed={browse.view?.kind === 'playlists' || browse.view?.kind === 'playlist'}
+                onClick={() => {
+                  setQuery('')
+                  if (browse.view?.kind === 'playlists') browse.close()
+                  else browse.openPlaylists()
+                }}
+                title="This channel's playlists"
+                className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 ring-1 ring-separator transition-colors ${
+                  browse.view?.kind === 'playlists' || browse.view?.kind === 'playlist' ? 'bg-control-active' : 'bg-control hover:bg-control-active'
+                }`}
+              >
+                <ListVideoIcon className="size-4 shrink-0 text-secondary" />
+                <span className="text-small-strong text-primary">Playlists</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {error && !page ? (
           <EmptyState icon={<RadioIcon className="size-8 text-tertiary" />} title="Couldn't load this channel" description={error}>
             <Button onClick={() => window.api.openExternal(channelPageUrl(channel))}>Open on {meta.label}</Button>
           </EmptyState>
+        ) : tab === 'videos' && browse.view ? (
+          <BrowseView browse={browse} platform={channel.platform} onPlay={setPlaying} onContextMenu={openVideoMenu} onBack={() => { setQuery(''); browse.close() }} />
         ) : (
           <MediaGrid
             items={items}
@@ -270,33 +349,7 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
             emptyText={emptyText}
             platform={channel.platform}
             onPlay={setPlaying}
-            onContextMenu={(e, m) => {
-              const item = savedVideo(channel, m)
-              const saved = app?.watchLater?.some((i) => i.id === item.id)
-              const queued = useQueue.getState().items.some((i) => i.id === item.id)
-              videoMenu.open(e, [
-                { label: 'Play', icon: <PlayIcon className="size-3.5" />, onSelect: () => setPlaying(m) },
-                queued
-                  ? { label: 'Remove from queue', icon: <ListXIcon className="size-3.5" />, onSelect: () => useQueue.getState().remove(item.id) }
-                  : {
-                      label: 'Add to queue',
-                      icon: <ListPlusIcon className="size-3.5" />,
-                      disabled: !m.playUrl && !m.hlsUrl,
-                      onSelect: () => {
-                        const count = addToQueue(item)
-                        useUi.getState().showToast({
-                          text: `Added to queue · ${count} ${count === 1 ? 'video' : 'videos'}`,
-                          action: { label: 'Play queue', run: () => go({ kind: 'queue' }) }
-                        })
-                      }
-                    },
-                {
-                  label: saved ? 'Remove from Watch Later' : 'Save to Watch Later',
-                  icon: saved ? <BookmarkCheckIcon className="size-3.5" /> : <BookmarkIcon className="size-3.5" />,
-                  onSelect: () => void window.api.toggleSaved(savedVideo(channel, m))
-                }
-              ])
-            }}
+            onContextMenu={openVideoMenu}
             hasMore={Boolean(page?.cursors[tab])}
             loadingMore={loadingMore === tab}
             onLoadMore={() => void loadMore(tab)}
@@ -379,6 +432,152 @@ function ClipFilter({
           <p className="px-2 pt-1 pb-0.5 text-small-strong text-tertiary">Created within</p>
           {(['24h', '7d', '30d'] as const).map((w) => item(CLIP_WINDOW_LABEL[w], win === w, () => onWindow(win === w ? 'all' : w)))}
           {item('Any time', win === 'all', () => onWindow('all'))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** The Videos tab while searching or looking at playlists. */
+function BrowseView({
+  browse,
+  platform,
+  onPlay,
+  onContextMenu,
+  onBack
+}: {
+  browse: ChannelBrowse
+  platform: Channel['platform']
+  onPlay(m: MediaItem): void
+  onContextMenu(e: React.MouseEvent, m: MediaItem): void
+  onBack(): void
+}): React.JSX.Element | null {
+  const { view, videos, playlists } = browse
+  if (!view) return null
+  const listing = view.kind === 'playlists' ? playlists : videos
+  const header =
+    view.kind === 'search' ? (
+      <>
+        Results for <span className="text-primary">“{view.query}”</span>
+      </>
+    ) : view.kind === 'playlists' ? (
+      'Playlists'
+    ) : (
+      <>
+        <span className="text-primary">{view.playlist.title}</span>
+        {view.playlist.videoCountText && <span className="ml-1.5 text-tertiary">· {view.playlist.videoCountText}</span>}
+      </>
+    )
+  return (
+    <div>
+      <div className="mb-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => (view.kind === 'playlist' ? browse.openPlaylists() : onBack())}
+          title={view.kind === 'playlist' ? 'Back to playlists' : 'Back to videos'}
+          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-control ring-1 ring-separator transition-colors hover:bg-control-active"
+        >
+          <ChevronLeftIcon className="size-4 text-secondary" strokeWidth={2.25} />
+        </button>
+        <p className="min-w-0 flex-1 truncate text-strong text-secondary">{header}</p>
+        {view.kind === 'playlist' && (
+          <Button onClick={() => window.api.openExternal(`https://www.youtube.com/playlist?list=${encodeURIComponent(view.playlist.id)}`)}>
+            <ExternalLinkIcon className="size-3.5" strokeWidth={2.25} />
+            Open on YouTube
+          </Button>
+        )}
+      </div>
+      {listing.error && listing.items.length === 0 ? (
+        <p className="py-8 text-center text-regular text-tertiary">{listing.error}</p>
+      ) : view.kind === 'playlists' ? (
+        <PlaylistGrid
+          playlists={playlists.items}
+          loading={playlists.loading && playlists.items.length === 0}
+          onOpen={browse.openPlaylist}
+          hasMore={Boolean(playlists.cursor)}
+          loadingMore={playlists.loading && playlists.items.length > 0}
+          onLoadMore={browse.more}
+        />
+      ) : (
+        <MediaGrid
+          items={videos.items}
+          loading={videos.loading && videos.items.length === 0}
+          portrait={false}
+          emptyText={view.kind === 'search' ? `No videos on this channel match “${view.query}”.` : 'This playlist has no videos you can watch.'}
+          platform={platform}
+          onPlay={onPlay}
+          onContextMenu={onContextMenu}
+          hasMore={Boolean(videos.cursor)}
+          loadingMore={videos.loading && videos.items.length > 0}
+          onLoadMore={browse.more}
+        />
+      )}
+    </div>
+  )
+}
+
+function PlaylistGrid({
+  playlists,
+  loading,
+  onOpen,
+  hasMore,
+  loadingMore,
+  onLoadMore
+}: {
+  playlists: ChannelPlaylist[]
+  loading: boolean
+  onOpen(p: ChannelPlaylist): void
+  hasMore: boolean
+  loadingMore: boolean
+  onLoadMore(): void
+}): React.JSX.Element {
+  const cols = '[grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]'
+  if (loading) {
+    return (
+      <div className={`grid ${cols} gap-x-4 gap-y-5`}>
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className="flex flex-col gap-2">
+            <div className="aspect-video w-full animate-pulse rounded-lg bg-control-subtle" />
+            <div className="h-3.5 w-4/5 animate-pulse rounded bg-control-subtle" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (playlists.length === 0) return <p className="py-8 text-center text-regular text-tertiary">This channel has no public playlists.</p>
+  return (
+    <div className={`grid ${cols} gap-x-4 gap-y-5`}>
+      {playlists.map((p) => (
+        <button key={p.id} type="button" onClick={() => onOpen(p)} className="group flex flex-col gap-2 text-left outline-none">
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-control-subtle ring-1 ring-separator transition-shadow group-hover:ring-secondary">
+            <Thumbnail src={p.thumbnail} />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+              <span className="flex size-11 items-center justify-center rounded-full bg-black/60 opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100">
+                <ListVideoIcon className="size-5 text-white" />
+              </span>
+            </div>
+            {p.videoCountText && (
+              <span className="absolute right-1.5 bottom-1.5 flex items-center gap-1 rounded bg-black/80 px-1.5 py-0.5 text-small font-medium text-white">
+                <ListVideoIcon className="size-3" />
+                {p.videoCountText}
+              </span>
+            )}
+          </div>
+          <span className="line-clamp-2 text-small-strong leading-snug text-primary">{p.title}</span>
+        </button>
+      ))}
+      {hasMore && (
+        <div className="col-span-full flex justify-center pt-2">
+          <Button onClick={onLoadMore} disabled={loadingMore}>
+            {loadingMore ? (
+              <>
+                <Loader2Icon className="size-3.5 animate-spin" />
+                Loading…
+              </>
+            ) : (
+              'Load more'
+            )}
+          </Button>
         </div>
       )}
     </div>

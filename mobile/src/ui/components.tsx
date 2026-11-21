@@ -1,6 +1,7 @@
 import { memo, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Platform as OS, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
 import { Image } from 'expo-image'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { Icon } from './Icon'
 import type { Channel, LiveInfo, Platform } from '@shared/types'
@@ -15,6 +16,15 @@ import { PLATFORM_COLOR, formatViewers, uptime, useColors } from './theme'
 export function useDockSpace(): number {
   const floating = useFloatingDock()
   return OS.OS === 'ios' ? 84 : floating ? FLOATING_DOCK_SPACE : 16
+}
+
+/**
+ * Top padding for a modal screen's header bar. iPhone shows modals as sheets below the status bar;
+ * Android shows them full screen under it, where taps on the header's buttons don't land.
+ */
+export function useModalTop(): { paddingTop: number } {
+  const insets = useSafeAreaInsets()
+  return { paddingTop: OS.OS === 'android' ? insets.top + 8 : 8 }
 }
 
 /**

@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { Icon } from '../ui/Icon'
 import { combinedEdits, nameMatches } from '../../../src/renderer/src/lib/combined'
 import { actions, useApp } from '../lib/hub'
-import { Button, ChannelRow } from '../ui/components'
+import { Button, ChannelRow, useModalTop } from '../ui/components'
 import { useColors } from '../ui/theme'
 
 /**
@@ -14,6 +14,7 @@ import { useColors } from '../ui/theme'
 export default function CombineScreen(): React.JSX.Element {
   const { seed, group: groupId } = useLocalSearchParams<{ seed: string; group?: string }>()
   const c = useColors()
+  const modalTop = useModalTop()
   const app = useApp((s) => s.app)!
   const group = app.settings.combined.find((g) => g.id === groupId) ?? null
   // A new combine starts with the channel's name, so the streamer's other channels are listed.
@@ -57,7 +58,7 @@ export default function CombineScreen(): React.JSX.Element {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <View style={[styles.bar, { borderBottomColor: c.separator }]}>
+      <View style={[styles.bar, { borderBottomColor: c.separator }, modalTop]}>
         <Button title="Cancel" variant="plain" onPress={() => router.back()} />
         <Text style={{ color: c.fg, fontWeight: '700', fontSize: 17, flex: 1, textAlign: 'center' }}>{group ? 'Edit combined' : 'Combine channels'}</Text>
         <Button title={group ? 'Save' : 'Combine'} variant="plain" disabled={selected.length < 2} onPress={confirm} />
@@ -107,7 +108,7 @@ export default function CombineScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4, height: 56, borderBottomWidth: StyleSheet.hairlineWidth },
+  bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4, paddingBottom: 8, minHeight: 56, borderBottomWidth: StyleSheet.hairlineWidth },
   help: { fontSize: 13, lineHeight: 18, paddingHorizontal: 16, paddingTop: 12 },
   search: { margin: 16, marginBottom: 8, height: 38, borderRadius: 10, paddingHorizontal: 12, fontSize: 16 },
   right: { flexDirection: 'row', alignItems: 'center', gap: 14 }

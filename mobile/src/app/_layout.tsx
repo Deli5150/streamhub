@@ -1,4 +1,5 @@
 import '../lib/polyfills'
+import '../lib/log'
 import { useCallback, useEffect, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { AppState } from 'react-native'
@@ -98,6 +99,7 @@ function Themed(): React.JSX.Element {
         <Stack.Screen name="playlist-info" />
         <Stack.Screen name="combine" options={{ presentation: 'modal' }} />
         <Stack.Screen name="import-playlists" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="feedback" options={{ presentation: 'modal' }} />
       </Stack>
       <LoginSheet />
       <MenuSheet />

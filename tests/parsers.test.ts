@@ -23,6 +23,8 @@ import {
   parseYouTubeLive,
   parseYouTubeRss,
   extractYtInitialData,
+  parseYouTubeChannelPlaylists,
+  youTubeContinuations,
   youTubeSignedOut
 } from '../src/main/providers/parsers'
 
@@ -383,5 +385,21 @@ describe('twitch channel page from the API', () => {
     expect(parseTwitchMedia({ data: { user: null } })).toBeNull()
     expect(parseTwitchMedia({ data: { user: { videos: null, clipsAll: { edges: [] } } } })).toBeNull()
     expect(parseTwitchMedia({})).toBeNull()
+  })
+})
+
+describe('youtube channel playlists', () => {
+  const data = JSON.parse(fixture('youtube-playlists.json'))
+
+  it('reads the playlists with their thumbnails and video counts', () => {
+    const playlists = parseYouTubeChannelPlaylists(data)
+    expect(playlists.map((p) => p.id)).toEqual(['PLXm3b2ZSqTsc', 'PLPXG0FHDlqWU', 'PLT4ClbJt7VFM'])
+    expect(playlists[0]).toMatchObject({ title: 'Home Security', videoCountText: '1 video' })
+    expect(playlists[0].thumbnail).toMatch(/^https:\/\/i\.ytimg\.com\//)
+  })
+
+  it('finds the "load more" token', () => {
+    expect(youTubeContinuations(data)).toHaveLength(1)
+    expect(youTubeContinuations({ a: [{ continuationCommand: { token: 'x' } }, { continuationCommand: { token: 'x' } }] })).toEqual(['x'])
   })
 })

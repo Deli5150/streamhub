@@ -1,6 +1,6 @@
 // Pure parsers for scraped / unofficial responses. Kept free of Electron imports so they can be unit tested.
 import * as cheerio from 'cheerio'
-import { channelKey, type AboutPanel, type Channel, type ChannelAbout, type LiveInfo, type MediaItem, type SavedItem, type TogetherChannel, type VideoChapter, type YouTubePlaylistSummary } from '@shared/types'
+import { channelKey, type AboutPanel, type Channel, type ChannelAbout, type ChannelPlaylist, type LiveInfo, type MediaItem, type SavedItem, type TogetherChannel, type VideoChapter, type YouTubePlaylistSummary } from '@shared/types'
 import { parseCount, rumbleEmbedId } from '@shared/urls'
 
 // ---------- YouTube RSS ----------
@@ -412,6 +412,60 @@ export function parseYouTubeBanner(data: unknown): string | undefined {
   }
   visit(data, 0)
   return best?.url
+}
+
+/** Every "load more" token in YouTube page or browse data, in page order (some lead nowhere). */
+export function youTubeContinuations(data: unknown): string[] {
+  const tokens: string[] = []
+  const visit = (node: unknown, depth: number): void => {
+    if (!node || typeof node !== 'object' || depth > 60) return
+    if (Array.isArray(node)) return node.forEach((n) => visit(n, depth + 1))
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      const token = (v as { token?: unknown } | null)?.token
+      if (k === 'continuationCommand' && typeof token === 'string' && !tokens.includes(token)) tokens.push(token)
+      else visit(v, depth + 1)
+    }
+  }
+  visit(data, 0)
+  return tokens
+}
+
+/** The playlists on a YouTube channel's Playlists tab (or a browse continuation of it). */
+export function parseYouTubeChannelPlaylists(data: unknown): ChannelPlaylist[] {
+  const found = new Map<string, ChannelPlaylist>()
+  const text = (t: any): string | undefined => t?.simpleText ?? t?.runs?.map((r: { text: string }) => r.text).join('') ?? t?.content
+  const biggest = (list: any): string | undefined =>
+    [...((list as Array<{ url: string; width?: number }> | undefined) ?? [])].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url
+  const visit = (node: unknown, depth: number): void => {
+    if (!node || typeof node !== 'object' || depth > 60) return
+    if (Array.isArray(node)) return node.forEach((n) => visit(n, depth + 1))
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      const o = v as Record<string, any>
+      if (k === 'lockupViewModel' && o?.contentType === 'LOCKUP_CONTENT_TYPE_PLAYLIST' && typeof o.contentId === 'string') {
+        const thumb = o.contentImage?.collectionThumbnailViewModel?.primaryThumbnail?.thumbnailViewModel
+        const badges = (JSON.stringify(thumb ?? {}).match(/"text":"([^"]+)"/g) ?? []).map((b) => b.slice(8, -1))
+        found.set(o.contentId, {
+          id: o.contentId,
+          title: text(o.metadata?.lockupMetadataViewModel?.title) ?? 'Untitled playlist',
+          thumbnail: biggest(thumb?.image?.sources),
+          videoCountText: badges.find((b) => /video|episode/i.test(b))
+        })
+        continue
+      }
+      if ((k === 'gridPlaylistRenderer' || k === 'playlistRenderer') && typeof o?.playlistId === 'string') {
+        found.set(o.playlistId, {
+          id: o.playlistId,
+          title: text(o.title) ?? 'Untitled playlist',
+          thumbnail: biggest(o.thumbnail?.thumbnails ?? o.thumbnails?.[0]?.thumbnails),
+          videoCountText: text(o.videoCountShortText) ?? text(o.videoCountText)
+        })
+        continue
+      }
+      visit(v, depth + 1)
+    }
+  }
+  visit(data, 0)
+  return [...found.values()]
 }
 
 /** URL of the tab YouTube actually served (it serves Home for tabs a channel doesn't have, e.g. Live). */

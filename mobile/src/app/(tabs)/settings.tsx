@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { router } from 'expo-router'
-import { Linking, Platform as OS, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Platform as OS, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Constants from 'expo-constants'
 import { Icon } from '../../ui/Icon'
 import { PLATFORM_LABEL, type AccountInfo, type Platform, type SyncStatus, type UpdateStatus } from '@shared/types'
 import { DEFAULT_THEME_ID, THEMES } from '@shared/themes'
-import { feedbackUrl, feedbackWhere, type FeedbackKind } from '@shared/feedback'
 import { actions, useApp } from '../../lib/hub'
 import { syncNow, syncSignIn, syncSignOut } from '../../lib/sync'
 import { checkForUpdates, installUpdate, showUpdateSheet } from '../../lib/updater'
@@ -119,12 +118,12 @@ export default function SettingsScreen(): React.JSX.Element {
       <UpdatesCard update={app.update} checkUpdates={app.settings.checkUpdates} />
 
       <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>FEEDBACK</Text>
-      <Group footer="Opens the form on GitHub with your phone and StreamHub’s version filled in. Submitting it needs a free GitHub account.">
+      <Group footer="Write it here; it then opens on GitHub with everything filled in. Submitting it needs a free GitHub account.">
         <GroupRow first label="Report a bug" detail="Something isn’t working right">
-          <Button title="Report" icon="bug-outline" variant="filled" onPress={() => openFeedback('bug')} />
+          <Button title="Report" icon="bug-outline" variant="filled" onPress={() => router.push({ pathname: '/feedback', params: { kind: 'bug' } })} />
         </GroupRow>
         <GroupRow label="Suggest a feature" detail="Something StreamHub should do">
-          <Button title="Suggest" icon="bulb-outline" variant="filled" onPress={() => openFeedback('feature')} />
+          <Button title="Suggest" icon="bulb-outline" variant="filled" onPress={() => router.push({ pathname: '/feedback', params: { kind: 'feature' } })} />
         </GroupRow>
       </Group>
 
@@ -313,12 +312,6 @@ function UpdatesCard({ update: u, checkUpdates }: { update: UpdateStatus; checkU
       ) : null}
     </Group>
   )
-}
-
-/** GitHub's new-issue form for a bug report or feature idea, with this phone and version filled in. */
-function openFeedback(kind: FeedbackKind): void {
-  const url = feedbackUrl({ kind, title: '', text: '', where: feedbackWhere(kind, OS.OS), version: Constants.expoConfig?.version ?? '' })
-  void Linking.openURL(url)
 }
 
 /** How long ago, roughly ("just now", "5 min ago", "3 h ago"). */
