@@ -1,0 +1,92 @@
+[
+  {
+    "id": "color-ember",
+    "name": "Ember",
+    "group": "Colours"
+  },
+  {
+    "id": "color-toxic",
+    "name": "Toxic",
+    "group": "Colours"
+  },
+  {
+    "id": "color-amethyst",
+    "name": "Amethyst",
+    "group": "Colours"
+  },
+  {
+    "id": "color-gold",
+    "name": "Gold",
+    "group": "Colours"
+  },
+  {
+    "id": "color-sakura",
+    "name": "Sakura",
+    "group": "Colours"
+  },
+  {
+    "id": "color-silver",
+    "name": "Silver",
+    "group": "Colours"
+  },
+  {
+    "id": "color-arctic",
+    "name": "Arctic",
+    "group": "Colours"
+  },
+  {
+    "id": "color-daylight",
+    "name": "Daylight",
+    "group": "Colours"
+  },
+  {
+    "id": "art-pixel",
+    "name": "Pixel Art",
+    "group": "Art Styles"
+  },
+  {
+    "id": "art-watercolor",
+    "name": "Watercolour",
+    "group": "Art Styles"
+  },
+  {
+    "id": "art-oil",
+    "name": "Oil Paint",
+    "group": "Art Styles"
+  },
+  {
+    "id": "art-neon",
+    "name": "Neon Sign",
+    "group": "Art Styles"
+  },
+  {
+    "id": "art-paper",
+    "name": "Paper Cut-Out",
+    "group": "Art Styles"
+  },
+  {
+    "id": "art-blueprint",
+    "name": "Blueprint",
+    "group": "Art Styles"
+  },
+  {
+    "id": "art-glass",
+    "name": "Stained Glass",
+    "group": "Art Styles"
+  },
+  {
+    "id": "art-synth",
+    "name": "Synthwave",
+    "group": "Art Styles"
+  },
+  {
+    "id": "holiday-christmas",
+    "name": "Christmas",
+    "group": "Holidays"
+  },
+  {
+    "id": "holiday-halloween",
+    "name": "Halloween",
+    "group": "Holidays"
+  }
+]

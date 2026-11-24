@@ -10,7 +10,7 @@ import { actions, useApp } from '../lib/hub'
 import { useQueue } from '../lib/queue'
 import { progressKey, resumePosition, savedTitle, useVodProgress } from '../lib/ui'
 import { centered, IconButton, Thumbnail } from '../ui/components'
-import { FloatingButton, HomeButton } from '../ui/HomeButton'
+import { VideoNav } from '../ui/HomeButton'
 import { CastButton } from '../ui/CastButton'
 import { showMenu } from '../ui/Menu'
 import { useAutoPip, useLayoutWindow, usePipActive } from '../ui/pip'
@@ -104,10 +104,7 @@ export default function PlaylistScreen(): React.JSX.Element | null {
         ]}
       >
         <PlaylistPlayer key={active.id} item={active} playerRef={player} onEnded={playNext} fill={fill} />
-        <View style={[styles.back, { top: insets.top + 4 }, inPip && styles.hidden]}>
-          <FloatingButton icon="chevron-down" label="Close" onPress={() => router.back()} />
-          <HomeButton />
-        </View>
+        <VideoNav backIcon="chevron-down" backLabel="Close" style={[styles.back, { top: insets.top + 4 }, inPip && styles.hidden]} />
       </View>
       <View style={[styles.nowPlaying, { borderBottomColor: c.separator }, pipHidden]}>
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -224,7 +221,7 @@ function PlaylistPlayer({
 }
 
 const styles = StyleSheet.create({
-  back: { position: 'absolute', left: 10, flexDirection: 'row', gap: 8 },
+  back: { position: 'absolute', left: 10 },
   nowPlaying: {
     flexDirection: 'row',
     alignItems: 'center',

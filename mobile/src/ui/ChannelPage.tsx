@@ -19,7 +19,7 @@ import { Icon } from './Icon'
 import { showMenu } from './Menu'
 import { useAutoPip, useLayoutWindow, usePipActive } from './pip'
 import { Player, type PlayerHandle } from './Player'
-import { FloatingButton, HomeButton } from './HomeButton'
+import { FloatingButton, HomeButton, VideoNav } from './HomeButton'
 import { CastButton } from './CastButton'
 import { PLATFORM_COLOR, displayFont, errorMessage, useColors } from './theme'
 
@@ -423,11 +423,18 @@ export function ChannelPage({ channel, live }: { channel: Channel; live?: LiveIn
         />
       </View>
       {/* Back and home stay in the corner however far the list scrolls (the dock is hidden here). */}
+      {/* Over a playing video they fold into one button (issue #24). */}
       <View style={[styles.cornerBar, { top: insets.top + 6 }, inPip && styles.hidden]} pointerEvents="box-none">
-        <FloatingButton icon="chevron-back" label="Back" onPress={back} />
-        <HomeButton />
-        <View style={{ flex: 1 }} pointerEvents="none" />
-        {playing ? null : <FloatingButton icon="ellipsis-horizontal" label="Channel menu" onPress={() => openChannelMenu(channel)} />}
+        {playing ? (
+          <VideoNav backIcon="chevron-back" onBack={back} />
+        ) : (
+          <>
+            <FloatingButton icon="chevron-back" label="Back" onPress={back} />
+            <HomeButton />
+            <View style={{ flex: 1 }} pointerEvents="none" />
+            <FloatingButton icon="ellipsis-horizontal" label="Channel menu" onPress={() => openChannelMenu(channel)} />
+          </>
+        )}
       </View>
     </View>
   )

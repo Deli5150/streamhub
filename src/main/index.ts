@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, nativeImage, session, shell, systemPreferences } from 'electron'
+import { iconForNewWindow, startAppIcon } from './appIcon'
+import { app, BrowserWindow, ipcMain, session, shell, systemPreferences } from 'electron'
 import path from 'node:path'
 import { PLATFORMS, type ChatTarget, type MediaCategory, type Platform, type Settings } from '@shared/types'
 import { setupAppMenu } from './appMenu'
@@ -105,6 +106,7 @@ function createWindow(): BrowserWindow {
   })
   loadRenderer(win)
   mainWindow = win
+  iconForNewWindow(win)
   setupAutoPip(win)
   guardFullScreen(win, win.webContents)
   win.on('focus', syncOnFocus)
@@ -281,12 +283,12 @@ app.whenReady().then(() => {
   // The keychain read for saved sign-ins (Google) runs alongside startup rather than when first needed.
   store.warmSecrets()
   setupSessions()
-  if (isMac) app.dock?.setIcon(nativeImage.createFromPath(ICON))
   registerIpc()
   applyNativeTheme(getSettings().theme)
   setupAppMenu(() => mainWindow)
   const win = createWindow()
   start(win)
+  startAppIcon(() => mainWindow)
   // Sign-ins don't run out: sites are visited now and then, and a signed-out answer is recovered
   // from (a visit, then the newest sign-in from Sync with Google) before it's reported.
   startSessionKeeper((p) => Boolean(store.get('usernames')[p]), () => syncNow())

@@ -247,6 +247,10 @@ export interface Settings {
   combined: CombinedGroup[]
   /** Android: the dock's look, Android's own navigation bar or a floating one like the iPhone's. */
   androidDock?: 'bar' | 'floating'
+  /** The app icon picked in Customization → App Icon (shared/appIcons.ts); "default" when unset. */
+  appIcon?: string
+  /** Holiday icons switch on by themselves on their dates (on unless turned off). */
+  holidayIcons?: boolean
 }
 
 /** Sync with Google (main/sync.ts). */

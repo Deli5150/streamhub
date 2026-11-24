@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { KeyboardAvoidingView, Platform as OS, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
+import * as Clipboard from 'expo-clipboard'
 import Constants from 'expo-constants'
 import { router, useLocalSearchParams } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
@@ -12,6 +13,8 @@ import { useColors } from '../ui/theme'
  * Report a bug or suggest a feature (the desktop's Feedback dialog): written here, then finished on
  * GitHub, where the issue form opens with everything filled in. It opens in the in-app browser: handed
  * to the system, github.com links open the GitHub app, whose new-issue screen keeps only the title.
+ * Android's in-app browser can still pass the link to the GitHub app (#22), so the description is
+ * also copied, ready to paste.
  */
 export default function FeedbackScreen(): React.JSX.Element {
   const c = useColors()
@@ -25,10 +28,11 @@ export default function FeedbackScreen(): React.JSX.Element {
   const where = feedbackWhere(kind, OS.OS)
   const ready = title.trim().length > 0 && text.trim().length > 0
 
-  const send = (): void => {
+  const send = async (): Promise<void> => {
     const url = feedbackUrl({ kind, title, text, where, version, log: kind === 'bug' && withLog ? recentLog() : undefined })
+    await Clipboard.setStringAsync(text.trim()).catch(() => undefined)
     router.back()
-    void WebBrowser.openBrowserAsync(url)
+    void WebBrowser.openBrowserAsync(url, { showTitle: true, enableBarCollapsing: true })
   }
 
   const field = [styles.field, { color: c.fg, backgroundColor: c.bg2, borderColor: c.separator }]
@@ -37,11 +41,11 @@ export default function FeedbackScreen(): React.JSX.Element {
       <View style={[styles.bar, { borderBottomColor: c.separator }, modalTop]}>
         <Button title="Cancel" variant="plain" onPress={() => router.back()} />
         <Text style={{ color: c.fg, fontWeight: '700', fontSize: 17, flex: 1, textAlign: 'center' }}>Send feedback</Text>
-        <Button title="Continue" variant="plain" disabled={!ready} onPress={send} />
+        <Button title="Continue" variant="plain" disabled={!ready} onPress={() => void send()} />
       </View>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} keyboardShouldPersistTaps="handled">
         <Text style={{ color: c.fg3, fontSize: 13, lineHeight: 18 }}>
-          Your report opens on GitHub with everything filled in. Check it over there and submit it (you’ll need a free GitHub account).
+          Your report opens on GitHub with everything filled in. Check it over there and submit it (you’ll need a free GitHub account). Your description is also copied, so you can paste it if it’s missing.
         </Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Chip label="Report a bug" active={kind === 'bug'} onPress={() => setKind('bug')} />

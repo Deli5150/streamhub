@@ -1,4 +1,5 @@
-import { Platform as OS, Pressable, StyleSheet, View } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { Animated, Platform as OS, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
 import { router } from 'expo-router'
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect'
 import { Ionicons } from '@expo/vector-icons'
@@ -28,7 +29,54 @@ export function HomeButton(): React.JSX.Element {
   return <FloatingButton icon="home" label="Home" onPress={() => router.dismissTo('/')} />
 }
 
+/** How long Back and Home stay out over a video before folding back into one button. */
+const NAV_OPEN_MS = 3_500
+
+/**
+ * Back and Home over a video, folded into one button so they cover less of the picture (issue #24):
+ * a tap opens them, and they fold away again after a few seconds untouched.
+ */
+export function VideoNav({
+  backIcon,
+  backLabel = 'Back',
+  onBack = () => router.back(),
+  style
+}: {
+  backIcon: keyof typeof Ionicons.glyphMap
+  backLabel?: string
+  onBack?(): void
+  style?: StyleProp<ViewStyle>
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+  const [shown] = useState(() => new Animated.Value(0))
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    Animated.timing(shown, { toValue: open ? 1 : 0, duration: 160, useNativeDriver: true }).start()
+    if (timer.current) clearTimeout(timer.current)
+    if (open) timer.current = setTimeout(() => setOpen(false), NAV_OPEN_MS)
+    return () => {
+      if (timer.current) clearTimeout(timer.current)
+    }
+  }, [open, shown])
+
+  if (!open) {
+    return (
+      <View style={style}>
+        <FloatingButton icon="ellipsis-horizontal" label="Show Back and Home" onPress={() => setOpen(true)} />
+      </View>
+    )
+  }
+  return (
+    <Animated.View style={[style, styles.navRow, { opacity: shown, transform: [{ scale: shown.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }] }]}>
+      <FloatingButton icon={backIcon} label={backLabel} onPress={onBack} />
+      <HomeButton />
+    </Animated.View>
+  )
+}
+
 const styles = StyleSheet.create({
+  navRow: { flexDirection: 'row', gap: 8 },
   press: { borderRadius: 20 },
   pressed: { transform: [{ scale: 0.92 }] },
   circle: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },

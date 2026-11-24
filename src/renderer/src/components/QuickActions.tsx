@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { CheckIcon, Gamepad2Icon, ImageIcon, KeyboardIcon, ListVideoIcon, PaletteIcon, PlusIcon, RotateCcwIcon, SettingsIcon, ShieldCheckIcon, Trash2Icon, UploadIcon, XIcon } from 'lucide-react'
 import { MENUBAR_THEMES, type MenubarTheme, type ShortcutAction } from '@shared/types'
 import { DARK_THEME_ID, LIGHT_THEME_ID, THEMES, type Colorway } from '@shared/themes'
+import { APP_ICONS, appIconFor, holidayDates, PICKABLE_ICONS, type AppIconGroup } from '@shared/appIcons'
 import { fileToDataUrl, MAX_WALLPAPERS, useBackground, type BackgroundFit } from '../lib/background'
 import { canonical, MAX_BINDINGS_PER_ACTION, shortcutProblem, TRAY, type ShortcutBindings } from '@shared/shortcuts'
 import { eventToAccelerator, formatAccelerator, isModifierKey, MODIFIER_HINT, SHIFT_NAME, SHORTCUT_META } from '../lib/shortcuts'
@@ -52,7 +53,7 @@ function SectionHeader({ title, description, action }: { title: string; descript
 
 // ---------- Customization ----------
 
-type CustomizationTab = 'theme' | 'wallpaper'
+type CustomizationTab = 'theme' | 'wallpaper' | 'icon'
 
 /** The color theme and the home screen's wallpapers, in one popover (they were two header buttons). */
 function CustomizationSection(): React.JSX.Element {
@@ -65,11 +66,12 @@ function CustomizationSection(): React.JSX.Element {
           onChange={setTab}
           options={[
             { value: 'theme', label: 'Theme' },
-            { value: 'wallpaper', label: 'Wallpaper' }
+            { value: 'wallpaper', label: 'Wallpaper' },
+            { value: 'icon', label: 'App Icon' }
           ]}
         />
       </div>
-      {tab === 'theme' ? <ThemeSection /> : <BackgroundSection />}
+      {tab === 'theme' ? <ThemeSection /> : tab === 'wallpaper' ? <BackgroundSection /> : <AppIconSection />}
     </div>
   )
 }
@@ -188,6 +190,55 @@ function ThemeSwatch({ theme, selected, onSelect }: { theme: Colorway; selected:
       </div>
       <span className="px-1 text-left text-small-strong text-primary">{theme.name}</span>
     </button>
+  )
+}
+
+// ---------- App icon ----------
+
+const ICON_PICTURES = import.meta.glob<string>('../assets/app-icons/*.png', { eager: true, import: 'default' })
+const iconPicture = (id: string): string => ICON_PICTURES[`../assets/app-icons/${id}.png`]
+
+/** The dock / taskbar icon: the usual one, recolours, art styles, and the holiday icons. */
+function AppIconSection(): React.JSX.Element {
+  const settings = useUi((s) => s.app?.settings)
+  const picked = PICKABLE_ICONS.some((i) => i.id === settings?.appIcon) ? settings!.appIcon! : 'default'
+  const holidays = settings?.holidayIcons !== false
+  const showing = settings ? appIconFor(settings) : 'default'
+  const groups: AppIconGroup[] = ['Colours', 'Art Styles']
+  return (
+    <div>
+      <SectionHeader title="App icon" description="The icon in your dock or taskbar." />
+      <div className="flex flex-col gap-5 px-4">
+        {groups.map((g) => (
+          <div key={g} className="flex flex-col gap-2">
+            <span className="text-small font-semibold tracking-wide text-tertiary uppercase">{g === 'Colours' ? 'Colors' : g}</span>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-3">
+              {PICKABLE_ICONS.filter((i) => i.group === g).map((i) => (
+                <button
+                  key={i.id}
+                  onClick={() => void window.api.updateSettings({ appIcon: i.id })}
+                  aria-pressed={picked === i.id}
+                  title={i.name}
+                  className="flex flex-col items-center gap-1.5"
+                >
+                  <span className={`relative block size-16 rounded-[22%] transition-shadow ${picked === i.id ? 'ring-2 ring-accent ring-offset-2 ring-offset-background' : 'hover:ring-1 hover:ring-secondary'}`}>
+                    <img src={iconPicture(i.id)} alt="" className={`size-16 rounded-[22%] ${i.id === 'default' ? 'scale-[1.22]' : ''}`} draggable={false} />
+                    {picked === i.id && <SelectedCheck className="-right-1 -top-1" />}
+                  </span>
+                  <span className="text-small text-primary">{i.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <FieldGroup>
+          <Field label="Holiday icons" description={`Switch to the Halloween icon (${holidayDates('holiday-halloween')}) and the Christmas icon (${holidayDates('holiday-christmas')}) by themselves, then back.`}>
+            <Switch checked={holidays} onChange={(v) => void window.api.updateSettings({ holidayIcons: v })} />
+          </Field>
+        </FieldGroup>
+        {showing !== picked && <p className="text-small text-tertiary">The {APP_ICONS.find((i) => i.id === showing)?.name} icon is showing for the holiday.</p>}
+      </div>
+    </div>
   )
 }
 

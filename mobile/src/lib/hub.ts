@@ -7,12 +7,14 @@ import { twitch } from '../../../src/main/providers/twitch'
 import type { Provider } from '../../../src/main/providers/types'
 import { getSaved, savedOps, syncSaved } from '../../../src/main/watchLater'
 import { getPlaylists, importPlaylists, listPlaylists, PLAYLIST_REFRESH_MS, refreshPlaylists, removePlaylist } from '../../../src/main/ytPlaylists'
+import { freshGoogleSignIn } from '../desktop/googleAuth'
 import { AuthError, sessionFor } from '../desktop/net'
 import { flushStore, store } from '../desktop/store'
 import { getChannelPage as cachedChannelPage, setPreloadPaused, startPreloading, type LoadPage } from './channelPages'
 import { getSettings, updateSettings, type SettingsPatch } from './settings'
 import { startSync, syncOnForeground, syncStatus } from './sync'
 import { autoCheck, startUpdater, updateStatus } from './updater'
+import { appIconChanged, startAppIcon } from './appIcon'
 import { youtubeProvider, youtubeWeb } from './youtubeWeb'
 
 // Mobile version of the desktop's src/main/hub.ts: follows sync, live polling, go-live alerts and the
@@ -21,6 +23,7 @@ import { youtubeProvider, youtubeWeb } from './youtubeWeb'
 
 const providers: Record<Platform, Provider> = { twitch, youtube: youtubeProvider, kick, rumble }
 const FOLLOWS_REFRESH_MS = 30 * 60_000
+const SYNC_TIMEOUT_MS = 90_000
 const LIVE_CACHE_MAX_AGE_MS = 15 * 60_000
 
 let live: Record<string, LiveInfo> = {}
@@ -187,7 +190,11 @@ export async function syncFollows(p: Platform): Promise<void> {
   syncing.add(p)
   emit()
   await guarded(p, async () => {
-    const follows = await providers[p].getFollows()
+    // A hung request mustn't leave the account "Syncing…" forever (issue #21).
+    const follows = await Promise.race([
+      providers[p].getFollows(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Sync took too long — try again')), SYNC_TIMEOUT_MS))
+    ])
     store.set('follows', { ...store.get('follows'), [p]: follows })
     store.set('followsSyncedAt', { ...store.get('followsSyncedAt'), [p]: Date.now() })
   }, true)
@@ -240,6 +247,7 @@ export function start(): void {
   timer = setInterval(tick, 15_000)
   startSync(emit, (p) => void syncFollows(p))
   startUpdater(emit)
+  startAppIcon()
 }
 
 function tick(): void {
@@ -282,6 +290,7 @@ export const actions = {
     // the sign-in screen closes (or never opens) before the user can sign in again.
     const cookieLogin = p !== 'youtube' || providers.youtube === youtubeWeb
     if (expired.has(p) && cookieLogin) await sessionFor(p).clearStorageData().catch(() => undefined)
+    if (expired.has(p) && !cookieLogin) freshGoogleSignIn()
     await providers[p].login()
     delete errors[p]
     expired.delete(p)
@@ -359,6 +368,7 @@ export const actions = {
 
   updateSettings(patch: SettingsPatch) {
     updateSettings(patch)
+    if ('appIcon' in patch || 'holidayIcons' in patch) appIconChanged()
     emit()
   },
 

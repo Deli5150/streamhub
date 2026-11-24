@@ -33,6 +33,53 @@ const TWITCH_CLAIM = `(() => {
   return true
 })()`
 /**
+ * The names of people in the chat page's recent messages, newest first: Twitch, Kick, YouTube (whose
+ * names are @handles), Rumble. For @mentions in the message box.
+ */
+const CHATTER_NAMES = `(() => {
+  const els = document.querySelectorAll([
+    '[data-a-target="chat-message-username"]', '.chat-author__display-name',
+    '#chatroom-messages .chat-entry-username', '#chatroom-messages button[title][data-prevent-expand]', '#chatroom-messages [data-chat-entry] button[title]',
+    'yt-live-chat-text-message-renderer #author-name', 'yt-live-chat-paid-message-renderer #author-name',
+    '.chat-history--username', '.chat-history--username-link'
+  ].join(','))
+  const seen = new Set()
+  const names = []
+  for (let i = els.length - 1; i >= 0 && names.length < 200; i--) {
+    const el = els[i]
+    const name = (el.getAttribute('title') || el.textContent || '').trim().replace(/^@/, '').replace(/:$/, '')
+    const key = name.toLowerCase()
+    if (!name || name.length > 40 || /\s/.test(name) || seen.has(key)) continue
+    seen.add(key)
+    names.push(name)
+  }
+  return names
+})()`
+
+/** The @name being typed at the cursor, if any: where its @ is and what follows it. */
+function mentionAt(text: string, caret: number): { start: number; query: string } | null {
+  const m = /(?:^|\s)@([\w.-]*)$/.exec(text.slice(0, caret))
+  return m ? { start: caret - m[1].length - 1, query: m[1] } : null
+}
+
+/** People in the chat page, read while an @mention is being typed (and every few seconds after). */
+function useChatters(page: React.MutableRefObject<PageHandle | null>, active: boolean, targetKey: string): string[] {
+  const [names, setNames] = useState<string[]>([])
+  useEffect(() => setNames([]), [targetKey])
+  useEffect(() => {
+    if (!active) return
+    const read = async (): Promise<void> => {
+      const got = (await page.current?.run(CHATTER_NAMES).catch(() => null)) as string[] | null
+      if (Array.isArray(got)) setNames(got)
+    }
+    void read()
+    const timer = setInterval(() => void read(), 3000)
+    return () => clearInterval(timer)
+  }, [active, targetKey, page])
+  return names
+}
+
+/**
  * StreamHub's message box under a stream's chat, the same on every platform: it sends as your
  * account there (main/chat.ts), and its emote button opens the platform's emotes for the channel
  * (yours and the channel's first, then global ones and emoji).
@@ -54,6 +101,20 @@ export function ChatBox({
   const [picker, setPicker] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const targetKey = `${target.platform}:${target.channelId}:${target.streamId ?? ''}:${target.chatId ?? ''}`
+  // @mentions: the name being typed, the people in chat who match it, and the highlighted one.
+  const [caret, setCaret] = useState(0)
+  const [mentionsOff, setMentionsOff] = useState(false)
+  const [pick, setPick] = useState(0)
+  const mention = mentionsOff ? null : mentionAt(text, caret)
+  const chatters = useChatters(page, mention !== null, targetKey)
+  const matches = useMemo(() => {
+    if (!mention) return []
+    const q = mention.query.toLowerCase()
+    const starts = chatters.filter((n) => n.toLowerCase().startsWith(q))
+    const has = q ? chatters.filter((n) => !n.toLowerCase().startsWith(q) && n.toLowerCase().includes(q)) : []
+    return [...starts, ...has].slice(0, 8)
+  }, [mention, chatters])
+  useEffect(() => setPick(0), [mention?.query])
   useEffect(() => {
     setText('')
     setError(null)
@@ -121,6 +182,21 @@ export function ChatBox({
     })
   }
 
+  /** Replaces the @name being typed with the chosen one. */
+  const insertMention = (name: string): void => {
+    if (!mention) return
+    const el = inputRef.current
+    const before = `${text.slice(0, mention.start)}@${name} `
+    const next = before + text.slice(caret).replace(/^\s+/, '')
+    setText(next)
+    setCaret(before.length)
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(before.length, before.length)
+    })
+  }
+  const showMentions = mention !== null && matches.length > 0
+
   if (!connected) {
     return (
       <div className="flex shrink-0 flex-col items-center gap-1.5 border-t border-separator p-2.5">
@@ -139,6 +215,7 @@ export function ChatBox({
   return (
     <div className="relative shrink-0 border-t border-separator p-2">
       {picker && <EmotePicker target={target} targetKey={targetKey} onPick={insert} onClose={() => setPicker(false)} />}
+      {showMentions && !picker && <MentionList names={matches} active={pick} onHover={setPick} onPick={insertMention} />}
       {target.platform === 'twitch' && <TwitchPoints targetKey={targetKey} page={page} />}
       {error && (
         <div className="mb-1.5 flex items-center gap-2 text-small text-support-red">
@@ -168,8 +245,33 @@ export function ChatBox({
             ref={inputRef}
             rows={1}
             value={text}
-            onChange={(e) => setText(e.target.value.replace(/[\r\n]+/g, ' '))}
+            onChange={(e) => {
+              setText(e.target.value.replace(/[\r\n]+/g, ' '))
+              setCaret(e.target.selectionStart)
+              setMentionsOff(false)
+            }}
+            onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
+            onBlur={() => setTimeout(() => setMentionsOff(true), 150)}
+            onFocus={() => setMentionsOff(false)}
             onKeyDown={(e) => {
+              if (showMentions) {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  const step = e.key === 'ArrowDown' ? 1 : -1
+                  setPick((i) => (i + step + matches.length) % matches.length)
+                  return
+                }
+                if ((e.key === 'Enter' || e.key === 'Tab') && !e.nativeEvent.isComposing) {
+                  e.preventDefault()
+                  insertMention(matches[pick] ?? matches[0])
+                  return
+                }
+                if (e.key === 'Escape') {
+                  e.preventDefault()
+                  setMentionsOff(true)
+                  return
+                }
+              }
               if (e.key === 'Escape' && picker) setPicker(false)
               if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                 e.preventDefault()
@@ -194,6 +296,36 @@ export function ChatBox({
           <SendHorizontalIcon className="size-3.5" />
         </Button>
       </form>
+    </div>
+  )
+}
+
+/** The people in chat matching an @mention being typed; Up/Down and Tab or Enter pick from the keyboard. */
+function MentionList({ names, active, onHover, onPick }: { names: string[]; active: number; onHover(i: number): void; onPick(name: string): void }): React.JSX.Element {
+  return (
+    <div role="listbox" aria-label="Mention someone" className="absolute inset-x-2 bottom-full z-30 mb-1.5 overflow-hidden rounded-card bg-background py-1 shadow-2xl ring-1 ring-separator">
+      <div className="px-3 pb-1 pt-0.5 text-small-strong text-tertiary">Mention</div>
+      {names.map((name, i) => (
+        <button
+          key={name}
+          type="button"
+          role="option"
+          aria-selected={i === active}
+          // Picked on mouse down, before the message box loses focus.
+          onMouseDown={(e) => {
+            e.preventDefault()
+            onPick(name)
+          }}
+          onMouseEnter={() => onHover(i)}
+          className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-regular ${i === active ? 'bg-control text-primary' : 'text-secondary'}`}
+        >
+          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-accent/20 text-[11px] font-semibold uppercase text-accent">{name[0]}</span>
+          <span className="truncate">
+            <span className="text-tertiary">@</span>
+            {name}
+          </span>
+        </button>
+      ))}
     </div>
   )
 }

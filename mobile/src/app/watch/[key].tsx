@@ -13,7 +13,7 @@ import { Chat } from '../../ui/Chat'
 import { useKeyboardCover } from '../../ui/keyboard'
 import { openChannelMenu } from '../../ui/channelMenu'
 import { Avatar, centered, EmptyState, IconButton } from '../../ui/components'
-import { FloatingButton, HomeButton } from '../../ui/HomeButton'
+import { FloatingButton, VideoNav } from '../../ui/HomeButton'
 import { CastButton } from '../../ui/CastButton'
 import { useAutoPip, useLayoutWindow, usePipActive } from '../../ui/pip'
 import { Player, type PlayerHandle } from '../../ui/Player'
@@ -155,10 +155,7 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
       <View style={[styles.row, { backgroundColor: '#000' }, !inPip && (chatHidden ? centered(insets) : { paddingLeft: insets.left, paddingRight: insets.right })]}>
         <View style={{ flex: 1 }}>
           {playerView}
-          <View style={[styles.floatingBack, { top: insets.top + 4 }, pipHidden]}>
-            <FloatingButton icon="chevron-back" label="Back" onPress={() => router.back()} />
-            <HomeButton />
-          </View>
+          <VideoNav backIcon="chevron-back" style={[styles.floatingBack, { top: insets.top + 4 }, pipHidden]} />
           {/* On the right, where the chat opens. */}
           {chatHidden ? (
             <View style={[styles.floatingChat, { top: insets.top + 4 }, pipHidden]}>
@@ -179,10 +176,7 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
     <View style={{ flex: 1, backgroundColor: inPip ? '#000' : c.bg }}>
       <View style={[{ paddingTop: inPip ? 0 : insets.top, backgroundColor: '#000' }, inPip && { flex: 1 }]}>
         {playerView}
-        <View style={[styles.floatingBack, { top: insets.top + 4 }, pipHidden]}>
-          <FloatingButton icon="chevron-down" label="Back" onPress={() => router.back()} />
-          <HomeButton />
-        </View>
+        <VideoNav backIcon="chevron-down" style={[styles.floatingBack, { top: insets.top + 4 }, pipHidden]} />
       </View>
       <View style={[{ flex: 1 }, pipHidden]}>
         <View style={typing ? styles.hidden : null}>
@@ -204,7 +198,7 @@ const styles = StyleSheet.create({
   tabs: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   row: { flex: 1, flexDirection: 'row' },
-  floatingBack: { position: 'absolute', left: 10, flexDirection: 'row', gap: 8 },
+  floatingBack: { position: 'absolute', left: 10 },
   floatingChat: { position: 'absolute', right: 10 },
   hidden: { display: 'none' },
   /**

@@ -19,6 +19,19 @@ const SCOPE = 'https://www.googleapis.com/auth/youtube'
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata'
 const IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? ''
 
+/**
+ * Google's sign-in calls can hang on iPhone once the saved sign-in has expired (issue #21: Sync spun
+ * forever and Reconnect never got a chance), so the silent ones give up after a while.
+ */
+const SILENT_TIMEOUT_MS = 20_000
+
+function timeout<T>(p: Promise<T>, what: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new AuthError(`youtube: ${what} timed out`)), SILENT_TIMEOUT_MS)
+    p.then(resolve, reject).finally(() => clearTimeout(t))
+  })
+}
+
 let configured = false
 function configure(): void {
   if (configured) return
@@ -35,14 +48,17 @@ export function googleSignedIn(): boolean {
   return GoogleSignin.hasPreviousSignIn() && Boolean(store.get('usernames').youtube)
 }
 
-/** Signs in to Google if needed and makes sure `scope` is granted. */
-async function signInWith(scope: string, label: string): Promise<void> {
+/**
+ * Signs in to Google if needed and makes sure `scope` is granted. `fresh` (Reconnect after the sign-in
+ * expired) skips the silent sign-in, which is what failed, and shows Google's sign-in straight away.
+ */
+async function signInWith(scope: string, label: string, fresh = false): Promise<void> {
   configure()
   if (OS.OS === 'android') await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
   let scopes: string[]
-  if (GoogleSignin.hasPreviousSignIn()) {
-    const res = await GoogleSignin.signInSilently()
-    if (res.type !== 'success') {
+  if (GoogleSignin.hasPreviousSignIn() && !fresh) {
+    const res = await timeout(GoogleSignin.signInSilently(), 'sign-in').catch(() => null)
+    if (res?.type !== 'success') {
       const again = await GoogleSignin.signIn()
       if (isCancelledResponse(again)) throw new Error(`${label} sign-in was cancelled`)
       scopes = again.data.scopes
@@ -105,12 +121,20 @@ export async function googleFetch(url: string, init: RequestInit = {}): Promise<
   }
 }
 
+let freshNext = false
+/** Reconnect after the sign-in expired: the next sign-in shows Google's screen instead of the silent one. */
+export function freshGoogleSignIn(): void {
+  freshNext = true
+}
+
 export async function googleSignIn(): Promise<void> {
+  const fresh = freshNext
+  freshNext = false
   if (!googleConfigured()) {
     throw new Error("YouTube sign-in isn't set up in this copy of StreamHub (it needs a Google OAuth client ID — see the mobile README → YouTube sign-in)")
   }
   try {
-    await signInWith(SCOPE, 'YouTube')
+    await signInWith(SCOPE, 'YouTube', fresh)
   } catch (e) {
     throw signInError(e, 'YouTube')
   }
@@ -153,10 +177,13 @@ export async function googleSignOut(): Promise<void> {
 async function accessToken(): Promise<string> {
   configure()
   if (!GoogleSignin.getCurrentUser()) {
-    const res = await GoogleSignin.signInSilently().catch(() => null)
+    const res = await timeout(GoogleSignin.signInSilently(), 'sign-in').catch(() => null)
     if (!res || res.type !== 'success') throw new AuthError('youtube: sign-in expired')
   }
-  return (await GoogleSignin.getTokens()).accessToken
+  const tokens = await timeout(GoogleSignin.getTokens(), 'token refresh').catch((e: unknown) => {
+    throw e instanceof AuthError ? e : new AuthError(`youtube: sign-in expired (${String(e)})`)
+  })
+  return tokens.accessToken
 }
 
 /** GET a Google API URL as the signed-in user. Throws AuthError when the sign-in is gone. */

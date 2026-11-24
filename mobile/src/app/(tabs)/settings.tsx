@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { router } from 'expo-router'
-import { Platform as OS, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Image, Platform as OS, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Constants from 'expo-constants'
 import { Icon } from '../../ui/Icon'
 import { PLATFORM_LABEL, type AccountInfo, type Platform, type SyncStatus, type UpdateStatus } from '@shared/types'
 import { DEFAULT_THEME_ID, THEMES } from '@shared/themes'
+import { APP_ICONS, appIconFor, holidayDates, PICKABLE_ICONS, type AppIconGroup } from '@shared/appIcons'
+import { APP_ICON_IMAGES } from '../../lib/appIconImages'
 import { actions, useApp } from '../../lib/hub'
 import { syncNow, syncSignIn, syncSignOut } from '../../lib/sync'
 import { checkForUpdates, installUpdate, showUpdateSheet } from '../../lib/updater'
@@ -111,6 +113,9 @@ export default function SettingsScreen(): React.JSX.Element {
         </>
       ) : null}
 
+      <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>APP ICON</Text>
+      <AppIconPicker picked={app.settings.appIcon ?? 'default'} holidays={app.settings.holidayIcons !== false} />
+
       <Text style={[styles.heading, { color: c.fg2 }, displayFont(c)]}>WALLPAPER</Text>
       <WallpaperSettings />
 
@@ -129,6 +134,46 @@ export default function SettingsScreen(): React.JSX.Element {
 
       <Text style={[styles.version, { color: c.fg3 }]}>StreamHub {Constants.expoConfig?.version ?? ''}</Text>
     </ScrollView>
+  )
+}
+
+/** The home-screen icon: the usual one, colours, art styles and the holiday icons. */
+function AppIconPicker({ picked, holidays }: { picked: string; holidays: boolean }): React.JSX.Element {
+  const c = useColors()
+  const showing = appIconFor({ appIcon: picked, holidayIcons: holidays })
+  const groups: AppIconGroup[] = ['Colours', 'Art Styles']
+  return (
+    <>
+      {groups.map((g) => (
+        <View key={g}>
+          <Text style={[styles.iconGroup, { color: c.fg3 }]}>{g === 'Colours' ? 'COLORS' : g.toUpperCase()}</Text>
+          <View style={styles.icons}>
+            {PICKABLE_ICONS.filter((i) => i.group === g).map((i) => (
+              <Pressable
+                key={i.id}
+                onPress={() => actions.updateSettings({ appIcon: i.id })}
+                accessibilityRole="button"
+                accessibilityLabel={`${i.name} icon`}
+                accessibilityState={{ selected: picked === i.id }}
+                style={styles.iconCell}
+              >
+                <View style={[styles.iconRing, { borderColor: picked === i.id ? c.accent : 'transparent' }]}>
+                  <Image source={APP_ICON_IMAGES[i.id]} style={[styles.iconImage, i.id === 'default' && { transform: [{ scale: 1.22 }] }]} />
+                </View>
+                <Text numberOfLines={1} style={{ color: c.fg, fontSize: 11.5 }}>{i.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ))}
+      <Group
+        footer={`${OS.OS === 'android' ? 'The new icon appears when you leave StreamHub. ' : ''}Holiday icons show by themselves from ${holidayDates('holiday-halloween')} (Halloween) and ${holidayDates('holiday-christmas')} (Christmas), then switch back.${showing !== picked ? ` The ${APP_ICONS.find((i) => i.id === showing)?.name} icon is showing now.` : ''}`}
+      >
+        <GroupRow first label="Holiday icons" detail="Halloween and Christmas">
+          <Switch value={holidays} onValueChange={(v) => actions.updateSettings({ holidayIcons: v })} />
+        </GroupRow>
+      </Group>
+    </>
   )
 }
 
@@ -379,6 +424,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 32, fontWeight: '800', marginBottom: 8 },
   heading: { fontSize: 13, fontWeight: '600', marginTop: 16, marginBottom: 6, marginLeft: 4 },
   intro: { fontSize: 13, lineHeight: 18, marginBottom: 12, marginLeft: 4 },
+  iconGroup: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5, marginTop: 6, marginBottom: 8, marginLeft: 4 },
+  icons: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 10 },
+  iconCell: { width: 72, alignItems: 'center', gap: 5 },
+  iconRing: { padding: 2, borderRadius: 17, borderWidth: 2 },
+  iconImage: { width: 60, height: 60, borderRadius: 14 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12, borderTopWidth: StyleSheet.hairlineWidth },
   error: { flexDirection: 'row', gap: 8, padding: 12, borderTopWidth: StyleSheet.hairlineWidth },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 },

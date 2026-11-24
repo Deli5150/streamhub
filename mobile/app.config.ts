@@ -73,6 +73,8 @@ const config: ExpoConfig = {
     './plugins/withAndroidCast',
     // Full-screen video centered whichever way an Android phone is turned.
     './plugins/withCutoutEdges',
+    // Settings → App Icon: the alternate icons in assets/app-icons (modules/app-icons).
+    './plugins/withAppIcons',
     ...(iosUrlScheme ? [['@react-native-google-signin/google-signin', { iosUrlScheme }] as [string, unknown]] : [])
   ],
   experiments: { typedRoutes: true }

@@ -2,6 +2,18 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.17]
+
+### New
+- **App icons.** Pick a new icon in **Customization → App Icon** on desktop, or **Settings → App Icon** on phones. Choose from eight recolours of the StreamHub bubble (Ember, Toxic, Amethyst, Gold, Sakura, Silver, Arctic, Daylight) and eight art styles (Pixel Art, Watercolour, Oil Paint, Neon Sign, Paper Cut-Out, Blueprint, Stained Glass, Synthwave). On desktop it changes the dock or taskbar icon. On Android the new icon shows once you leave the app. On an iPhone it changes right away, with iOS's short notice.
+- **Holiday icons.** From Oct 24 to Nov 1 the icon turns into a white bubble on a Halloween night, and from Dec 1 to Dec 26 the bubble sits in falling snow. Afterwards it switches back to your icon by itself. Turn **Holiday icons** off to keep yours all year.
+- **@mentions in chat (desktop).** Type **@** in the chat box to see the people who've been chatting, narrowed as you type. Pick one with the mouse, or with the arrow keys and Tab or Enter. Works on Twitch, Kick, YouTube and Rumble. ([#23](../../issues/23))
+- **Phones: Back and Home take less room over videos.** The two buttons in the corner of a playing video are now one button. Tap it to show Back and Home; they fold away again after a few seconds. ([#24](../../issues/24))
+
+### Fixed
+- **iPhone: YouTube loading forever after its sign-in expired.** If Google's sign-in stopped answering, YouTube stayed on "Syncing…" and **Reconnect** never got the chance to work. It now gives up after a while and shows the account as expired, and **Reconnect** goes straight to Google's sign-in. ([#21](../../issues/21))
+- **Android: feedback arriving on GitHub without its description.** Android could still hand the feedback form to the GitHub app, which keeps only the title. Your description is now also copied, so you can paste it if it's missing. ([#22](../../issues/22))
+
 ## [1.0.16]
 
 ### New
