@@ -374,6 +374,12 @@ export interface Api {
   reportChatEmotes(target: ChatTarget, seen: Array<{ code: string; url: string }>): void
   /** Closes the PiP window (the in-app player resumes). */
   closePip(): Promise<void>
+  /** TVs on the network to cast to (looks for a couple of seconds). */
+  castDevices(): Promise<CastDevice[]>
+  castStatus(): Promise<CastStatus>
+  castPlay(device: CastDevice, req: CastPlayRequest): Promise<void>
+  castStop(): Promise<void>
+  onCastStatus(cb: (s: CastStatus) => void): () => void
   /** A live Twitch player froze or showed an error; resolves true when it should be reloaded. */
   twitchStalled(login: string, reason: string): Promise<boolean>
   /** Adds the item to Watch Later, or removes it if it's already there. */
@@ -410,4 +416,35 @@ export interface Api {
   onLinuxPads(cb: (pads: LinuxPad[]) => void): () => void
   /** A channel page was (re)loaded from the site; pushes its fresh data. */
   onChannelPage(cb: (key: string, data: ChannelPageData) => void): () => void
+}
+
+/** A TV to cast to (Chromecast, Google TV, TV with Chromecast built in), found on the network. */
+export interface CastDevice {
+  id: string
+  name: string
+  model?: string
+  host: string
+  port: number
+}
+
+/** A video for the TV: what a player plays, and what the TV shows about it. */
+export interface CastPlayRequest {
+  platform: Platform
+  url: string
+  hls?: boolean
+  startAt?: number
+  title?: string
+  subtitle?: string
+  thumbnail?: string
+}
+
+/** What's being cast, and how it went. `device` null means not casting. */
+export interface CastStatus {
+  device: CastDevice | null
+  state: 'idle' | 'loading' | 'playing' | 'error'
+  /** The player URL the state is about. */
+  url?: string
+  error?: string
+  /** Set when the video is from YouTube (only YouTube's own apps can cast it). */
+  youtubeId?: string
 }

@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { LinuxPad } from '@shared/linuxPads'
-import type { Api, AppState, ChannelPageData, ShortcutAction } from '@shared/types'
+import type { Api, AppState, CastStatus, ChannelPageData, ShortcutAction } from '@shared/types'
 
 function subscribe<T>(channel: string, cb: (v: T) => void): () => void {
   const handler = (_: IpcRendererEvent, v: T): void => cb(v)
@@ -33,6 +33,11 @@ const api: Api = {
   chatEmotes: (target) => ipcRenderer.invoke('chat-emotes', target),
   reportChatEmotes: (target, seen) => ipcRenderer.send('chat-emotes-seen', target, seen),
   closePip: () => ipcRenderer.invoke('close-pip'),
+  castDevices: () => ipcRenderer.invoke('cast-devices'),
+  castStatus: () => ipcRenderer.invoke('cast-status'),
+  castPlay: (device, req) => ipcRenderer.invoke('cast-play', device, req),
+  castStop: () => ipcRenderer.invoke('cast-stop'),
+  onCastStatus: (cb) => subscribe<CastStatus>('cast-status', cb),
   twitchStalled: (login, reason) => ipcRenderer.invoke('twitch-stalled', login, reason),
   setFullScreen: (on) => ipcRenderer.invoke('set-fullscreen', on),
   playerClosed: () => ipcRenderer.invoke('player-closed'),

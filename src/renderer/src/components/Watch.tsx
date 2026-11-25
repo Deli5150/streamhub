@@ -29,6 +29,8 @@ import { SaveForLaterButton } from './SaveForLater'
 import { Button, EmptyState } from './ui'
 import { WebView, type PageHandle } from './WebView'
 import { CHAT_INPUT_HIDDEN_CSS, ChatBox } from './ChatBox'
+import { CastButton, CastingView } from './Cast'
+import { useCastPlayback } from '../lib/cast'
 
 export function Watch({ channelKey, offline }: { channelKey: string; offline?: boolean }): React.JSX.Element {
   const { channel, live } = useChannel(channelKey)
@@ -69,6 +71,8 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
   const chatChannel = members.find((c) => c.key === chatKey) ?? channel
   const videoLive = app?.live[videoChannel.key] ?? live
   const player = embedUrl(videoChannel, videoLive)
+  // Casting to a TV: the TV plays the stream and this shows what's playing where.
+  const cast = useCastPlayback(player ? { platform: videoChannel.platform, url: player, title: videoLive.title, subtitle: videoChannel.displayName, thumbnail: videoLive.thumbnail } : null)
   // Switching the stream while it's in picture in picture moves picture in picture to the new
   // source, instead of leaving the old one floating and starting the new one here. Until it's
   // playing there, the in-app player waits (it would play out loud meanwhile).
@@ -136,6 +140,8 @@ function LivePlayer({ channel, live }: { channel: Channel; live: LiveInfo }): Re
                   <PictureInPicture2Icon className="size-10 text-white/80" strokeWidth={1.5} />
                   <p className="text-strong text-white">Switching Picture-in-Picture to {PLATFORM_META[videoChannel.platform].label}…</p>
                 </div>
+              ) : cast ? (
+                <CastingView cast={cast} className={mini ? 'aspect-video w-full' : 'size-full'} />
               ) : player ? (
                 <WebView key={player} platform={videoChannel.platform} src={player} className={mini ? 'aspect-video w-full' : 'size-full'} />
               ) : (
@@ -304,6 +310,7 @@ function ChannelInfo({
           Multi-view
         </Button>
         <SaveForLaterButton item={savedLive(channel, live)} />
+        <CastButton />
         <Button variant="plain" onClick={() => openPipFor(channel, live)} title="Picture in Picture">
           <PictureInPicture2Icon className="size-3.5" />
         </Button>

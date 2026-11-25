@@ -1,6 +1,6 @@
 {
   "name": "streamhub",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "All-in-one desktop viewer for Twitch, YouTube, Kick and Rumble",
   "main": "./out/main/index.js",
   "private": true,
@@ -118,6 +118,7 @@
     "vitest": "^5.0.5"
   },
   "dependencies": {
+    "bonjour-service": "^1.4.4",
     "cheerio": "^1.2.0",
     "hls.js": "^1.7.3",
     "lucide-react": "^0.542.0",

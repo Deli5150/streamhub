@@ -2,6 +2,11 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.18]
+
+### New
+- **Cast to a TV from Mac, Windows and Linux.** The cast button (next to Picture in Picture under a live stream, and over a video on a channel page or in a playlist) lists the Chromecasts, Google TVs and TVs with Chromecast built in on your Wi-Fi. Pick one and the TV plays the stream itself; StreamHub shows what's playing where, with **Stop casting**. While you're casting, whatever you open next goes to the TV too. Twitch, Kick and Rumble streams and videos can be cast, as on Android. YouTube only lets its own apps cast its videos, so for YouTube StreamHub offers **Open on YouTube** (Chrome can cast it from there).
+
 ## [1.0.17]
 
 ### New

@@ -15,6 +15,8 @@ import { HlsVideo } from './HlsVideo'
 import { PLATFORM_META, PlatformOverlayBadge } from './platform'
 import { Thumbnail } from './Thumbnail'
 import { SaveForLaterButton } from './SaveForLater'
+import { CastButton, CastingView } from './Cast'
+import { useCastPlayback } from '../lib/cast'
 import { Button, EmptyState, SearchInput, useContextMenu } from './ui'
 import { WebView } from './WebView'
 
@@ -702,6 +704,10 @@ function PlayerModal({ channel, item, onClose }: { channel: Channel; item: Media
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  // Casting to a TV: the TV plays the video from where it's got to here.
+  const castUrl = item.playUrl ?? item.hlsUrl
+  const cast = useCastPlayback(castUrl ? { platform: channel.platform, url: castUrl, hls: !item.playUrl, startAt: lastTime.current || startAt, title: item.title, subtitle: channel.displayName, thumbnail: item.thumbnail } : null)
+
   const pip = async (): Promise<void> => {
     const url = item.playUrl ?? item.hlsUrl
     if (!url) return
@@ -724,7 +730,9 @@ function PlayerModal({ channel, item, onClose }: { channel: Channel; item: Media
         >
           <XIcon className="size-4 text-white" strokeWidth={2.25} />
         </button>
-        {item.playUrl ? (
+        {cast ? (
+          <CastingView cast={cast} />
+        ) : item.playUrl ? (
           <WebView
             key={item.playUrl}
             platform={channel.platform}
@@ -750,6 +758,7 @@ function PlayerModal({ channel, item, onClose }: { channel: Channel; item: Media
               <PictureInPicture2Icon className="size-4 text-white" strokeWidth={2.25} />
             </button>}
             <SaveForLaterButton overlay item={savedVideo(channel, item)} />
+            <CastButton overlay />
             <ChaptersButton chapters={chapters} currentTime={() => lastTime.current} onSeek={(to) => setSeek({ to })} buttonClass="flex size-9 items-center justify-center rounded-full bg-black/55 ring-1 ring-white/10 backdrop-blur-md transition-colors hover:bg-black/75" />
           </div>
         )}

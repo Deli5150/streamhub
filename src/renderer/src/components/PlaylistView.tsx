@@ -29,6 +29,8 @@ import { HlsVideo } from './HlsVideo'
 import { PLATFORM_META, PlatformDot } from './platform'
 import { Thumbnail } from './Thumbnail'
 import { Button } from './ui'
+import { CastButton, CastingView } from './Cast'
+import { useCastPlayback } from '../lib/cast'
 import { WebView } from './WebView'
 
 const overlayButton =
@@ -195,6 +197,7 @@ export function PlaylistView({ source = 'watchLater', startId }: { source?: Play
                 <PictureInPicture2Icon className="size-4 text-white" strokeWidth={2.25} />
               </button>
             )}
+            <CastButton overlay />
             <ChaptersButton chapters={chapters} currentTime={() => lastTime.current} onSeek={(to) => setSeek({ to })} buttonClass={overlayButton} />
           </div>
           {!listOpen && !theater && (
@@ -450,6 +453,15 @@ function PlaylistPlayer({
     [key, save, onTime]
   )
   const box = playerBox(theater)
+  const channel = app?.channels.find((c) => c.key === item.channelKey)
+  const live = app?.live[item.channelKey]
+  const url = channel && live ? embedUrl(channel, live) : null
+  // Casting to a TV: the TV plays this item, from where it's got to here.
+  const media = item.media?.playUrl ?? item.media?.hlsUrl
+  const cast = useCastPlayback(
+    media || url ? { platform: item.platform, url: (media ?? url)!, hls: !item.media?.playUrl && Boolean(item.media?.hlsUrl), startAt, title: item.title, subtitle: item.displayName, thumbnail: item.thumbnail } : null
+  )
+  if (cast) return <CastingView cast={cast} className={box} />
 
   if (item.media?.playUrl) {
     return (
@@ -472,9 +484,6 @@ function PlaylistPlayer({
     )
   }
 
-  const channel = app?.channels.find((c) => c.key === item.channelKey)
-  const live = app?.live[item.channelKey]
-  const url = channel && live ? embedUrl(channel, live) : null
   if (channel && url) return <WebView key={url} platform={channel.platform} src={url} className={box} />
 
   return (

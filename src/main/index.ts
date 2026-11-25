@@ -16,6 +16,7 @@ import { hasTray, hidePopup, initMenubar, syncMenubar } from './menubar'
 import { browserUserAgent, partition, sessionFor } from './net'
 import { guardFullScreen, playerClosed, setAppFullScreen, windowOf } from './fullscreen'
 import { closePip, openPip, registerPipControls, setPipRenderer, setupAutoPip } from './pip'
+import { closeCast, registerCast } from './cast'
 import { youtubeChapters } from './providers/youtube'
 import { syncNow, syncOnFocus, syncSignIn, syncSignOut } from './sync'
 import { installTwitchAdFilter, twitchPlayerStalled } from './twitchAds'
@@ -258,6 +259,7 @@ function registerIpc(): void {
   ipcMain.handle('sync-sign-out', () => syncSignOut())
   ipcMain.handle('sync-now', () => syncNow())
   registerPipControls()
+  registerCast()
 }
 
 onSettingsChange((next, prev) => {
@@ -307,6 +309,7 @@ app.whenReady().then(() => {
 let quitting = false
 app.on('before-quit', () => {
   quitting = true
+  closeCast()
   void flushCookies()
 })
 
