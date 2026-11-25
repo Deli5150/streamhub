@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
-import { Platform as OS, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Platform as OS, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import { WebView } from 'react-native-webview'
 import type { Channel, LiveInfo } from '@shared/types'
 import { chatUrl } from '@shared/urls'
+import { CHATTER_NAMES, matchMentions, mentionAt, mentionHelperScript } from '@shared/mentions'
 import { prepareYouTubeChat, sendYouTubeChat } from '../../../src/main/youtubeChat'
 import { allowYouTubeChat, googleSignedIn, signInToYouTubeWeb } from '../desktop/googleAuth'
 import { DESKTOP_UA, GOOGLE_WEB_UA } from '../lib/reader'
@@ -27,6 +28,12 @@ export function Chat({ channel, live }: { channel: Channel; live?: LiveInfo }): 
   const url = chatUrl(channel, live)
   // Bumped after signing in from the chat, to reload it signed in.
   const [reloads, setReloads] = useState(0)
+  // @mentions (issue #23): the page's own message box gets a list of who's chatting (mentionHelperScript);
+  // StreamHub's own YouTube box on iPhone asks the page for the names (readChatters).
+  const web = useRef<React.ComponentRef<typeof WebView>>(null)
+  const [chatters, setChatters] = useState<string[]>([])
+  const readChatters = (): void => web.current?.injectJavaScript(`window.ReactNativeWebView.postMessage(JSON.stringify({ chatters: ${CHATTER_NAMES} })); true;`)
+  const helper = useMemo(() => mentionHelperScript({ dark: c.dark, accent: c.accent }), [c.dark, c.accent])
   if (!url) {
     return (
       <View style={styles.empty}>
@@ -38,8 +45,19 @@ export function Chat({ channel, live }: { channel: Channel; live?: LiveInfo }): 
   const ownBox = ownYouTubeBox(channel, live)
   const page = (
     <WebView
+      ref={web}
       key={`${url}#${reloads}`}
       source={{ uri: url }}
+      // Twitch's chat page lists who to mention by itself; the others get StreamHub's list.
+      injectedJavaScript={channel.platform === 'twitch' ? undefined : helper}
+      onMessage={(e) => {
+        try {
+          const m = JSON.parse(e.nativeEvent.data) as { chatters?: unknown }
+          if (Array.isArray(m.chatters)) setChatters(m.chatters.filter((n): n is string => typeof n === 'string'))
+        } catch {
+          // Not ours.
+        }
+      }}
       // Twitch's popout chat and Rumble's chat popup are desktop pages (Rumble's must also match the
       // page reader for Cloudflare); YouTube's is Google's, which must look like the phone's browser;
       // Kick's works as the WebView is.
@@ -72,15 +90,36 @@ export function Chat({ channel, live }: { channel: Channel; live?: LiveInfo }): 
   return (
     <View style={{ flex: 1 }}>
       {page}
-      <YouTubeChatBox videoId={live.streamId} />
+      <YouTubeChatBox videoId={live.streamId} chatters={chatters} readChatters={readChatters} />
     </View>
   )
 }
 
 /** StreamHub's message box for a YouTube chat: sends through the Data API as the connected account. */
-function YouTubeChatBox({ videoId }: { videoId: string }): React.JSX.Element {
+function YouTubeChatBox({ videoId, chatters, readChatters }: { videoId: string; chatters: string[]; readChatters(): void }): React.JSX.Element {
   const c = useColors()
   const [text, setText] = useState('')
+  // @mentions: the @name at the cursor, and the people chatting who match it (read from the page
+  // while one is being typed, every few seconds).
+  const [caret, setCaret] = useState(0)
+  const mention = mentionAt(text, caret)
+  const typing = mention !== null
+  useEffect(() => {
+    if (!typing) return
+    readChatters()
+    const timer = setInterval(readChatters, 3000)
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typing])
+  const matches = mention ? matchMentions(chatters, mention.query) : []
+  const [selection, setSelection] = useState<{ start: number; end: number } | undefined>(undefined)
+  const insertMention = (name: string): void => {
+    if (!mention) return
+    const before = `${text.slice(0, mention.start)}@${name} `
+    setText(before + text.slice(caret).replace(/^\s+/, ''))
+    setCaret(before.length)
+    setSelection({ start: before.length, end: before.length })
+  }
   const [error, setError] = useState<string | null>(null)
   // The chat's id is looked up now, so the first message goes out in one request.
   useEffect(() => void prepareYouTubeChat(videoId), [videoId])
@@ -110,11 +149,25 @@ function YouTubeChatBox({ videoId }: { videoId: string }): React.JSX.Element {
   }
   return (
     <View style={[styles.box, { borderTopColor: c.separator, backgroundColor: c.bg }]}>
+      {matches.length ? (
+        <ScrollView horizontal keyboardShouldPersistTaps="always" showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mentions} accessibilityLabel="Mention someone">
+          {matches.map((name) => (
+            <Pressable key={name} onPress={() => insertMention(name)} accessibilityRole="button" style={({ pressed }) => [styles.mention, { backgroundColor: c.bg2, opacity: pressed ? 0.6 : 1 }]}>
+              <Text style={{ color: c.fg, fontSize: 14 }}>@{name}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
       {error ? <Text style={{ color: c.fg3, fontSize: 12, paddingHorizontal: 4 }}>{error}</Text> : null}
       <View style={styles.boxRow}>
         <TextInput
           value={text}
           onChangeText={setText}
+          selection={selection}
+          onSelectionChange={(e) => {
+            setCaret(e.nativeEvent.selection.end)
+            setSelection(undefined)
+          }}
           placeholder="Chat…"
           placeholderTextColor={c.fg3}
           maxLength={200}
@@ -147,5 +200,7 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   box: { gap: 4, paddingHorizontal: 8, paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth },
   boxRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
+  mentions: { gap: 6, paddingHorizontal: 2, paddingBottom: 2 },
+  mention: { borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
   input: { flex: 1, minHeight: 36, maxHeight: 96, borderRadius: 18, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 8, fontSize: 15 }
 })

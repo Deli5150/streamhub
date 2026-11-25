@@ -2,6 +2,14 @@
 
 What changed in each version of StreamHub. Each version's downloads are on its [GitHub Release](../../releases).
 
+## [1.0.19]
+
+### New
+- **@mentions in chat on iPhone and Android.** Type **@** in a chat's message box to see the people who've been chatting, narrowed as you type; tap one to put their name in. On Kick, YouTube and Rumble it’s StreamHub’s list, just above the message box; Twitch's chat already has its own, so it keeps that. ([#23](../../issues/23))
+
+### Fixed
+- **@mentions left out anyone with an "s" in their name** (desktop). The list of people to mention skipped every name containing the letter s.
+
 ## [1.0.18]
 
 ### New

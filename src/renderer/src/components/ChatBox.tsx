@@ -4,6 +4,7 @@ import type { ChatEmote, ChatEmoteSet, ChatTarget } from '@shared/types'
 import { useUi } from '../store'
 import { PLATFORM_META } from './platform'
 import { Button, SearchInput } from './ui'
+import { CHATTER_NAMES, matchMentions, mentionAt } from '@shared/mentions'
 import type { PageHandle } from './WebView'
 
 /**
@@ -32,36 +33,6 @@ const TWITCH_CLAIM = `(() => {
   b.click()
   return true
 })()`
-/**
- * The names of people in the chat page's recent messages, newest first: Twitch, Kick, YouTube (whose
- * names are @handles), Rumble. For @mentions in the message box.
- */
-const CHATTER_NAMES = `(() => {
-  const els = document.querySelectorAll([
-    '[data-a-target="chat-message-username"]', '.chat-author__display-name',
-    '#chatroom-messages .chat-entry-username', '#chatroom-messages button[title][data-prevent-expand]', '#chatroom-messages [data-chat-entry] button[title]',
-    'yt-live-chat-text-message-renderer #author-name', 'yt-live-chat-paid-message-renderer #author-name',
-    '.chat-history--username', '.chat-history--username-link'
-  ].join(','))
-  const seen = new Set()
-  const names = []
-  for (let i = els.length - 1; i >= 0 && names.length < 200; i--) {
-    const el = els[i]
-    const name = (el.getAttribute('title') || el.textContent || '').trim().replace(/^@/, '').replace(/:$/, '')
-    const key = name.toLowerCase()
-    if (!name || name.length > 40 || /\s/.test(name) || seen.has(key)) continue
-    seen.add(key)
-    names.push(name)
-  }
-  return names
-})()`
-
-/** The @name being typed at the cursor, if any: where its @ is and what follows it. */
-function mentionAt(text: string, caret: number): { start: number; query: string } | null {
-  const m = /(?:^|\s)@([\w.-]*)$/.exec(text.slice(0, caret))
-  return m ? { start: caret - m[1].length - 1, query: m[1] } : null
-}
-
 /** People in the chat page, read while an @mention is being typed (and every few seconds after). */
 function useChatters(page: React.MutableRefObject<PageHandle | null>, active: boolean, targetKey: string): string[] {
   const [names, setNames] = useState<string[]>([])
@@ -107,13 +78,7 @@ export function ChatBox({
   const [pick, setPick] = useState(0)
   const mention = mentionsOff ? null : mentionAt(text, caret)
   const chatters = useChatters(page, mention !== null, targetKey)
-  const matches = useMemo(() => {
-    if (!mention) return []
-    const q = mention.query.toLowerCase()
-    const starts = chatters.filter((n) => n.toLowerCase().startsWith(q))
-    const has = q ? chatters.filter((n) => !n.toLowerCase().startsWith(q) && n.toLowerCase().includes(q)) : []
-    return [...starts, ...has].slice(0, 8)
-  }, [mention, chatters])
+  const matches = useMemo(() => (mention ? matchMentions(chatters, mention.query) : []), [mention, chatters])
   useEffect(() => setPick(0), [mention?.query])
   useEffect(() => {
     setText('')

@@ -59,6 +59,8 @@ cd android && JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Content
 # → android/app/build/outputs/apk/release/app-release.apk
 ```
 
+Don't skip the `prebuild --clean` to save time: Gradle only rebundles the JavaScript when something in `mobile/` changed, so a change to `../src/shared` alone (the @mention helper, casting) builds an APK with the old code. If you do rerun Gradle on its own, add `--rerun-tasks`.
+
 Release builds skip R8 code shrinking (`plugins/withoutCodeShrinking.js`), which Expo's template turns on. With shrinking on, R8 removed classes that WorkManager creates by reflection, and the app closed as soon as it opened. Release APKs are signed with StreamHub's own key (`credentials/streamhub-release.keystore`, never uploaded). Its passwords are kept in `~/.gradle/gradle.properties` as `STREAMHUB_RELEASE_*` (see `plugins/withReleaseSigning.js`). Keep both: Android only installs an update that's signed with the same key as the copy already on the phone. YouTube sign-in on Android needs an **Android** OAuth client in Google Cloud with package `app.streamhub` and this key's SHA-1. To print it, run `keytool -list -v -keystore credentials/streamhub-release.keystore -alias streamhub`.
 
 **iPhone (.ipa).** Build with `npm run ios:device`, or press ⌘R in Xcode, then zip the built app into an `.ipa`. The app is in Xcode's DerivedData under `Build/Products/Release-iphoneos/StreamHub.app`: put it in a `Payload` folder, zip that folder, and rename the zip to `.ipa`. With a free Apple ID, the `.ipa` only runs on your own registered iPhone, for 7 days at a time. AltStore or Sideloadly can install it and re-sign it with your Apple ID.
